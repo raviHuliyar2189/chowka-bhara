@@ -1,0 +1,13 @@
+{
+  "name": "@chowka/game-core",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./paths": "./src/paths.ts",
+    "./dice": "./src/dice.ts",
+    "./rules": "./src/rules.ts",
+    "./turnEngine": "./src/turnEngine.ts",
+    "./session": "./src/session.ts"
+  }
+}

@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5x5 Board Game Prototype</title>
+<style>
+:root {
+  --p1-color: #e74c3c;
+  --p2-color: #2980b9;
+  --p3-color: #27ae60;
+  --p4-color: #f39c12;
+  --bg-color: #f8f9fa;
+}
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg-color);
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+h1 { margin-bottom: 10px; color: #2c3e50; }
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  max-width: 1100px;
+  width: 100%;
+  justify-content: center;
+}
+/* Board Setup */
+.board-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.board {
+  display: grid;
+  grid-template-columns: repeat(5, 80px);
+  grid-template-rows: repeat(5, 80px);
+  gap: 4px;
+  background-color: #34495e;
+  border: 4px solid #2c3e50;
+  border-radius: 8px;
+  padding: 4px;
+}
+.cell {
+  background-color: #fff;
+  border-radius: 4px;
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  justify-content: center;
+  padding: 2px;
+  box-sizing: border-box;
+  font-size: 10px;
+}
+.cell.marked {
+  background-color: #ecf0f1;
+}
+.cell.marked::before {
+  content: "X";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 40px;
+  color: rgba(0, 0, 0, 0.1);
+  font-weight: bold;
+  pointer-events: none;
+}
+.cell-label {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 9px;
+  color: #7f8c8d;
+  font-weight: bold;
+  pointer-events: none;
+}
+/* Piece Tokens */
+.piece {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 11px;
+  margin: 2px;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.piece:hover { transform: scale(1.2); z-index: 10; }
+.piece.selected { border-color: #f1c40f; transform: scale(1.25); box-shadow: 0 0 8px #f1c40f; }
+.piece.P1 { background-color: var(--p1-color); }
+.piece.P2 { background-color: var(--p2-color); }
+.piece.P3 { background-color: var(--p3-color); }
+.piece.P4 { background-color: var(--p4-color); }
+
+/* Control Panel */
+.controls {
+  flex: 1;
+  min-width: 320px;
+  max-width: 450px;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.announcer {
+  background-color: #e8f4f8;
+  border-left: 5px solid #2980b9;
+  padding: 12px;
+  font-weight: bold;
+  color: #2c3e50;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+}
+.dice-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 6px;
+}
+.dice-container { display: flex; gap: 8px; justify-content: center; }
+.die {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: white;
+  font-size: 12px;
+}
+.die.black { background: #2c3e50; }
+.die.white { background: #bdc3c7; color: #2c3e50; border: 1px solid #95a5a6; }
+.pool-container {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.val-btn {
+  padding: 6px 12px;
+  border: 2px solid #2980b9;
+  background: white;
+  color: #2980b9;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.val-btn.selected { background: #2980b9; color: white; }
+button.action-btn {
+  padding: 10px 16px;
+  background: #27ae60;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+button.action-btn:disabled { background: #bdc3c7; cursor: not-allowed; }
+.btn-abort { background: #c0392b; }
+
+/* Modals & Overlays */
+.overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal {
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  max-width: 450px;
+  width: 90%;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.hidden { display: none !important; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th, td { border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 13px; }
+th { background: #f2f2f2; }
+.player-link { color: #2980b9; text-decoration: underline; cursor: pointer; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>5x5 Board Game Simulator</h1>
+<div class="container">
+  <div class="board-container">
+    <div class="board" id="board"></div>
+  </div>
+  <div class="controls">
+    <div class="announcer" id="announcer">Setup the game to start playing.</div>
+    <div class="dice-section">
+      <div class="dice-container" id="diceDisplay">
+        <div class="die black">?</div>
+        <div class="die black">?</div>
+        <div class="die black">?</div>
+        <div class="die black">?</div>
+      </div>
+      <button class="action-btn" id="rollBtn" onclick="handleRollClick()" disabled>Roll Dice</button>
+    </div>
+    <div>
+      <strong>Move Pool Available:</strong>
+      <div class="pool-container" id="poolContainer" style="margin-top:5px;">None</div>
+    </div>
+    <div>
+      <strong>Active Players:</strong>
+      <div id="playerList" style="margin-top: 5px;"></div>
+    </div>
+    <button class="action-btn btn-abort" onclick="initiateAbort()">Abort Game</button>
+  </div>
+</div>
+
+<!-- Setup Modal -->
+<div class="overlay" id="setupModal">
+  <div class="modal">
+    <h2>Game Setup</h2>
+    <label for="playerCount">Number of Players:</label>
+    <select id="playerCount" onchange="updateSetupInputs()" style="padding: 5px; margin-bottom: 15px;">
+      <option value="2">2 Players (Opposite Bases)</option>
+      <option value="3">3 Players</option>
+      <option value="4" selected>4 Players</option>
+    </select>
+    <div id="playerInputs"></div>
+    <button class="action-btn" style="width: 100%; margin-top: 15px;" onclick="startGame()">Start Game</button>
+  </div>
+</div>
+
+<!-- Profile Stats Modal -->
+<div class="overlay hidden" id="statsModal">
+  <div class="modal">
+    <h3 id="statsTitle">Player Statistics</h3>
+    <table>
+      <tr><th>Metric</th><th>Value</th></tr>
+      <tr><td>Total Games Played</td><td id="statGames">0</td></tr>
+      <tr><td>1st Place Win %</td><td id="stat1st">0%</td></tr>
+      <tr><td>2nd Place Win %</td><td id="stat2nd">0%</td></tr>
+      <tr><td>3rd Place Win %</td><td id="stat3rd">0%</td></tr>
+      <tr><td>Loss %</td><td id="statLoss">0%</td></tr>
+    </table>
+    <button class="action-btn" style="width: 100%; margin-top: 15px;" onclick="closeStats()">Close</button>
+  </div>
+</div>
+
+<!-- Session Results / Rematch Modal -->
+<div class="overlay hidden" id="resultsModal">
+  <div class="modal">
+    <h2>Game Finished!</h2>
+    <div id="gameResultsList"></div>
+    <h3>Session Overall Summary</h3>
+    <div id="sessionTableContainer"></div>
+    <button class="action-btn" style="width: 100%; margin-top: 15px;" onclick="promptRematch()">Play Again (Same Session)</button>
+  </div>
+</div>
+
+<script>
+// --- Base Coordinate & Path Translations ---
+const P1_PATH = [
+  [4,2],[4,3], [4,4], [3,4], [2,4], [1,4], [0,4], [0,3], [0,2], [0,1], [0,0], [1,0], [2,0], [3,0], [4,0], [4,1],
+  [3,1], [2,1], [1,1], [1,2], [1,3], [2,3], [3,3], [3,2], [2,2]
+];
+
+function rotateCoord([r, c], times) {
+  let cur = [r, c];
+  for (let i = 0; i < times; i++) {
+    cur = [4 - cur[1], cur[0]];
+  }
+  return cur;
+}
+
+// Map rotational paths for P1(0), P2(1), P3(2), P4(3)
+const PATHS = {
+  P1: P1_PATH,
+  P2: P1_PATH.map(pt => rotateCoord(pt, 1)),
+  P3: P1_PATH.map(pt => rotateCoord(pt, 2)),
+  P4: P1_PATH.map(pt => rotateCoord(pt, 3))
+};
+
+const BASE_POSITIONS = { P1: [4,2], P2: [2,4], P3: [0,2], P4: [2,0] };
+const COLORS = { P1: '#e74c3c', P2: '#2980b9', P3: '#27ae60', P4: '#f39c12' };
+
+// --- Game Engine State ---
+let players = [];
+let currentTurnIndex = 0;
+let dicePool = [];
+let selectedValue = null;
+let selectedPiece = null;
+let captureBonusAwarded = false;
+let rankings = [];
+let isRollPhase = true;
+
+// Persistent Session Stats
+let sessionStats = {}; // { playerName: { games: 0, p1: 0, p2: 0, p3: 0, loss: 0 }}
+
+// --- Initialization & UI Rendering ---
+function initBoard() {
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML = '';
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 5; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.id = `cell-${r}-${c}`;
+      // Mark home bases and center
+      if ((r === 2 && c === 2) || (r === 4 && c === 2) || (r === 2 && c === 4) || (r === 0 && c === 2) || (r === 2 && c === 0)) {
+        cell.classList.add('marked');
+      }
+      let label = "";
+      if (r === 4 && c === 2) label = "P1";
+      if (r === 2 && c === 4) label = "P2";
+      if (r === 0 && c === 2) label = "P3";
+      if (r === 2 && c === 0) label = "P4";
+      if (r === 2 && c === 2) label = "CTR";
+      if (label) {
+        const lbl = document.createElement('span');
+        lbl.className = 'cell-label';
+        lbl.innerText = label;
+        cell.appendChild(lbl);
+      }
+      boardEl.appendChild(cell);
+    }
+  }
+}
+
+function updateSetupInputs() {
+  const count = parseInt(document.getElementById('playerCount').value);
+  const container = document.getElementById('playerInputs');
+  container.innerHTML = '';
+  const posLabels = count === 2 ? ['P1 (Bottom)', 'P3 (Top)'] : ['P1 (Bottom)', 'P2 (Right)', 'P3 (Top)', 'P4 (Left)'];
+  for (let i = 0; i < count; i++) {
+    const div = document.createElement('div');
+    div.style.marginBottom = '8px';
+    div.innerHTML = `
+      <label>${posLabels[i]} Name: </label>
+      <input type="text" id="pName_${i}" value="Player ${i+1}" style="padding: 4px; width: 160px;">
+    `;
+    container.appendChild(div);
+  }
+}
+
+function startGame() {
+  const count = parseInt(document.getElementById('playerCount').value);
+  const posKeys = count === 2 ? ['P1', 'P3'] : ['P1', 'P2', 'P3', 'P4'].slice(0, count);
+  players = [];
+  rankings = [];
+  currentTurnIndex = 0;
+  dicePool = [];
+  isRollPhase = true;
+
+  for (let i = 0; i < count; i++) {
+    const name = document.getElementById(`pName_${i}`).value.trim() || `Player ${i+1}`;
+    const key = posKeys[i];
+    if (!sessionStats[name]) {
+      sessionStats[name] = { games: 0, p1: 0, p2: 0, p3: 0, loss: 0 };
+    }
+    players.push({
+      id: key,
+      name: name,
+      pieces: [{id: 1, pos: 0}, {id: 2, pos: 0}, {id: 3, pos: 0}, {id: 4, pos: 0}],
+      isFinished: false
+    });
+  }
+
+  document.getElementById('setupModal').classList.add('hidden');
+  renderPlayerList();
+  renderBoardPieces();
+  startTurn();
+}
+
+function startTurn() {
+  selectedValue = null;
+  selectedPiece = null;
+  captureBonusAwarded = false;
+
+  if (players[currentTurnIndex].isFinished) {
+    nextTurn();
+    return;
+  }
+
+  isRollPhase = true;
+  dicePool = [];
+  updatePoolUI();
+  document.getElementById('rollBtn').disabled = false;
+  announce(`${players[currentTurnIndex].name} (${players[currentTurnIndex].id}), roll the dice!`);
+}
+
+function announce(msg) {
+  document.getElementById('announcer').innerText = msg;
+}
+
+// --- Dice Rolling Logic ---
+function handleRollClick() {
+  if (!isRollPhase) return;
+  // Roll 4 binary dice (0 = Black, 1 = White)
+  let roll = [];
+  let whites = 0;
+  for (let i = 0; i < 4; i++) {
+    let val = Math.floor(Math.random() * 2);
+    roll.push(val);
+    if (val === 1) whites++;
+  }
+  renderDice(roll);
+
+  let val = 0;
+  let isBonus = false;
+  let name = "";
+
+  if (whites === 0) { val = 8; isBonus = true; name = "Bhara (8)"; }
+  else if (whites === 4) { val = 4; isBonus = true; name = "Chauka (4)"; }
+  else { val = whites; name = val.toString(); }
+
+  dicePool.push(val);
+  updatePoolUI();
+
+  if (isBonus) {
+    announce(`${players[currentTurnIndex].name} rolled ${name}! Bonus roll granted. Roll again!`);
+  } else {
+    announce(`${players[currentTurnIndex].name} rolled ${name}. Select a value and piece to move.`);
+    isRollPhase = false;
+    document.getElementById('rollBtn').disabled = true;
+    checkLegalMovesOrPass();
+  }
+}
+
+function renderDice(roll) {
+  const container = document.getElementById('diceDisplay');
+  container.innerHTML = '';
+  roll.forEach(d => {
+    const die = document.createElement('div');
+    die.className = `die ${d === 0 ? 'black' : 'white'}`;
+    die.innerText = d === 0 ? 'B' : 'W';
+    container.appendChild(die);
+  });
+}
+
+function updatePoolUI() {
+  const poolEl = document.getElementById('poolContainer');
+  poolEl.innerHTML = '';
+  if (dicePool.length === 0) {
+    poolEl.innerText = 'None';
+    return;
+  }
+  dicePool.forEach((val, idx) => {
+    const btn = document.createElement('button');
+    btn.className = `val-btn ${selectedValue === idx ? 'selected' : ''}`;
+    btn.innerText = val;
+    btn.onclick = () => {
+      if (isRollPhase) return;
+      selectedValue = idx;
+      updatePoolUI();
+      highlightPieceOptions();
+    };
+    poolEl.appendChild(btn);
+  });
+}
+
+// --- Movement & Rule Engine ---
+function renderBoardPieces() {
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 5; c++) {
+      const cell = document.getElementById(`cell-${r}-${c}`);
+      const pieces = cell.querySelectorAll('.piece');
+      pieces.forEach(p => p.remove());
+    }
+  }
+
+  players.forEach(p => {
+    p.pieces.forEach(piece => {
+      const path = PATHS[p.id];
+      const coord = path[piece.pos];
+      const cell = document.getElementById(`cell-${coord[0]}-${coord[1]}`);
+      const pEl = document.createElement('div');
+      pEl.className = `piece ${p.id} ${selectedPiece === piece ? 'selected' : ''}`;
+      pEl.innerText = piece.id;
+      pEl.onclick = (e) => {
+        e.stopPropagation();
+        handlePieceClick(p, piece);
+      };
+      cell.appendChild(pEl);
+    });
+  });
+}
+
+function handlePieceClick(player, piece) {
+  if (player.id !== players[currentTurnIndex].id) return;
+  if (isRollPhase || selectedValue === null) {
+    announce("Please select a dice roll value from the pool first!");
+    return;
+  }
+
+  const moveVal = dicePool[selectedValue];
+  if (canMovePiece(player, piece, moveVal)) {
+    executeMove(player, piece, moveVal);
+  } else {
+    announce(`Cannot move Piece ${piece.id} by ${moveVal} (Invalid move or overshoots center).`);
+  }
+}
+
+function canMovePiece(player, piece, val) {
+  const newPos = piece.pos + val;
+  if (newPos > 24) return false; // Overshoot center
+
+  // Check Outer Ring Stacking (Positions 1 to 15)
+  if (newPos >= 1 && newPos <= 15) {
+    const targetCoord = PATHS[player.id][newPos];
+    let friendlyOnSpace = player.pieces.some(p => p !== piece && isSameSpace(PATHS[player.id][p.pos], targetCoord));
+    if (friendlyOnSpace) return false;
+  }
+  return true;
+}
+
+function isSameSpace(c1, c2) {
+  return c1[0] === c2[0] && c1[1] === c2[1];
+}
+
+function executeMove(player, piece, val) {
+  piece.pos += val;
+  const targetCoord = PATHS[player.id][piece.pos];
+
+  dicePool.splice(selectedValue, 1);
+  selectedValue = null;
+
+  // Check Captures (Safe spaces: Base 0 and Center 24)
+  if (piece.pos > 0 && piece.pos < 24) {
+    let capturedAny = false;
+    players.forEach(opp => {
+      if (opp.id !== player.id) {
+        opp.pieces.forEach(oppPiece => {
+          if (oppPiece.pos > 0 && oppPiece.pos < 24) {
+            if (isSameSpace(PATHS[opp.id][oppPiece.pos], targetCoord)) {
+              oppPiece.pos = 0;
+              capturedAny = true;
+            }
+          }
+        });
+      }
+    });
+
+    if (capturedAny) {
+      captureBonusAwarded = true;
+      announce(`CAPTURE! ${player.name} captured opponent piece(s) and earned an extra turn!`);
+    }
+  }
+
+  // Check Player Completion
+  if (player.pieces.every(p => p.pos === 24)) {
+    player.isFinished = true;
+    rankings.push(player);
+    announce(`${player.name} finished all pieces and secured Place #${rankings.length}!`);
+  }
+
+  renderBoardPieces();
+  updatePoolUI();
+
+  if (dicePool.length > 0) {
+    checkLegalMovesOrPass();
+  } else {
+    if (captureBonusAwarded) {
+      announce(`${player.name} gets a bonus turn for capturing!`);
+      startTurn();
+    } else {
+      nextTurn();
+    }
+  }
+}
+
+function checkLegalMovesOrPass() {
+  const curPlayer = players[currentTurnIndex];
+  let hasLegalMove = false;
+  for (let vidx = 0; vidx < dicePool.length; vidx++) {
+    for (let p of curPlayer.pieces) {
+      if (canMovePiece(curPlayer, p, dicePool[vidx])) {
+        hasLegalMove = true;
+        break;
+      }
+    }
+    if (hasLegalMove) break;
+  }
+
+  if (!hasLegalMove) {
+    announce(`No legal moves available for ${curPlayer.name}. Roll pool discarded.`);
+    dicePool = [];
+    updatePoolUI();
+    setTimeout(nextTurn, 1500);
+  }
+}
+
+function nextTurn() {
+  const activePlayers = players.filter(p => !p.isFinished);
+  if (activePlayers.length <= 1) {
+    if (activePlayers.length === 1) {
+      rankings.push(activePlayers[0]);
+    }
+    endGame();
+    return;
+  }
+
+  do {
+    currentTurnIndex = (currentTurnIndex + 1) % players.length;
+  } while (players[currentTurnIndex].isFinished);
+
+  startTurn();
+}
+
+function highlightPieceOptions() {
+  if (selectedValue === null) return;
+  const curPlayer = players[currentTurnIndex];
+  const val = dicePool[selectedValue];
+  announce(`${curPlayer.name}, select a piece that can move ${val} steps.`);
+}
+
+// --- End Game & Session Statistics ---
+function endGame() {
+  players.forEach(p => {
+    sessionStats[p.name].games++;
+    const rank = rankings.indexOf(p);
+    if (rank === 0) sessionStats[p.name].p1++;
+    else if (rank === 1) sessionStats[p.name].p2++;
+    else if (rank === 2) sessionStats[p.name].p3++;
+    else sessionStats[p.name].loss++;
+  });
+
+  const resList = document.getElementById('gameResultsList');
+  resList.innerHTML = '<ol>';
+  rankings.forEach((r, idx) => {
+    resList.innerHTML += `<li><strong>${r.name}</strong> (${r.id}) - ${idx === 3 || (idx === rankings.length - 1 && rankings.length > 2) ? 'Loss' : 'Place ' + (idx + 1)}</li>`;
+  });
+  resList.innerHTML += '</ol>';
+
+  renderSessionTable();
+  document.getElementById('resultsModal').classList.remove('hidden');
+}
+
+function renderSessionTable() {
+  let html = '<table><tr><th>Player</th><th>Games</th><th>1st %</th><th>2nd %</th><th>3rd %</th><th>Loss %</th></tr>';
+  for (let name in sessionStats) {
+    const s = sessionStats[name];
+    const g = s.games || 1;
+    html += `
+      <tr>
+        <td><span class="player-link" onclick="showStats('${name}')">${name}</span></td>
+        <td>${s.games}</td>
+        <td>${((s.p1/g)*100).toFixed(0)}%</td>
+        <td>${((s.p2/g)*100).toFixed(0)}%</td>
+        <td>${((s.p3/g)*100).toFixed(0)}%</td>
+        <td>${((s.loss/g)*100).toFixed(0)}%</td>
+      </tr>`;
+  }
+  html += '</table>';
+  document.getElementById('sessionTableContainer').innerHTML = html;
+}
+
+function showStats(name) {
+  const s = sessionStats[name] || { games: 0, p1: 0, p2: 0, p3: 0, loss: 0 };
+  const g = s.games || 1;
+  document.getElementById('statsTitle').innerText = `${name}'s Lifetime Stats`;
+  document.getElementById('statGames').innerText = s.games;
+  document.getElementById('stat1st').innerText = `${((s.p1/g)*100).toFixed(1)}%`;
+  document.getElementById('stat2nd').innerText = `${((s.p2/g)*100).toFixed(1)}%`;
+  document.getElementById('stat3rd').innerText = `${((s.p3/g)*100).toFixed(1)}%`;
+  document.getElementById('statLoss').innerText = `${((s.loss/g)*100).toFixed(1)}%`;
+  document.getElementById('statsModal').classList.remove('hidden');
+}
+
+function closeStats() {
+  document.getElementById('statsModal').classList.add('hidden');
+}
+
+function promptRematch() {
+  document.getElementById('resultsModal').classList.add('hidden');
+  rankings = [];
+  currentTurnIndex = 0;
+  players.forEach(p => {
+    p.isFinished = false;
+    p.pieces.forEach(pc => pc.pos = 0);
+  });
+  renderBoardPieces();
+  startTurn();
+}
+
+function renderPlayerList() {
+  const listEl = document.getElementById('playerList');
+  listEl.innerHTML = '';
+  players.forEach(p => {
+    const div = document.createElement('div');
+    div.style.color = COLORS[p.id];
+    div.style.fontWeight = 'bold';
+    div.innerHTML = `<span class="player-link" style="color:${COLORS[p.id]}" onclick="showStats('${p.name}')">${p.name}</span> (${p.id})`;
+    listEl.appendChild(div);
+  });
+}
+
+// --- Abort Logic ---
+function initiateAbort() {
+  if (confirm("Request game abort? All players must agree.")) {
+    let declineCount = 0;
+    players.forEach(p => {
+      if (!confirm(`${p.name}, do you agree to abort the game? (OK = Agree, Cancel = Decline)`)) {
+        declineCount++;
+      }
+    });
+
+    if (declineCount === 0) {
+      announce("Game aborted by unanimous vote.");
+      document.getElementById('setupModal').classList.remove('hidden');
+    } else if (declineCount >= 2) {
+      if (confirm(`${declineCount} player(s) declined aborting. Should continuing players remove forfeiting players and proceed?`)) {
+        announce("Continuing game with active remaining players.");
+      }
+    } else {
+      announce("Abort request cancelled. Game resumes.");
+    }
+  }
+}
+
+// Window Load Init
+window.onload = () => {
+  initBoard();
+  updateSetupInputs();
+};
+</script>
+</body>
+</html>

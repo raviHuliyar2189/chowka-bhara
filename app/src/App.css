@@ -1,0 +1,1191 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.mode-select-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.online-error {
+  color: #96402f;
+  font-weight: bold;
+  margin: 8px 0 0;
+}
+
+h1 {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-family: Georgia, 'Times New Roman', serif;
+  letter-spacing: 1px;
+}
+
+/* The underline lives on this span (not the whole h1) so it doesn't visually bleed into
+   .app-version below — a parent's text-decoration otherwise draws through inline descendants
+   even when they set text-decoration: none themselves. */
+.app-title-main {
+  text-decoration: underline;
+}
+
+.app-version {
+  display: block;
+  text-align: center;
+  font-size: 13px;
+  font-weight: normal;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+/* Full-screen dedication splash shown for the first 10s before setup — fixed wood/parchment
+   colors like the board/frame, not theme-reactive, so it reads the same regardless of light/
+   dark mode. */
+.welcome-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 30px;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  text-align: center;
+  background: linear-gradient(165deg, var(--wood-mid), var(--wood-dark) 70%);
+  border-radius: 8px;
+  border: 1px solid var(--wood-dark);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  margin-top: 30px;
+}
+
+.welcome-title {
+  margin: 0;
+  color: var(--gold);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 34px;
+  letter-spacing: 1px;
+  text-decoration: underline;
+}
+
+.welcome-pic {
+  max-width: 100%;
+  max-height: 30vh;
+  border-radius: 6px;
+  border: 4px solid var(--parchment);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Portrait-oriented (taller than wide), so the same max-height as the group photo would still
+   leave it eating more of the panel's limited vertical budget than the top photo — capped
+   tighter so both photos plus the title/message fit within the panel without scrolling. */
+.welcome-pic-portrait {
+  max-height: 20vh;
+}
+
+.welcome-message {
+  margin: 0;
+  color: #ecd9b3;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 19px;
+  font-style: italic;
+  letter-spacing: 0.3px;
+}
+
+/* One outer wood frame housing everything below the title — the setup card, or the board +
+   controls once a game is running — same wood motif as the board/dice frames, so the whole
+   app reads as one physical object rather than a title floating over loose panels. */
+.app-frame {
+  display: flex;
+  justify-content: center;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  background: linear-gradient(160deg, var(--wood-light), var(--wood-mid) 45%, var(--wood-dark) 100%);
+  border: 6px solid var(--wood-dark);
+  border-radius: 14px;
+  /* Extra side padding: P4's home-label tag hangs up to 78px left of the board (70px max-width
+     + 8px margin, see .home-label.side-left) with nothing else there to contain it — the frame
+     needs enough room on that side or the tag pokes out past the wood border. */
+  padding: 24px 100px;
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+}
+
+/* The setup screen sits in normal page flow (not a fixed, viewport-centered overlay like the
+   other modals) specifically so it lands right under the title rather than floating centered
+   in the viewport regardless of where the title is. */
+.setup-inline {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.sound-prompt {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-top: 15px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.sound-prompt-question {
+  color: var(--text-muted);
+}
+
+/* A real toggle-switch track+knob drawn via pseudo-elements to the left of the label, so on/off
+   reads at a glance (green track + knob-right = on) instead of relying on the reader to parse
+   changing text. The .is-on/.is-off modifier (set in JSX from the same boolean driving the
+   label) controls track color and knob position. */
+.btn-sound {
+  position: relative;
+  padding: 6px 12px 6px 46px;
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--border);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s,
+    transform 0.08s;
+}
+
+.btn-sound::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  width: 26px;
+  height: 14px;
+  border-radius: 8px;
+  background: #9a8f7a;
+  transform: translateY(-50%);
+  transition: background 0.2s;
+}
+
+.btn-sound::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  transform: translateY(-50%) translateX(0);
+  transition: transform 0.2s;
+}
+
+.btn-sound.is-on::before {
+  background: #4d8f52;
+}
+
+.btn-sound.is-on::after {
+  transform: translateY(-50%) translateX(12px);
+}
+
+.btn-sound:hover {
+  box-shadow: 0 0 0 3px rgba(201, 150, 44, 0.25);
+}
+
+.btn-sound:active {
+  transform: scale(0.97);
+}
+
+/* In-game toggle sits at the top of the controls column, tucked to the right so it doesn't
+   compete with the announcer bar for attention. */
+/* Abort Game and the in-game sound toggle, stacked below the dice-playing component. */
+/* Abort Game and the in-game sound toggle share one row — Abort to the left, Sound to the
+   right — below the dice-playing component. */
+.post-dice-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  /* centered rather than space-between: with "Roll Back Last Move" in the mix this row usually
+     wraps to two lines at the panel's fixed 420px inner width, and centering keeps a lone
+     leftover button on the second line looking intentional instead of stranded on the left. */
+  justify-content: center;
+  gap: 8px 6px;
+  width: 100%;
+}
+
+/* Buttons sharing this row (Abort, Report Bug, Roll Back, Sound) — trim padding/font size
+   versus their other uses elsewhere to keep as many as possible on one line. */
+.post-dice-actions .action-btn {
+  padding: 8px 11px;
+  font-size: 13px;
+}
+
+.post-dice-actions .btn-sound {
+  /* Keep the left padding wide enough for the toggle-switch track drawn via ::before/::after —
+     only trim the rest to fit this row's tighter space budget. */
+  padding: 6px 9px 6px 42px;
+  font-size: 12px;
+}
+
+.in-game-sound {
+  align-self: center;
+}
+
+/* Debug-only: copies this game's full move-by-move log to the clipboard, so a reported bug can
+   be reproduced exactly instead of guessed at. Deliberately understated (small, muted) since
+   it's a diagnostic tool, not a gameplay control. */
+.btn-debug-log {
+  padding: 5px 8px;
+  background: var(--surface);
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Fixed-width label column so every player-name input starts at the same left edge, regardless
+   of how long each seat's label text ("P1 (Bottom) Name:" vs "P3 (Top) Name:") happens to be. */
+.setup-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.setup-label {
+  flex: 0 0 170px;
+}
+
+.setup-row input,
+.setup-row select {
+  flex: 0 0 230px;
+  width: 230px;
+}
+
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  /* Extra-wide gap: the P2/P4 home-label tags hang outside the board's right/left edges (up to
+     70px label + 8px margin = 78px, capped by side-left/side-right's max-width), and need
+     clearance from the play-area panel next to them. */
+  gap: 92px;
+  max-width: 1100px;
+  width: 100%;
+  justify-content: center;
+  /* Stretch (the flex default): board-container and play-area end up the same height, so the
+     two columns align at both top and bottom. */
+  align-items: stretch;
+}
+
+/* Board: a heavy wood frame around parchment cells */
+.board-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* play-area's own content (turn text, button, round throw area, move list, abort/sound) can
+     be taller or shorter than the board — .container's stretch still matches their outer
+     heights, so center the board in that space rather than leaving it pinned to the top. */
+  justify-content: center;
+}
+
+.board {
+  position: relative;
+  display: grid;
+  /* Fluid cell size: shrinks below 80px on narrow viewports (min() with a vw term) so the whole
+     board scales down smoothly on phones instead of forcing horizontal scroll, while staying at
+     a fixed 80px on anything wide enough to afford it (desktop). */
+  grid-template-columns: repeat(5, min(80px, 12vw));
+  grid-template-rows: repeat(5, min(80px, 12vw));
+  gap: 4px;
+  background: linear-gradient(160deg, var(--wood-light), var(--wood-mid) 45%, var(--wood-dark) 100%);
+  border: 6px solid var(--wood-dark);
+  border-radius: 10px;
+  padding: 8px;
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+}
+
+/* Player name tags, hung just outside the board edge next to each home square — also a link
+   through to that player's statistics. */
+.home-label {
+  position: absolute;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 3px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  z-index: 6;
+  border: none;
+  font-family: inherit;
+  line-height: 1.3;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.6);
+}
+
+.home-label:hover {
+  filter: brightness(1.15);
+}
+
+.home-label.lost {
+  opacity: 0.45;
+}
+
+.home-label.side-top {
+  top: -6px;
+  left: 50%;
+  transform: translate(-50%, -100%);
+}
+
+.home-label.side-bottom {
+  bottom: -6px;
+  left: 50%;
+  transform: translate(-50%, 100%);
+}
+
+/* Left/right tags sit fully outside the board (not overlapping the home cell's own pieces),
+   anchored via left/right:100%+margin (a fixed offset) rather than translateX(100%) (which
+   scales with the label's own text width and made protrusion unpredictable for longer names).
+   max-width caps how far a long name can possibly reach, so the required .container gap is a
+   known, bounded worst case rather than "however wide the name happens to render." */
+.home-label.side-left {
+  right: 100%;
+  margin-right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-label.side-right {
+  left: 100%;
+  margin-left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cell {
+  background: var(--parchment);
+  border: 1px solid rgba(74, 47, 28, 0.25);
+  border-radius: 4px;
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  justify-content: center;
+  padding: 2px;
+  box-sizing: border-box;
+  gap: 2px;
+  box-shadow: inset 0 0 6px rgba(74, 47, 28, 0.15);
+}
+
+.cell.marked {
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.cell.marked::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, var(--tint, var(--gold)) 0%, transparent 72%);
+  opacity: 0.35;
+  pointer-events: none;
+  border-radius: 4px;
+}
+
+/* The traditional diagonal cross marking a safe square, etched into the parchment. */
+.cell.marked::after {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  background:
+    linear-gradient(45deg, transparent calc(50% - 1.5px), var(--wood-dark) calc(50% - 1.5px), var(--wood-dark) calc(50% + 1.5px), transparent calc(50% + 1.5px)),
+    linear-gradient(-45deg, transparent calc(50% - 1.5px), var(--wood-dark) calc(50% - 1.5px), var(--wood-dark) calc(50% + 1.5px), transparent calc(50% + 1.5px));
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Pieces: glossy beads rather than flat circles */
+.piece {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 11px;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    inset -2px -2px 3px rgba(0, 0, 0, 0.35),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.5),
+    0 2px 3px rgba(0, 0, 0, 0.35);
+  cursor: default;
+  z-index: 1;
+}
+
+/* All of the active player's pieces glow for the whole turn, so it's obvious at a glance
+   which pieces are theirs — separate from .legal, which marks the specific piece(s) that can
+   use the currently selected dice value. The size/scale pulse is driven by framer-motion (see
+   Board.tsx) rather than a CSS transform, since a CSS transform here would fight the piece's
+   own layout-animation transform. The ring uses solid gold/amber rather than white — white
+   reads too close to the parchment board color to stand out; gold has real contrast against it.
+   `filter` brightens the piece's own fill too, so the highlight isn't just an outer ring. */
+.piece.active-turn {
+  animation: activeGlow 1.1s ease-in-out infinite;
+  z-index: 3;
+}
+
+@keyframes activeGlow {
+  0%,
+  100% {
+    filter: brightness(1.15) saturate(1.15);
+    box-shadow:
+      0 0 0 4px var(--gold),
+      0 0 10px 4px rgba(201, 150, 44, 0.7),
+      inset -2px -2px 3px rgba(0, 0, 0, 0.35),
+      inset 1px 1px 2px rgba(255, 255, 255, 0.5),
+      0 2px 3px rgba(0, 0, 0, 0.35);
+  }
+  50% {
+    filter: brightness(1.4) saturate(1.3);
+    box-shadow:
+      0 0 0 7px var(--gold),
+      0 0 18px 7px rgba(201, 150, 44, 0.9),
+      inset -2px -2px 3px rgba(0, 0, 0, 0.35),
+      inset 1px 1px 2px rgba(255, 255, 255, 0.5),
+      0 2px 3px rgba(0, 0, 0, 0.35);
+  }
+}
+
+.piece.legal {
+  cursor: pointer;
+  outline: 3px solid var(--gold);
+  outline-offset: 1px;
+  z-index: 2;
+}
+
+.piece.illegal {
+  opacity: 0.35;
+}
+
+/* Play area: chocolate-brown panel housing the turn text, roll button, round throw area, move
+   list, and the abort/sound controls — everything sits directly on this background rather than
+   in its own separate nested card, so text color is fixed light (not the theme-reactive --text)
+   for contrast, matching how the board/dice frames are also fixed regardless of light/dark mode.
+   Fixed width AND height (flex: 0 0, not 1) rather than sizing to content — the announcer text
+   and the move list both vary in how much room they need (a longer message wraps to more
+   lines, more pending dice values wrap to more rows), and letting the panel size to that meant
+   it visibly resized — even changed width — every time the message or pool changed. overflow-y
+   is a safety net for the rare case content doesn't fit this fixed size, so it scrolls instead
+   of breaking the fixed size or clipping. */
+.play-area {
+  flex: 0 0 460px;
+  width: 460px;
+  height: 560px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  background: linear-gradient(165deg, var(--wood-mid), var(--wood-dark) 70%);
+  color: #ecd9b3;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid var(--wood-dark);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.announcer {
+  width: 100%;
+  box-sizing: border-box;
+  background-color: var(--surface-muted);
+  border-left: 5px solid var(--gold);
+  padding: 12px;
+  font-weight: bold;
+  color: var(--text);
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+}
+
+/* A transient nudge (e.g. "select a value first") briefly replaces the normal message —
+   flash the border so it reads as a correction, not just routine status text. */
+.announcer-hint {
+  animation: hintFlash 0.6s ease-out 2;
+}
+
+@keyframes hintFlash {
+  0%,
+  100% {
+    border-left-color: var(--gold);
+  }
+  50% {
+    border-left-color: #c0392b;
+  }
+}
+
+/* Just a layout container now — the play-area itself supplies the background, and each piece
+   (round throw area, move list) carries its own styling, rather than everything sitting inside
+   one more nested card. */
+.dice-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+/* The round throw area: a fixed-size felt/parchment disc, not a flex-filled rectangle — a
+   physical dice bowl doesn't resize to fit its container, and a fixed size sidesteps the
+   collapse bug a flex-grow + all-absolutely-positioned-children region is prone to (see git
+   history) when its parent doesn't have a definite height to hand it. The idle figure and the
+   latest throw overlay the exact same absolutely-positioned box inside it. */
+.dice-stage {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(circle at 35% 30%, var(--parchment), #dcc79a 85%);
+  border: 5px solid var(--wood-dark);
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.35),
+    inset 0 0 14px rgba(74, 47, 28, 0.3);
+}
+
+/* Waiting-to-roll state: the hand-with-dice figure, centered in the circle. */
+.dice-idle {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dice-idle-figure {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  animation: idleShake 1.1s ease-in-out infinite;
+  transform-origin: 50% 90%;
+}
+
+/* A restless shake, like dice being rattled between two cupped hands before the throw. */
+@keyframes idleShake {
+  0%,
+  100% {
+    transform: rotate(-5deg) translateY(0);
+  }
+  25% {
+    transform: rotate(4deg) translateY(-3px);
+  }
+  50% {
+    transform: rotate(-4deg) translateY(0);
+  }
+  75% {
+    transform: rotate(5deg) translateY(-3px);
+  }
+}
+
+/* Each die is a real cropped photo of a kavade (see DiceTray.tsx), flipping between its two
+   real faces on its own staggered beat, as if being tumbled in the hand right before the throw.
+   Both face images sit stacked in the same box; the animation just crosses-fades which one is
+   opaque, at a hard cut (steps) rather than a dissolve, matching a real flip. */
+.idle-die {
+  position: absolute;
+  width: 32px;
+  height: 38px;
+  border-radius: 60% 60% 55% 55% / 70% 70% 45% 45%;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 3px rgba(0, 0, 0, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.idle-die-face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation-timing-function: steps(1, end);
+  animation-iteration-count: infinite;
+}
+
+.idle-die-face-black {
+  animation-name: idleFaceBlack;
+}
+
+.idle-die-face-white {
+  animation-name: idleFaceWhite;
+}
+
+@keyframes idleFaceBlack {
+  0%,
+  49.9% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes idleFaceWhite {
+  0%,
+  49.9% {
+    opacity: 0;
+  }
+  50%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.roll-history {
+  position: absolute;
+  inset: 0;
+}
+
+/* The latest throw's 4 shells scatter within this — same box as .dice-idle, just the "shown
+   after rolling" layer instead of the "waiting to roll" one. The circle itself (.dice-stage)
+   is what looks like a tray/dish now; this is purely a positioning layer. */
+.dice-tray {
+  position: absolute;
+  inset: 0;
+}
+
+/* The current roll's value, as a caption below the circle rather than tucked in its corner —
+   a corner label doesn't read well against a round shape. */
+.roll-label-row {
+  min-height: 18px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #ecd9b3;
+  text-align: center;
+}
+
+/* Dice: the traditional Chowka Bhara kavade (cowrie shells) — real cropped photos (see
+   DiceTray.tsx), clipped to an oval via border-radius + overflow. Scattered within their tray
+   via inline left/top/--rot set per die in DiceTray.tsx. */
+.die {
+  position: absolute;
+  width: 24px;
+  height: 30px;
+  border-radius: 60% 60% 55% 55% / 70% 70% 45% 45%;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 3px rgba(0, 0, 0, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.35);
+  animation: dieTumble 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.die-face {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@keyframes dieTumble {
+  0% {
+    transform: rotate(calc(var(--rot, 0deg) - 130deg)) scale(0.4) translate(-8px, -34px);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  55% {
+    transform: rotate(calc(var(--rot, 0deg) + 26deg)) scale(1.16) translateY(3px);
+  }
+  78% {
+    transform: rotate(calc(var(--rot, 0deg) - 9deg)) scale(0.95) translateY(-1px);
+  }
+  100% {
+    transform: rotate(var(--rot, 0deg)) scale(1) translate(0, 0);
+    opacity: 1;
+  }
+}
+
+.pool-section {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--surface-muted);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 10px 12px;
+  transition: box-shadow 0.3s;
+}
+
+/* Whenever more than one throw is still owed this turn, draw the eye here alongside the
+   board's legal-piece highlighting — not just while picking a value, but through picking a
+   piece too, so it's clear the turn isn't over after one move. */
+.pool-section.needs-choice {
+  animation: needsChoicePulse 1.3s ease-in-out infinite;
+}
+
+@keyframes needsChoicePulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px var(--gold);
+  }
+  50% {
+    box-shadow: 0 0 0 2px var(--gold), 0 0 10px 3px rgba(201, 150, 44, 0.6);
+  }
+}
+
+.pool-container {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 5px;
+  /* Match .val-btn's rendered height (padding + border) so "None" (plain text, no padding/
+     border) reserves the same vertical space as actual value chips — otherwise this row's own
+     height differs between states and steals/frees space from .dice-stage above it, which is
+     exactly the layout jitter this is fixing. */
+  min-height: 34px;
+}
+
+.val-btn {
+  padding: 6px 12px;
+  border: 2px solid var(--p2);
+  background: var(--surface);
+  color: var(--p2);
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
+  transition:
+    transform 0.08s ease-out,
+    box-shadow 0.08s ease-out,
+    background 0.1s;
+}
+
+.val-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--p2) 15%, var(--surface));
+}
+
+.val-btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: none;
+}
+
+.val-btn.selected {
+  background: var(--p2);
+  color: white;
+}
+
+.val-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Same "more than one move still owed" cue as .pool-section.needs-choice, applied per-box so
+   each still-pending value flashes individually — the already-selected box is excluded since
+   it's no longer a pending choice. */
+.val-btn.needs-choice {
+  animation: needsChoicePulse 1.3s ease-in-out infinite;
+}
+
+/* "Keycap" style: a gradient fill plus a solid-color bottom ledge (the box-shadow's first,
+   0-blur layer) reads as physical depth, so the button looks pressable rather than a flat
+   colored rectangle. Hover lifts it slightly with a taller shadow; active pushes it down onto
+   its own ledge with a shorter one — the same visual language a real button uses when pressed. */
+button.action-btn {
+  padding: 10px 16px;
+  background: linear-gradient(180deg, #75974f 0%, #5f7d3f 55%, #4f6934 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow:
+    0 3px 0 #3d5327,
+    0 5px 8px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 0.08s ease-out,
+    box-shadow 0.08s ease-out,
+    filter 0.15s;
+}
+
+button.action-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 0 #3d5327,
+    0 7px 10px rgba(0, 0, 0, 0.4);
+}
+
+button.action-btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    0 1px 0 #3d5327,
+    0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.roll-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.btn-roll {
+  min-width: 150px;
+  width: auto;
+}
+
+button.btn-rollback {
+  background: linear-gradient(180deg, #ab5b48 0%, #96402f 55%, #7d3526 100%);
+  box-shadow:
+    0 3px 0 #5c2419,
+    0 5px 8px rgba(0, 0, 0, 0.35);
+}
+
+button.btn-rollback:hover:not(:disabled) {
+  box-shadow:
+    0 4px 0 #5c2419,
+    0 7px 10px rgba(0, 0, 0, 0.4);
+}
+
+button.btn-rollback:active:not(:disabled) {
+  box-shadow:
+    0 1px 0 #5c2419,
+    0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.btn-start {
+  display: block;
+  min-width: 160px;
+  width: auto;
+  margin: 15px auto 0;
+}
+
+button.action-btn:disabled {
+  background: #a19a8a;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+  filter: none;
+}
+
+/* `button` prefix matches (rather than loses to) button.action-btn's specificity — a plain
+   .btn-abort class here was silently losing to that rule, so every decline/cancel-style button
+   (including the real Abort Game button) rendered green instead of red. */
+button.btn-abort {
+  background: linear-gradient(180deg, #ab5b48 0%, #96402f 55%, #7d3526 100%);
+  box-shadow:
+    0 3px 0 #5c2419,
+    0 5px 8px rgba(0, 0, 0, 0.35);
+}
+
+button.btn-abort:hover:not(:disabled) {
+  box-shadow:
+    0 4px 0 #5c2419,
+    0 7px 10px rgba(0, 0, 0, 0.4);
+}
+
+button.btn-abort:active:not(:disabled) {
+  box-shadow:
+    0 1px 0 #5c2419,
+    0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.player-list {
+  margin-top: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Modals */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--surface);
+  padding: 24px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  max-width: 480px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  color: var(--text);
+}
+
+.report-bug-modal {
+  max-width: 560px;
+}
+
+.report-bug-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+  margin-top: 8px;
+}
+
+.report-bug-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+th,
+td {
+  border: 1px solid var(--border);
+  padding: 8px;
+  text-align: center;
+  font-size: 13px;
+}
+
+th {
+  background: var(--surface-muted);
+}
+
+.player-link {
+  color: var(--p2);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Capture toast, floating over the board; the animation itself handles fade in/hold/out,
+   retriggered by React remounting a fresh element (keyed on eventSeq) for each capture. */
+.capture-toast {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--gold);
+  color: #2a1c12;
+  font-weight: bold;
+  padding: 8px 16px;
+  border-radius: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+  z-index: 10;
+  opacity: 0;
+  animation: toastPop 1.6s ease-out forwards;
+}
+
+@keyframes toastPop {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px) scale(0.9);
+  }
+  15% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px) scale(0.95);
+  }
+}
+
+/* A table with more columns than a phone screen is wide (the session summary) scrolls inside
+   its own box instead of forcing the whole page to scroll sideways. */
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* ---------------------------------------------------------------------------------------------
+   Phone layout (Android + iPhone, portrait). Below this width the desktop layout's fixed pixel
+   sizes (the 460x560 play-area, the 100px frame side-padding sized for the home-labels' fixed
+   78px protrusion, the 400px-wide setup rows) no longer fit — everything here either goes fluid
+   (%/vw-based) or stacks vertically instead of sitting side by side.
+   --------------------------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .app {
+    padding: 8px;
+  }
+
+  h1 {
+    font-size: 26px;
+  }
+
+  .app-frame {
+    /* Side padding no longer needs to clear the home-labels' fixed 78px protrusion — that
+       protrusion itself shrinks on phones (see .home-label.side-left/right below). Kept tight
+       (8px) since every pixel matters at down to ~360px-wide phones once the board + its two
+       side labels are accounted for. */
+    padding: 12px 8px;
+    border-radius: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .welcome-screen {
+    padding: 20px 16px;
+    gap: 16px;
+    margin-top: 20px;
+  }
+
+  .welcome-title {
+    font-size: 24px;
+  }
+
+  .welcome-message {
+    font-size: 15px;
+  }
+
+  /* Board above play-area instead of side by side — there's no room for both at full width on
+     a phone screen. */
+  .container {
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  /* Labels sit much closer to the board on phones (small fixed offset instead of the desktop's
+     78px) — the board itself is narrower here too, so there's less spare room around it. Names
+     longer than ~4-5 characters truncate with an ellipsis at this width; tapping the label still
+     opens that player's full name via their stats modal. */
+  .home-label {
+    font-size: 9px;
+    padding: 2px 5px;
+  }
+
+  .home-label.side-left {
+    margin-right: 2px;
+    max-width: 28px;
+  }
+
+  .home-label.side-right {
+    margin-left: 2px;
+    max-width: 28px;
+  }
+
+  .piece {
+    width: 16px;
+    height: 16px;
+    font-size: 8px;
+  }
+
+  .play-area {
+    width: 100%;
+    max-width: 420px;
+    height: auto;
+    max-height: none;
+    flex: 0 0 auto;
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .announcer {
+    min-height: 36px;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .dice-section {
+    gap: 8px;
+  }
+
+  .dice-stage {
+    width: 150px;
+    height: 150px;
+  }
+
+  .dice-idle-figure {
+    width: 100px;
+  }
+
+  .btn-roll {
+    min-width: 130px;
+    padding: 8px 14px;
+  }
+
+  .pool-section {
+    padding: 8px 10px;
+  }
+
+  /* Label above input instead of beside it — the desktop's fixed 170px label + 230px input
+     (400px total) doesn't fit inside a phone-width modal. */
+  .setup-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 3px;
+  }
+
+  .setup-label {
+    flex: none;
+  }
+
+  .setup-row input,
+  .setup-row select {
+    flex: none;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .modal {
+    padding: 16px;
+  }
+
+  th,
+  td {
+    padding: 5px;
+    font-size: 12px;
+  }
+}

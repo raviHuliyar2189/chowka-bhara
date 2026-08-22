@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+*.local
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+
+# Claude Code's own local tool/session config — not application source, not meant to be shared.
+.claude/

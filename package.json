@@ -1,0 +1,10 @@
+{
+  "name": "chowka-bhara",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "app",
+    "server",
+    "packages/*"
+  ]
+}
