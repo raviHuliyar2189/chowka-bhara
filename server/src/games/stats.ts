@@ -30,3 +30,17 @@ export async function recordGameFinished(gameId: string, state: GameState): Prom
     else if (p.place === 3) await bumpStat(playerId, 'third');
   }
 }
+
+// A fully-aborted game (every active player agreed) never produces placements — every seated
+// player still counts a game played, tracked as 'aborted' rather than folded into wins/losses.
+// Mirrors app/src/game/session.ts's applyAbortToStats, just persisted per real account.
+export async function recordGameAborted(gameId: string): Promise<void> {
+  const { rows } = await pool.query('select player_id from game_seats where game_id = $1', [gameId]);
+  for (const r of rows) {
+    await pool.query(
+      `insert into player_stats (player_id, games, aborted) values ($1, 1, 1)
+       on conflict (player_id) do update set games = player_stats.games + 1, aborted = player_stats.aborted + 1`,
+      [r.player_id]
+    );
+  }
+}

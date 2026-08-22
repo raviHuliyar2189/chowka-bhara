@@ -61,5 +61,12 @@ export default function OnlineApp({ me }: Props) {
     );
   }
 
-  return <OnlinePlay gameId={view.gameId} initialState={view.state} mySeat={view.mySeat} />;
+  return (
+    <OnlinePlay
+      gameId={view.gameId}
+      initialState={view.state}
+      mySeat={view.mySeat}
+      onAborted={() => setView({ kind: 'setup' })}
+    />
+  );
 }

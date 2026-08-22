@@ -11,12 +11,12 @@ interface GameRow {
   state: GameState | null;
 }
 
-async function loadGame(gameId: string): Promise<GameRow | null> {
+export async function loadGame(gameId: string): Promise<GameRow | null> {
   const { rows } = await pool.query('select status, state from games where id = $1', [gameId]);
   return rows[0] ?? null;
 }
 
-async function seatFor(gameId: string, playerId: string): Promise<string | null> {
+export async function seatFor(gameId: string, playerId: string): Promise<string | null> {
   const { rows } = await pool.query('select seat from game_seats where game_id = $1 and player_id = $2', [
     gameId,
     playerId,
@@ -28,8 +28,9 @@ type Mutator = (state: GameState) => GameState;
 
 // Loads the current state, applies one game-core reducer call, persists the result, updates
 // stats if the game just ended, and broadcasts the new state to everyone in the room — the same
-// shape for every gameplay action below, so each just supplies its own validation + reducer call.
-async function applyAndBroadcast(io: Server, gameId: string, mutate: Mutator): Promise<void> {
+// shape for every gameplay action below (and reused by abort.ts's forfeit path), so each just
+// supplies its own validation + reducer call.
+export async function applyAndBroadcast(io: Server, gameId: string, mutate: Mutator): Promise<void> {
   const row = await loadGame(gameId);
   if (!row || !row.state || row.status !== 'in_progress') return;
 
