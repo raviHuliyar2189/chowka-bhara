@@ -27,6 +27,10 @@ export default function OnlineLobby({ gameId, me, onStart }: Props) {
     (async () => {
       try {
         let current = await fetchGame(gameId);
+        if (current.status === 'aborted') {
+          if (!cancelled) setError('This game was aborted.');
+          return;
+        }
         let mySeat = current.seats.find((s) => s.playerId === me.id);
         if (!mySeat) {
           if (current.status !== 'lobby') {
