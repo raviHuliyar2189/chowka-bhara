@@ -30,6 +30,8 @@ import ResultsModal from './components/ResultsModal';
 import WelcomeScreen from './components/WelcomeScreen';
 import ModeSelect from './online/ModeSelect';
 import OnlineApp from './online/OnlineApp';
+import AuthGate from './online/AuthGate';
+import type { PlayerInfo } from './online/api';
 import './App.css';
 
 // A game-invite or sign-in link (/games/:id, /auth/confirm) opened fresh always means "online
@@ -55,6 +57,8 @@ type SessionEntry = { players: string[]; placements: PlacementEntry[] };
 
 export default function App() {
   const [showWelcome, setShowWelcome] = useState(!isOnlineDeepLink);
+  const [player, setPlayer] = useState<PlayerInfo | null>(null);
+  const [showAuthToast, setShowAuthToast] = useState(false);
   const [mode, setMode] = useState<'unset' | 'hotseat' | 'online'>(isOnlineDeepLink ? 'online' : 'unset');
   const [inSetup, setInSetup] = useState(true);
   const [game, setGame] = useState<GameState | null>(null);
@@ -77,6 +81,17 @@ export default function App() {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hint?.key]);
+
+  useEffect(() => {
+    if (!showAuthToast) return;
+    const timer = setTimeout(() => setShowAuthToast(false), 1600);
+    return () => clearTimeout(timer);
+  }, [showAuthToast]);
+
+  function handleAuthed(p: PlayerInfo) {
+    setPlayer(p);
+    setShowAuthToast(true);
+  }
 
   // Deliberately narrow deps: each effect should announce exactly once per new roll / capture /
   // finish, keyed on the counter that changes for that event — not on every game state change,
@@ -236,6 +251,30 @@ export default function App() {
     );
   }
 
+  if (!player) {
+    return (
+      <div className="app">
+        <h1>
+          <span className="app-title-main">Chowka Bhara</span>
+          <span className="app-version">Version 0.2</span>
+        </h1>
+        <AuthGate onAuthed={handleAuthed} />
+      </div>
+    );
+  }
+
+  if (showAuthToast) {
+    return (
+      <div className="app">
+        <div className="setup-inline">
+          <div className="modal">
+            <h2>Welcome, {player.displayName}!</h2>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (mode === 'unset') {
     return (
       <div className="app">
@@ -255,7 +294,7 @@ export default function App() {
           <span className="app-title-main">Chowka Bhara</span>
           <span className="app-version">Version 0.2</span>
         </h1>
-        <OnlineApp />
+        <OnlineApp me={player} />
       </div>
     );
   }

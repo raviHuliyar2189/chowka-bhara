@@ -1,22 +1,12 @@
 import { Router } from 'express';
 import { pool } from '../db/pool';
-import { env } from '../env';
 import { readSession, requireAuth } from '../auth/middleware';
-import { sendGameInviteEmail } from '../email/sendGameInvite';
 import { getIo, lobbyRoom } from '../realtime/io';
 import { createGame } from '@chowka/game-core/turnEngine';
-import { PLAYER_COLORS, type PlayerId } from '@chowka/game-core/paths';
+import { PLAYER_COLORS, SEATS_BY_COUNT, type PlayerId } from '@chowka/game-core/paths';
 
 export const gamesRouter = Router();
 gamesRouter.use(readSession, requireAuth);
-
-// The three valid seat combinations, matching the existing hotseat rules (app's SetupModal.tsx
-// SEATS map) — 2-player games sit at opposite bases (P1/P3), not any arbitrary pair.
-const VALID_SEAT_SETS = [
-  ['P1', 'P3'],
-  ['P1', 'P2', 'P3'],
-  ['P1', 'P2', 'P3', 'P4'],
-];
 
 interface SeatRow {
   seat: string;
@@ -28,8 +18,12 @@ interface SeatRow {
 }
 
 async function loadLobby(gameId: string) {
-  const gameResult = await pool.query('select id, status, created_by from games where id = $1', [gameId]);
-  const game = gameResult.rows[0] as { id: string; status: string; created_by: string } | undefined;
+  const gameResult = await pool.query('select id, status, created_by, seat_count from games where id = $1', [
+    gameId,
+  ]);
+  const game = gameResult.rows[0] as
+    | { id: string; status: string; created_by: string; seat_count: number }
+    | undefined;
   if (!game) return null;
 
   const seatsResult = await pool.query(
@@ -45,6 +39,7 @@ async function loadLobby(gameId: string) {
     id: game.id,
     status: game.status,
     createdBy: game.created_by,
+    seatCount: game.seat_count,
     seats: seats.map((s) => ({
       seat: s.seat,
       playerId: s.player_id,
@@ -53,7 +48,7 @@ async function loadLobby(gameId: string) {
       status: s.status,
       joinedAt: s.joined_at,
     })),
-    allJoined: seats.length > 0 && seats.every((s) => s.status === 'joined'),
+    allJoined: seats.length === game.seat_count,
   };
 }
 
@@ -62,109 +57,70 @@ async function broadcastLobbyUpdate(gameId: string) {
   if (lobby) getIo().to(lobbyRoom(gameId)).emit('lobby-updated', lobby);
 }
 
-// GET /players — the invite dropdown's data source: every registered player.
-gamesRouter.get('/players', async (_req, res) => {
-  const { rows } = await pool.query('select id, email, display_name from players order by display_name');
-  res.json({
-    players: rows.map((r) => ({ id: r.id, email: r.email, displayName: r.display_name })),
-  });
-});
-
-// POST /games { seats: { P1: playerId, P2: playerId, ... } } — creates a lobby and emails
-// invites to everyone except the organizer, who is auto-marked "joined" (they're already here).
+// POST /games { seatCount: 2 | 3 | 4 } — creates a lobby with just the creator seated; the
+// remaining seats are claimed by whoever opens the game's shareable link next (see /join below).
 gamesRouter.post('/games', async (req, res) => {
-  const seatsInput = req.body?.seats;
-  if (!seatsInput || typeof seatsInput !== 'object') {
-    res.status(400).json({ error: 'seats is required.' });
+  const seatCount = Number(req.body?.seatCount);
+  const seatOrder = SEATS_BY_COUNT[seatCount];
+  if (!seatOrder) {
+    res.status(400).json({ error: 'seatCount must be 2, 3, or 4.' });
     return;
   }
 
-  const entries = Object.entries(seatsInput).filter(
-    (entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0
+  const gameResult = await pool.query(
+    'insert into games (created_by, seat_count) values ($1, $2) returning id',
+    [req.player!.playerId, seatCount]
   );
-  const seatNames = entries.map(([seat]) => seat).sort();
-  const seatSetValid = VALID_SEAT_SETS.some(
-    (set) => set.length === seatNames.length && set.every((s, i) => s === seatNames[i])
-  );
-  if (!seatSetValid) {
-    res.status(400).json({ error: 'Seats must be P1+P3, P1+P2+P3, or all four.' });
-    return;
-  }
-
-  const playerIds = entries.map(([, id]) => id);
-  if (new Set(playerIds).size !== playerIds.length) {
-    res.status(400).json({ error: 'The same player cannot fill two seats.' });
-    return;
-  }
-  if (!playerIds.includes(req.player!.playerId)) {
-    res.status(400).json({ error: "You must include yourself as one of the seats you're setting up." });
-    return;
-  }
-
-  const playersResult = await pool.query('select id, display_name, email from players where id = any($1)', [
-    playerIds,
-  ]);
-  if (playersResult.rows.length !== playerIds.length) {
-    res.status(400).json({ error: 'One or more selected players no longer exist.' });
-    return;
-  }
-  const playerById = new Map(playersResult.rows.map((p) => [p.id as string, p]));
-
-  const gameResult = await pool.query('insert into games (created_by) values ($1) returning id', [
-    req.player!.playerId,
-  ]);
   const gameId = gameResult.rows[0].id as string;
 
-  for (const [seat, playerId] of entries) {
-    const isOrganizer = playerId === req.player!.playerId;
-    await pool.query(
-      `insert into game_seats (game_id, seat, player_id, status, joined_at)
-       values ($1, $2, $3, $4, $5)`,
-      [gameId, seat, playerId, isOrganizer ? 'joined' : 'invited', isOrganizer ? new Date() : null]
-    );
-  }
-
-  const inviteLink = `${env.appUrl}/games/${gameId}`;
-  for (const [, playerId] of entries) {
-    if (playerId === req.player!.playerId) continue;
-    const invitee = playerById.get(playerId)!;
-    await sendGameInviteEmail(invitee.email, req.player!.displayName, inviteLink);
-  }
+  await pool.query(
+    `insert into game_seats (game_id, seat, player_id, status, joined_at)
+     values ($1, $2, $3, 'joined', now())`,
+    [gameId, seatOrder[0], req.player!.playerId]
+  );
 
   const lobby = await loadLobby(gameId);
   res.status(201).json({ game: lobby });
 });
 
-// GET /games/:id — only participants may view a lobby.
+// GET /games/:id — viewable by any signed-in player, not just current participants, so a fresh
+// link-opener can see who's already in before deciding to join.
 gamesRouter.get('/games/:id', async (req, res) => {
   const lobby = await loadLobby(req.params.id);
   if (!lobby) {
     res.status(404).json({ error: 'Game not found.' });
     return;
   }
-  if (!lobby.seats.some((s) => s.playerId === req.player!.playerId)) {
-    res.status(403).json({ error: "You're not part of this game." });
-    return;
-  }
   res.json({ game: lobby });
 });
 
-// POST /games/:id/join — an invited player accepts their seat. Idempotent if already joined.
+// POST /games/:id/join — claims the next open seat for the caller. Idempotent if already seated.
 gamesRouter.post('/games/:id/join', async (req, res) => {
   const gameId = req.params.id;
-  const seatResult = await pool.query(
-    'select seat, status from game_seats where game_id = $1 and player_id = $2',
-    [gameId, req.player!.playerId]
-  );
-  const seat = seatResult.rows[0] as { seat: string; status: string } | undefined;
-  if (!seat) {
-    res.status(403).json({ error: "You weren't invited to this game." });
+  const gameResult = await pool.query('select seat_count from games where id = $1', [gameId]);
+  const game = gameResult.rows[0] as { seat_count: number } | undefined;
+  if (!game) {
+    res.status(404).json({ error: 'Game not found.' });
     return;
   }
-  if (seat.status !== 'joined') {
+
+  const existing = await pool.query('select seat from game_seats where game_id = $1 and player_id = $2', [
+    gameId,
+    req.player!.playerId,
+  ]);
+  if (existing.rows.length === 0) {
+    const takenResult = await pool.query('select seat from game_seats where game_id = $1', [gameId]);
+    const taken = new Set(takenResult.rows.map((r) => r.seat as string));
+    const seatOrder = SEATS_BY_COUNT[game.seat_count] ?? [];
+    const nextSeat = seatOrder.find((s) => !taken.has(s));
+    if (!nextSeat) {
+      res.status(400).json({ error: 'This game is already full.' });
+      return;
+    }
     await pool.query(
-      'update game_seats set status = $1, joined_at = now() where game_id = $2 and seat = $3',
-      ['joined', gameId, seat.seat]
+      `insert into game_seats (game_id, seat, player_id, status, joined_at)
+       values ($1, $2, $3, 'joined', now())`,
+      [gameId, nextSeat, req.player!.playerId]
     );
     await broadcastLobbyUpdate(gameId);
   }

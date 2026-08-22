@@ -10,6 +10,15 @@ export const PLAYER_COLORS: Record<PlayerId, string> = {
   P4: '#c07a12',
 };
 
+// Same reasoning as PLAYER_COLORS above — the ordered seat list for a given player count, shared
+// between the online server (seat assignment) and client (lobby placeholder rendering) so they
+// can't drift apart. 2-player games sit at opposite bases (P1/P3), not any arbitrary pair.
+export const SEATS_BY_COUNT: Record<number, PlayerId[]> = {
+  2: ['P1', 'P3'],
+  3: ['P1', 'P2', 'P3'],
+  4: ['P1', 'P2', 'P3', 'P4'],
+};
+
 // P1's 25-step path: index 0 = home, 1-15 = outer ring, 16-23 = inner ring, 24 = center.
 const P1_PATH: Coord[] = [
   [4, 2], [4, 3], [4, 4], [3, 4], [2, 4], [1, 4], [0, 4], [0, 3], [0, 2], [0, 1], [0, 0],

@@ -3,7 +3,7 @@ import type { Socket } from 'socket.io-client';
 import { fetchGame, joinGame, startGame, type LobbyState, type PlayerInfo } from './api';
 import { connectSocket } from './socket';
 import type { GameState } from '../game/turnEngine';
-import type { PlayerId } from '../game/paths';
+import { SEATS_BY_COUNT, type PlayerId } from '../game/paths';
 
 interface Props {
   gameId: string;
@@ -15,6 +15,7 @@ export default function OnlineLobby({ gameId, me, onStart }: Props) {
   const [lobby, setLobby] = useState<LobbyState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [copied, setCopied] = useState(false);
   // Known as soon as the lobby loads, before the game exists — kept in a ref (not state) since
   // it never changes and the game-updated handler below needs it without retriggering the effect.
   const mySeatRef = useRef<PlayerId | null>(null);
@@ -26,12 +27,18 @@ export default function OnlineLobby({ gameId, me, onStart }: Props) {
     (async () => {
       try {
         let current = await fetchGame(gameId);
-        const mySeat = current.seats.find((s) => s.playerId === me.id);
-        mySeatRef.current = (mySeat?.seat as PlayerId) ?? null;
-        // Visiting the lobby (e.g. via the emailed invite link) counts as accepting the invite.
-        if (mySeat && mySeat.status === 'invited') {
+        let mySeat = current.seats.find((s) => s.playerId === me.id);
+        if (!mySeat) {
+          if (current.seats.length >= current.seatCount) {
+            if (!cancelled) setError('This game is already full.');
+            return;
+          }
+          if (cancelled) return;
+          // Opening the link is what claims a seat — no separate "accept invite" step.
           current = await joinGame(gameId);
+          mySeat = current.seats.find((s) => s.playerId === me.id);
         }
+        mySeatRef.current = (mySeat?.seat as PlayerId) ?? null;
         if (cancelled) return;
         setLobby(current);
       } catch (err) {
@@ -72,6 +79,18 @@ export default function OnlineLobby({ gameId, me, onStart }: Props) {
     }
   }
 
+  const inviteLink = `${window.location.origin}/games/${gameId}`;
+
+  async function handleCopyLink() {
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard access denied/unavailable — the link is still shown in the field to copy manually.
+    }
+  }
+
   if (error) {
     return (
       <div className="modal">
@@ -88,15 +107,39 @@ export default function OnlineLobby({ gameId, me, onStart }: Props) {
     );
   }
 
+  const seatOrder = SEATS_BY_COUNT[lobby.seatCount] ?? [];
+  const seatByName = new Map(lobby.seats.map((s) => [s.seat, s]));
+  const whatsappText = encodeURIComponent(`Join my Chowka Bhara game: ${inviteLink}`);
+
   return (
     <div className="modal">
       <h2>Waiting Room</h2>
+
+      {!lobby.allJoined && (
+        <div className="setup-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.5rem' }}>
+          <label className="setup-label">Share this link:</label>
+          <input readOnly value={inviteLink} onFocus={(e) => e.currentTarget.select()} />
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="action-btn" onClick={handleCopyLink}>
+              {copied ? 'Copied!' : 'Copy Link'}
+            </button>
+            <a
+              className="action-btn"
+              href={`https://wa.me/?text=${whatsappText}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Share on WhatsApp
+            </a>
+          </div>
+        </div>
+      )}
+
       <ul className="player-list">
-        {lobby.seats.map((s) => (
-          <li key={s.seat}>
-            {s.seat}: {s.displayName} — {s.status === 'joined' ? '✅ Joined' : '⏳ Invited'}
-          </li>
-        ))}
+        {seatOrder.map((seat) => {
+          const s = seatByName.get(seat);
+          return <li key={seat}>{seat}: {s ? `${s.displayName} — ✅ Joined` : 'Waiting for a player…'}</li>;
+        })}
       </ul>
       <button className="action-btn btn-start" disabled={!lobby.allJoined || starting} onClick={handleStart}>
         {starting ? 'Starting…' : lobby.allJoined ? 'Start Game' : 'Waiting for everyone to join…'}

@@ -105,7 +105,8 @@ authRouter.post('/complete-profile', async (req, res) => {
 });
 
 authRouter.get('/me', readSession, requireAuth, (req, res) => {
-  res.json({ player: req.player });
+  const { playerId, email, displayName } = req.player!;
+  res.json({ player: { id: playerId, email, displayName } });
 });
 
 authRouter.post('/logout', (_req, res) => {

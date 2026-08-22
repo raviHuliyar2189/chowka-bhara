@@ -55,10 +55,6 @@ export async function fetchMe(): Promise<PlayerInfo | null> {
   }
 }
 
-export function fetchPlayers(): Promise<PlayerInfo[]> {
-  return request<{ players: PlayerInfo[] }>('/players').then((r) => r.players);
-}
-
 export interface SeatInfo {
   seat: string;
   playerId: string;
@@ -72,14 +68,15 @@ export interface LobbyState {
   id: string;
   status: string;
   createdBy: string;
+  seatCount: number;
   seats: SeatInfo[];
   allJoined: boolean;
 }
 
-export function createGame(seats: Record<string, string>): Promise<LobbyState> {
+export function createGame(seatCount: number): Promise<LobbyState> {
   return request<{ game: LobbyState }>('/games', {
     method: 'POST',
-    body: JSON.stringify({ seats }),
+    body: JSON.stringify({ seatCount }),
   }).then((r) => r.game);
 }
 

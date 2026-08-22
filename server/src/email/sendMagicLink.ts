@@ -7,10 +7,14 @@ export async function sendMagicLinkEmail(email: string, link: string): Promise<v
     console.log(`[dev email] Magic link for ${email}: ${link}`);
     return;
   }
-  await resend.emails.send({
+  const { error } = await resend.emails.send({
     from: 'Chowka Bhara <onboarding@resend.dev>',
     to: email,
     subject: 'Your Chowka Bhara sign-in link',
     html: `<p>Click below to sign in:</p><p><a href="${link}">${link}</a></p><p>This link expires in 15 minutes.</p>`,
   });
+  // The Resend SDK resolves with { error } instead of throwing on API-level failures (e.g. the
+  // sandbox "verify a domain" restriction) — without this check, a failed send silently reports
+  // success (202) to the caller.
+  if (error) throw new Error(`Resend failed to send magic link: ${error.message}`);
 }
