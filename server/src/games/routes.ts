@@ -18,11 +18,12 @@ interface SeatRow {
 }
 
 async function loadLobby(gameId: string) {
-  const gameResult = await pool.query('select id, status, created_by, seat_count from games where id = $1', [
-    gameId,
-  ]);
+  const gameResult = await pool.query(
+    'select id, status, created_by, seat_count, state from games where id = $1',
+    [gameId]
+  );
   const game = gameResult.rows[0] as
-    | { id: string; status: string; created_by: string; seat_count: number }
+    | { id: string; status: string; created_by: string; seat_count: number; state: unknown }
     | undefined;
   if (!game) return null;
 
@@ -40,6 +41,10 @@ async function loadLobby(gameId: string) {
     status: game.status,
     createdBy: game.created_by,
     seatCount: game.seat_count,
+    // Present once the game has actually started — lets a participant who reopens the link
+    // (closed tab, refreshed, switched devices) rejoin straight into the live board instead of
+    // a waiting room that's already moved on.
+    state: game.state ?? null,
     seats: seats.map((s) => ({
       seat: s.seat,
       playerId: s.player_id,

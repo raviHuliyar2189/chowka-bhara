@@ -92,6 +92,7 @@ export interface LobbyState {
   status: string;
   createdBy: string;
   seatCount: number;
+  state: GameState | null;
   seats: SeatInfo[];
   allJoined: boolean;
 }

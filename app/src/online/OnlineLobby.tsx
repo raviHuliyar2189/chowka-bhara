@@ -29,6 +29,10 @@ export default function OnlineLobby({ gameId, me, onStart }: Props) {
         let current = await fetchGame(gameId);
         let mySeat = current.seats.find((s) => s.playerId === me.id);
         if (!mySeat) {
+          if (current.status !== 'lobby') {
+            if (!cancelled) setError("This game has already started and you weren't part of it.");
+            return;
+          }
           if (current.seats.length >= current.seatCount) {
             if (!cancelled) setError('This game is already full.');
             return;
@@ -38,8 +42,16 @@ export default function OnlineLobby({ gameId, me, onStart }: Props) {
           current = await joinGame(gameId);
           mySeat = current.seats.find((s) => s.playerId === me.id);
         }
-        mySeatRef.current = (mySeat?.seat as PlayerId) ?? null;
+        const seat = mySeat!.seat as PlayerId;
+        mySeatRef.current = seat;
         if (cancelled) return;
+
+        // Already underway (or finished) — reopening the link (closed tab, refresh, new device)
+        // rejoins straight into the live board instead of a waiting room that's already moved on.
+        if (current.state) {
+          onStart(current.state, seat);
+          return;
+        }
         setLobby(current);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load this game.');
