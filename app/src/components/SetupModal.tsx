@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { PlayerId } from '../game/paths';
-import type { SetupPlayer } from '../App';
+import type { SetupPlayer } from '../hotseat/HotseatPage';
 
 interface Props {
   roster: string[];
