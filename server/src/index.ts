@@ -1,7 +1,6 @@
 import { createServer } from 'http';
 import express, { type ErrorRequestHandler } from 'express';
 import cors from 'cors';
-import cookieParser from 'cookie-parser';
 import { Server as SocketIOServer } from 'socket.io';
 import { env } from './env';
 import { authRouter } from './auth/routes';
@@ -11,9 +10,8 @@ import { registerConnectionHandlers } from './realtime/connection';
 
 const app = express();
 
-app.use(cors({ origin: env.appUrl, credentials: true }));
+app.use(cors({ origin: env.appUrl }));
 app.use(express.json());
-app.use(cookieParser());
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
@@ -33,7 +31,7 @@ app.use(errorHandler);
 
 const httpServer = createServer(app);
 const io = new SocketIOServer(httpServer, {
-  cors: { origin: env.appUrl, credentials: true },
+  cors: { origin: env.appUrl },
 });
 setIo(io);
 registerConnectionHandlers(io);

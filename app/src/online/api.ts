@@ -2,11 +2,32 @@ import type { GameState } from '../game/turnEngine';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
+// A bearer token in localStorage, not a cookie — the frontend (Vercel) and backend (Render) are
+// different domains, which makes a session cookie a third-party cookie that browsers increasingly
+// block by default. A token the client attaches itself sidesteps that entirely.
+const TOKEN_KEY = 'chowka_token';
+
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+function setToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = getToken();
   const resp = await fetch(`${API_URL}${path}`, {
     ...options,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...options.headers },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
   });
   const body = await resp.json().catch(() => ({}));
   if (!resp.ok) {
@@ -28,24 +49,27 @@ export type LoginResult = { status: 'logged-in'; player: PlayerInfo } | { status
 export async function login(email: string): Promise<LoginResult> {
   const resp = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
-    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
   });
   const body = await resp.json().catch(() => ({}));
   if (resp.status === 404) return { status: 'no-account', email };
   if (!resp.ok) throw new Error(body.error ?? `Request failed (${resp.status})`);
+  setToken(body.token);
   return body as LoginResult;
 }
 
-export function signup(email: string, displayName: string): Promise<{ status: string; player: PlayerInfo }> {
-  return request('/auth/signup', {
+export async function signup(email: string, displayName: string): Promise<{ status: string; player: PlayerInfo }> {
+  const body = await request<{ status: string; token: string; player: PlayerInfo }>('/auth/signup', {
     method: 'POST',
     body: JSON.stringify({ email, displayName }),
   });
+  setToken(body.token);
+  return body;
 }
 
 export async function fetchMe(): Promise<PlayerInfo | null> {
+  if (!getToken()) return null;
   try {
     const result = await request<{ player: PlayerInfo }>('/auth/me');
     return result.player;

@@ -1,8 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { verifySession, type SessionPayload } from './tokens';
 
-export const SESSION_COOKIE = 'chowka_session';
-
 declare global {
   namespace Express {
     interface Request {
@@ -11,11 +9,21 @@ declare global {
   }
 }
 
-// Attaches req.player when a valid session cookie is present; does not itself reject the
-// request, so routes that work differently for signed-in vs anonymous callers can use it too.
+// Bearer token in the Authorization header, not a cookie — the frontend and backend live on
+// different domains (Vercel/Render), which makes a session cookie a third-party cookie that
+// modern browsers block by default regardless of SameSite/Secure settings. A token the client
+// attaches itself sidesteps that entirely.
+function readBearerToken(req: Request): string | null {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) return null;
+  return header.slice('Bearer '.length);
+}
+
+// Attaches req.player when a valid token is present; does not itself reject the request, so
+// routes that work differently for signed-in vs anonymous callers can use it too.
 export function readSession(req: Request, _res: Response, next: NextFunction): void {
-  const token = req.cookies?.[SESSION_COOKIE];
-  const session = typeof token === 'string' ? verifySession(token) : null;
+  const token = readBearerToken(req);
+  const session = token ? verifySession(token) : null;
   if (session) req.player = session;
   next();
 }

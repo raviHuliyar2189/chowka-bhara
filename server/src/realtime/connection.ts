@@ -4,17 +4,6 @@ import { pool } from '../db/pool';
 import { lobbyRoom } from './io';
 import { registerGameplayHandlers } from './gameplay';
 
-const SESSION_COOKIE = 'chowka_session';
-
-function readSessionCookie(cookieHeader: string | undefined): string | null {
-  if (!cookieHeader) return null;
-  for (const part of cookieHeader.split(';')) {
-    const [key, ...rest] = part.trim().split('=');
-    if (key === SESSION_COOKIE) return decodeURIComponent(rest.join('='));
-  }
-  return null;
-}
-
 async function isParticipant(gameId: string, playerId: string): Promise<boolean> {
   const { rows } = await pool.query('select 1 from game_seats where game_id = $1 and player_id = $2', [
     gameId,
@@ -25,8 +14,10 @@ async function isParticipant(gameId: string, playerId: string): Promise<boolean>
 
 export function registerConnectionHandlers(io: Server): void {
   io.on('connection', (socket: Socket) => {
-    const token = readSessionCookie(socket.handshake.headers.cookie);
-    const session: SessionPayload | null = token ? verifySession(token) : null;
+    // Bearer token via the socket handshake's auth payload, not a cookie — same reasoning as
+    // server/src/auth/middleware.ts (cross-domain deployment makes cookies unreliable here).
+    const token = socket.handshake.auth?.token;
+    const session: SessionPayload | null = typeof token === 'string' ? verifySession(token) : null;
 
     if (!session) {
       socket.emit('auth-error', { error: 'Not signed in.' });
