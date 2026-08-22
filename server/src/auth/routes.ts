@@ -1,107 +1,85 @@
 import { Router, type Response } from 'express';
 import { pool } from '../db/pool';
 import { env } from '../env';
-import { sendMagicLinkEmail } from '../email/sendMagicLink';
-import { newToken, signSession, signPendingProfile, verifyPendingProfile } from './tokens';
+import { signSession } from './tokens';
 import { readSession, requireAuth, SESSION_COOKIE } from './middleware';
 
 export const authRouter = Router();
 
-const LINK_TTL_MINUTES = 15;
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 function isValidEmail(email: unknown): email is string {
   return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-// Player registration is intentionally NOT part of this same insert — the caller only reaches
-// here once a magic link has already been confirmed for this email, so the identity is verified.
-async function findPlayerByEmail(email: string) {
-  const { rows } = await pool.query('select id, email, display_name from players where email = $1', [email]);
-  return rows[0] as { id: string; email: string; display_name: string } | undefined;
-}
+// Vercel (frontend) and Render (backend) are different registrable domains in production, so a
+// session cookie needs SameSite=None (which itself requires Secure) to be sent on cross-site
+// fetch calls — SameSite=Lax silently drops it on anything but a top-level navigation. Locally,
+// frontend and backend are both on localhost (different ports, same site), so Lax works fine
+// there and Secure would block the cookie entirely over plain http.
+const isProd = env.appUrl.startsWith('https://');
+const cookieOptions = {
+  httpOnly: true as const,
+  sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
+  secure: isProd,
+  maxAge: SESSION_MAX_AGE_MS,
+};
 
 function setSessionCookie(res: Response, player: { id: string; email: string; display_name: string }) {
   const token = signSession({ playerId: player.id, email: player.email, displayName: player.display_name });
-  res.cookie(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    maxAge: SESSION_MAX_AGE_MS,
-  });
+  res.cookie(SESSION_COOKIE, token, cookieOptions);
 }
 
-authRouter.post('/request-link', async (req, res) => {
+// POST /auth/login { email } — no password, no verification: the email alone identifies a
+// returning player. 404 with status 'no-account' tells the client to offer sign-up instead.
+authRouter.post('/login', async (req, res) => {
   const { email } = req.body ?? {};
   if (!isValidEmail(email)) {
     res.status(400).json({ error: 'A valid email address is required.' });
     return;
   }
   const normalized = email.trim().toLowerCase();
-  const token = newToken();
-  const expiresAt = new Date(Date.now() + LINK_TTL_MINUTES * 60 * 1000);
-  await pool.query('insert into magic_links (token, email, expires_at) values ($1, $2, $3)', [
-    token,
+  const { rows } = await pool.query('select id, email, display_name from players where email = $1', [
     normalized,
-    expiresAt,
   ]);
-  const link = `${env.appUrl}/auth/confirm?token=${token}`;
-  await sendMagicLinkEmail(normalized, link);
-  res.status(202).json({ status: 'sent' });
-});
-
-authRouter.get('/confirm', async (req, res) => {
-  const token = typeof req.query.token === 'string' ? req.query.token : '';
-  if (!token) {
-    res.status(400).json({ error: 'Missing token.' });
-    return;
-  }
-
-  const { rows } = await pool.query(
-    'select email, expires_at, used_at from magic_links where token = $1',
-    [token]
-  );
-  const link = rows[0] as { email: string; expires_at: string; used_at: string | null } | undefined;
-  if (!link || link.used_at || new Date(link.expires_at) < new Date()) {
-    res.status(400).json({ error: 'This link is invalid or has expired — request a new one.' });
-    return;
-  }
-  await pool.query('update magic_links set used_at = now() where token = $1', [token]);
-
-  const player = await findPlayerByEmail(link.email);
+  const player = rows[0] as { id: string; email: string; display_name: string } | undefined;
   if (!player) {
-    // Email verified, but no account yet — mandatory display name still needed before login.
-    const pendingToken = signPendingProfile(link.email);
-    res.json({ status: 'needs-profile', email: link.email, pendingToken });
+    res.status(404).json({ status: 'no-account', email: normalized });
     return;
   }
-
   setSessionCookie(res, player);
   res.json({ status: 'logged-in', player: { id: player.id, email: player.email, displayName: player.display_name } });
 });
 
-authRouter.post('/complete-profile', async (req, res) => {
-  const { pendingToken, displayName } = req.body ?? {};
-  const email = typeof pendingToken === 'string' ? verifyPendingProfile(pendingToken) : null;
-  if (!email) {
-    res.status(400).json({ error: 'This registration link is invalid or has expired — request a new one.' });
+// POST /auth/signup { email, displayName } — creates the account and logs in immediately.
+authRouter.post('/signup', async (req, res) => {
+  const { email, displayName } = req.body ?? {};
+  if (!isValidEmail(email)) {
+    res.status(400).json({ error: 'A valid email address is required.' });
     return;
   }
   if (typeof displayName !== 'string' || displayName.trim().length === 0) {
     res.status(400).json({ error: 'A display name is required.' });
     return;
   }
+  const normalized = email.trim().toLowerCase();
   const name = displayName.trim().slice(0, 40);
 
+  const existing = await pool.query('select id from players where email = $1', [normalized]);
+  if (existing.rows.length > 0) {
+    res.status(409).json({ error: 'An account with that email already exists — log in instead.' });
+    return;
+  }
+
   const { rows } = await pool.query(
-    `insert into players (email, display_name) values ($1, $2)
-     on conflict (email) do update set display_name = excluded.display_name
-     returning id, email, display_name`,
-    [email, name]
+    'insert into players (email, display_name) values ($1, $2) returning id, email, display_name',
+    [normalized, name]
   );
   const player = rows[0] as { id: string; email: string; display_name: string };
-
   setSessionCookie(res, player);
-  res.json({ status: 'logged-in', player: { id: player.id, email: player.email, displayName: player.display_name } });
+  res
+    .status(201)
+    .json({ status: 'logged-in', player: { id: player.id, email: player.email, displayName: player.display_name } });
 });
 
 authRouter.get('/me', readSession, requireAuth, (req, res) => {
@@ -110,6 +88,6 @@ authRouter.get('/me', readSession, requireAuth, (req, res) => {
 });
 
 authRouter.post('/logout', (_req, res) => {
-  res.clearCookie(SESSION_COOKIE);
+  res.clearCookie(SESSION_COOKIE, cookieOptions);
   res.status(204).end();
 });

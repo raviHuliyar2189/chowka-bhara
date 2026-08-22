@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react';
-import { requestMagicLink } from './api';
+import { login, type PlayerInfo } from './api';
 
 interface Props {
-  onSent: (email: string) => void;
+  onLoggedIn: (player: PlayerInfo) => void;
+  onNoAccount: (email: string) => void;
 }
 
-export default function OnlineLogin({ onSent }: Props) {
+export default function OnlineLogin({ onLoggedIn, onNoAccount }: Props) {
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,10 +17,14 @@ export default function OnlineLogin({ onSent }: Props) {
     setSending(true);
     setError(null);
     try {
-      await requestMagicLink(trimmed);
-      onSent(trimmed);
+      const result = await login(trimmed);
+      if (result.status === 'no-account') {
+        onNoAccount(result.email);
+      } else {
+        onLoggedIn(result.player);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not send the link.');
+      setError(err instanceof Error ? err.message : 'Could not log in.');
     } finally {
       setSending(false);
     }
@@ -27,8 +32,8 @@ export default function OnlineLogin({ onSent }: Props) {
 
   return (
     <div className="modal">
-      <h2>Sign In to Play Online</h2>
-      <p>Enter your email — we'll send you a link to sign in, no password needed.</p>
+      <h2>Sign In to Play</h2>
+      <p>Enter your email to log in, or to create a new account.</p>
       <form onSubmit={handleSubmit}>
         <div className="setup-row">
           <label className="setup-label" htmlFor="onlineEmail">
@@ -45,7 +50,7 @@ export default function OnlineLogin({ onSent }: Props) {
         </div>
         {error && <p className="online-error">{error}</p>}
         <button className="action-btn btn-start" type="submit" disabled={sending}>
-          {sending ? 'Sending…' : 'Send Sign-In Link'}
+          {sending ? 'Checking…' : 'Continue'}
         </button>
       </form>
     </div>

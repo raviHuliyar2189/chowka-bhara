@@ -21,28 +21,27 @@ export interface PlayerInfo {
   displayName: string;
 }
 
-export function requestMagicLink(email: string): Promise<void> {
-  return request('/auth/request-link', { method: 'POST', body: JSON.stringify({ email }) });
-}
+export type LoginResult = { status: 'logged-in'; player: PlayerInfo } | { status: 'no-account'; email: string };
 
-export interface ConfirmResult {
-  status: 'needs-profile' | 'logged-in';
-  email?: string;
-  pendingToken?: string;
-  player?: PlayerInfo;
-}
-
-export function confirmMagicLink(token: string): Promise<ConfirmResult> {
-  return request(`/auth/confirm?token=${encodeURIComponent(token)}`);
-}
-
-export function completeProfile(
-  pendingToken: string,
-  displayName: string
-): Promise<{ status: string; player: PlayerInfo }> {
-  return request('/auth/complete-profile', {
+// No password, no verification — the email alone identifies a returning player. A 404 response
+// (status 'no-account') means the caller should offer sign-up instead.
+export async function login(email: string): Promise<LoginResult> {
+  const resp = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
-    body: JSON.stringify({ pendingToken, displayName }),
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  const body = await resp.json().catch(() => ({}));
+  if (resp.status === 404) return { status: 'no-account', email };
+  if (!resp.ok) throw new Error(body.error ?? `Request failed (${resp.status})`);
+  return body as LoginResult;
+}
+
+export function signup(email: string, displayName: string): Promise<{ status: string; player: PlayerInfo }> {
+  return request('/auth/signup', {
+    method: 'POST',
+    body: JSON.stringify({ email, displayName }),
   });
 }
 

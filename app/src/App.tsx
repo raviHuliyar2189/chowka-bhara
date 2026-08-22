@@ -34,12 +34,11 @@ import AuthGate from './online/AuthGate';
 import type { PlayerInfo } from './online/api';
 import './App.css';
 
-// A game-invite or sign-in link (/games/:id, /auth/confirm) opened fresh always means "online
-// mode, right now" — skip the dedication splash and the mode-select prompt for that case, since
-// the person just clicked a link that only makes sense in that context.
-const isOnlineDeepLink =
-  typeof window !== 'undefined' &&
-  (window.location.pathname === '/auth/confirm' || /^\/games\/[^/]+$/.test(window.location.pathname));
+// A game-invite link (/games/:id) opened fresh always means "online mode, right now" — skip the
+// dedication splash and the mode-select prompt for that case, since the person just clicked a
+// link that only makes sense in that context. Login itself no longer implies a mode, since it's
+// now required up front for hotseat too.
+const isOnlineDeepLink = typeof window !== 'undefined' && /^\/games\/[^/]+$/.test(window.location.pathname);
 
 const COLORS: Record<PlayerId, string> = {
   P1: '#b03a2e',
