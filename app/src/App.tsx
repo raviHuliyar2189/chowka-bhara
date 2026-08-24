@@ -6,6 +6,7 @@ import OnlineSetup from './online/OnlineSetup';
 import OnlineGamePage from './online/OnlineGamePage';
 import AuthGate from './online/AuthGate';
 import HotseatPage from './hotseat/HotseatPage';
+import VsComputerPage from './vscomputer/VsComputerPage';
 import type { PlayerInfo } from './online/api';
 import { unlockAudioOnFirstInteraction } from './audio/announcer';
 import './App.css';
@@ -16,9 +17,11 @@ import './App.css';
 // it mounts, so no separate redirect-preservation bookkeeping is needed once auth completes.
 const isGameInviteLink = typeof window !== 'undefined' && /^\/games\/[^/]+$/.test(window.location.pathname);
 
+const MODE_PATHS = { hotseat: '/hotseat', online: '/online', 'vs-computer': '/vs-computer' } as const;
+
 function ModeSelectRoute() {
   const navigate = useNavigate();
-  return <ModeSelect onChoose={(m) => navigate(m === 'hotseat' ? '/hotseat' : '/online')} />;
+  return <ModeSelect onChoose={(m) => navigate(MODE_PATHS[m])} />;
 }
 
 function OnlineSetupRoute() {
@@ -98,6 +101,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<ModeSelectRoute />} />
           <Route path="/hotseat" element={<HotseatPage />} />
+          <Route path="/vs-computer" element={<VsComputerPage />} />
           <Route path="/online" element={<OnlineSetupRoute />} />
           <Route path="/games/:gameId" element={<OnlineGameRoute me={player} />} />
           <Route path="*" element={<Navigate to="/" replace />} />

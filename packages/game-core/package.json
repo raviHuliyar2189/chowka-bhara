@@ -8,6 +8,7 @@
     "./dice": "./src/dice.ts",
     "./rules": "./src/rules.ts",
     "./turnEngine": "./src/turnEngine.ts",
-    "./session": "./src/session.ts"
+    "./session": "./src/session.ts",
+    "./ai": "./src/ai.ts"
   }
 }

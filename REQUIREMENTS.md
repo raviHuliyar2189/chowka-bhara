@@ -2,16 +2,18 @@
 
 ## 1. Overview
 A digital implementation of the traditional cross-board race/capture game Chowka Bhara (a.k.a.
-Ashta Chamma), for 2–4 players, with two modes:
+Ashta Chamma), for 2–4 players, with three modes:
 
 - **Hotseat**: a single device passed between players in person, no account required.
 - **Online**: players on separate devices (laptop/tablet/phone), each signed in with their own
   account, playing together over the internet in real time.
+- **Vs Computer**: one human against a computer-controlled opponent, on a single device.
 
-Both modes share the exact same game engine (`packages/game-core`) and the exact same board/dice
-UI components (`Board`, `DiceTray`) — the rules, legality, and animations are identical either way.
-What differs is who computes a move (the browser locally in hotseat; the server authoritatively in
-online) and how players get into the same game.
+All three modes share the exact same game engine (`packages/game-core`) and the exact same
+board/dice UI components (`Board`, `DiceTray`) — the rules, legality, and animations are identical
+across all of them. What differs is who computes a move (the browser locally in hotseat and vs
+computer; the server authoritatively in online), how players get into the same game, and — for vs
+computer only — that one seat's moves come from a heuristic AI instead of a person (§14).
 
 ## 2. Board
 
@@ -390,6 +392,10 @@ Resolved during requirements gathering:
   consistent snapshot instead of each other's just-applied changes.
 - **Online rematch**: added so finishing an online game isn't a dead end the way it briefly was —
   any participant can restart with the same seats, mirroring hotseat's existing "play again."
+- **Vs Computer**: a third mode added at the user's request — single device, always 2 players
+  (1 human + 1 AI), a rule-aware but not unbeatable heuristic opponent (§14) rather than a perfect
+  solver. Implemented as its own page (not folded into hotseat's) to avoid adding AI-turn
+  conditionals to the more heavily-used hotseat flow.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
@@ -479,8 +485,8 @@ included here rather than silently omitted) and offers two actions:
 
 ### Routing
 Each meaningful screen is a real URL with its own browser-history entry, so the browser/phone's
-native Back button and gesture work throughout: `/` (mode-select), `/hotseat`, `/online` (create a
-game), `/games/:id` (that game's lobby and gameplay).
+native Back button and gesture work throughout: `/` (mode-select), `/hotseat`, `/vs-computer`,
+`/online` (create a game), `/games/:id` (that game's lobby and gameplay).
 
 ### Hosting
 Frontend on Vercel (static Vite build), backend on Render (free-tier Node/Socket.IO — spins down
@@ -488,3 +494,33 @@ after ~15 min idle, so a first request after a quiet spell can take 30–50s to 
 Neon (Postgres, free tier — also the local dev database; there is no separate local Postgres
 instance). No transactional email is currently sent (magic-link and per-invite email were both
 removed — see §12); an unused `resend` dependency remains installed but uncalled.
+
+## 14. Vs Computer
+
+A single-device mode like hotseat, but always exactly 2 players: the human (P1) and a
+computer-controlled opponent (P3, "Computer") — opposite bases, per the existing 2-player
+convention. No account or roster picker — just enter a name and start.
+
+### AI opponent
+A pure, deterministic heuristic (`packages/game-core/src/ai.ts`'s `chooseAiMove`), not a perfect
+player — for every legal `(pool value, own piece)` combination, scores it and picks the best:
+- **+100 per opponent piece it would capture** (predicted via `resolveCaptures`, the same
+  non-mutating prediction `movePiece` itself uses before actually applying a capture).
+- **+50 for finishing a piece** (landing exactly on the center).
+- **−30 if the landing cell would be capturable by an active opponent next turn** — checked against
+  every plausible roll (1, 2, 3, 4, 8) for every opponent piece, respecting the same inner-ring
+  capture-gate rule (§7) legal-move checking already enforces.
+- **A small forward-progress tiebreaker** otherwise.
+
+The computer's turn (rolling, and — after a short pacing delay so it doesn't feel instant —
+picking a value and piece) drives the exact same reducer functions (`roll`, `selectPoolValue`,
+`selectPiece`) a human's own button clicks call; a bonus roll or a capture naturally continues the
+computer's turn the same way it would for a human, no special-casing needed.
+
+### Differences from hotseat
+- **Setup**: just the human's name — no player-count or roster picker.
+- **Abort**: hotseat's multi-player consensus flow (§9) doesn't apply with only one real person to
+  ask — clicking Abort Game ends the game immediately, no confirmation cycling.
+- **Announcements, stats, rematch/new-session**: identical to hotseat — the computer's moves are
+  announced the same way a human's would be, and results/stats use the same `localStorage`
+  roster-keyed persistence (§10), just always including "Computer" as one of the two players.
