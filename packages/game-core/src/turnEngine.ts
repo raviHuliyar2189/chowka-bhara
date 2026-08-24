@@ -16,6 +16,10 @@ export interface GameState {
   eventSeq: number; // increments on every capture, for UI toast triggers
   lastCaptureCount: number;
   lastCapturePlayer: string;
+  revertSeq: number; // increments whenever a turn gets undone (stuck pool, or a finish reached
+  // with pool values still unplayed) — same "event counter" pattern as eventSeq, for UI/announcer
+  // triggers that need to fire exactly once per revert, not on every unrelated state change
+  lastRevertedPlayer: string;
   turnStartSnapshot: Player[]; // players' state at the start of the current player's turn — if
   // the turn later gets stuck partway through the dice pool, we revert to this rather than
   // leaving partial moves (including captures) standing
@@ -65,6 +69,8 @@ export function createGame(playerDefs: PlayerDef[]): GameState {
     eventSeq: 0,
     lastCaptureCount: 0,
     lastCapturePlayer: '',
+    revertSeq: 0,
+    lastRevertedPlayer: '',
     turnStartSnapshot: clonePlayers(players),
     debugLog: [`Game started: ${players.map((p) => `${p.id}=${p.name}`).join(', ')}`],
     lastMoveSnapshot: null,
@@ -128,7 +134,15 @@ function passIfNoLegalMove(state: GameState): GameState {
   // it — otherwise the player would show as not-finished (reverted pieces) yet still ranked.
   const rankings = state.rankings.filter((id) => id !== revertedPlayer.id);
   const logged = withLog(
-    { ...state, players: revertedPlayers, rankings, pool: [], rollHistory: [] },
+    {
+      ...state,
+      players: revertedPlayers,
+      rankings,
+      pool: [],
+      rollHistory: [],
+      revertSeq: state.revertSeq + 1,
+      lastRevertedPlayer: revertedPlayer.name,
+    },
     `${revertedPlayer.name} couldn't play out the whole pool [${state.pool.join(',')}]${
       player.isFinished ? ' (including a finish)' : ''
     } — turn undone, reverted to start-of-turn state.`
@@ -354,6 +368,8 @@ export function rematch(state: GameState): GameState {
     eventSeq: state.eventSeq,
     lastCaptureCount: 0,
     lastCapturePlayer: '',
+    revertSeq: 0,
+    lastRevertedPlayer: '',
     turnStartSnapshot: clonePlayers(players),
     debugLog: [`Rematch started: ${players.map((p) => `${p.id}=${p.name}`).join(', ')}`],
     lastMoveSnapshot: null,

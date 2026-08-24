@@ -244,6 +244,10 @@ Spoken (Web Speech) and chime (Web Audio) announcements fire for:
   the bare number, so every spoken roll doubles as a complete instruction on its own.
 - **A capture** — including the "roll again" instruction, since capturing always grants a bonus
   roll (§5.6) — and **a piece/player finishing**.
+- **A turn getting undone** (stuck pool, or a finish reached with pool values still unplayed —
+  §5.5) — otherwise this only ever showed up as on-screen text. Combined with the following turn's
+  own start announcement into one utterance, rather than firing both back to back (the announcer
+  has no queue — a second `speak()` call cuts off whatever was still playing).
 
 All spoken announcements are in **English**, regardless of the on-screen text (which stays
 Kannada, e.g. the turn banner's "<name>, ನಿಮ್ಮ ಸರದಿ, ಕವಡೆ ಹಾಕಿ" and the on-screen "select a value

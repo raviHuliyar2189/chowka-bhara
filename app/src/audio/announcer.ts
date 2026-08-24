@@ -130,6 +130,17 @@ export function announceTurnStart(playerName: string, awaitingRoll: boolean): vo
   speak(`${playerName}, it's your turn — ${action}.`);
 }
 
+// Spoken whenever a stuck turn (or a finish reached with pool values still unplayed) gets undone
+// — otherwise this only ever showed up as on-screen text, easy to miss mid-game. Combined with
+// the next turn's own announcement into one utterance rather than firing both separately, since
+// speak() always cancels-and-replaces (no queueing) — a second call right after this one would
+// just cut it off before it finished.
+export function announceTurnReverted(revertedPlayerName: string, nextPlayerName: string): void {
+  speak(
+    `${revertedPlayerName} couldn't play out all the dice — that turn is undone. ${nextPlayerName}, it's your turn — roll the dice.`
+  );
+}
+
 // Capturing always grants a bonus roll (§5.6) — say so, not just the capture itself, so this
 // announcement is a complete instruction like the others.
 export function announceCapture(playerName: string, count: number): void {

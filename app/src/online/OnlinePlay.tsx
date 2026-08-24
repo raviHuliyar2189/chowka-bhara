@@ -12,6 +12,7 @@ import OnlineAbortModal, { type AbortUIState } from './OnlineAbortModal';
 import {
   announceRoll,
   announceTurnStart,
+  announceTurnReverted,
   announceCapture,
   announceFinish,
   announceHint,
@@ -42,6 +43,11 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onAborted }: 
   const [showReportBug, setShowReportBug] = useState(false);
   const [abortUI, setAbortUI] = useState<AbortUIState | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  // Starts from the rejoining/initial state's own revertSeq (not 0) — a player who rejoins mid-
+  // game after several reverts already happened shouldn't get a spurious "reverted" announcement
+  // on their very first turn-start effect firing. See HotseatPage.tsx's own copy of this ref for
+  // the full reasoning (avoiding a race between two speak() calls on the same state transition).
+  const prevRevertSeq = useRef(initialState.revertSeq);
 
   // The player roster (id/name pairs) never changes once a game starts — removePlayers marks
   // players as having lost, it doesn't remove them from the array — so the initial prop is a
@@ -103,12 +109,19 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onAborted }: 
   // Spoken immediately when a new turn begins (not just after the 5s idle nudge) — keyed on
   // currentTurnIndex so it fires once per turn change, including the very first turn on mount.
   // Every connected player's device runs this independently off the same synced state, same as
-  // the roll/capture/finish announcements above.
+  // the roll/capture/finish announcements above. If this turn change was caused by a revert
+  // (stuck pool / finish-with-leftover-dice), that gets its own combined announcement instead —
+  // see prevRevertSeq's own comment above.
   useEffect(() => {
     if (game.phase !== 'awaiting-roll') return;
-    announceTurnStart(game.players[game.currentTurnIndex].name, true);
+    if (game.revertSeq !== prevRevertSeq.current) {
+      announceTurnReverted(game.lastRevertedPlayer, game.players[game.currentTurnIndex].name);
+    } else {
+      announceTurnStart(game.players[game.currentTurnIndex].name, true);
+    }
+    prevRevertSeq.current = game.revertSeq;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game.currentTurnIndex]);
+  }, [game.currentTurnIndex, game.revertSeq]);
 
   useEffect(() => {
     if (game.eventSeq === 0) return;

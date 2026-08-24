@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PlayerId } from '../game/paths';
 import {
   type GameState,
@@ -15,6 +15,7 @@ import { loadRoster, saveRoster, loadStats, saveStats, type PlayerStats } from '
 import {
   announceRoll,
   announceTurnStart,
+  announceTurnReverted,
   announceCapture,
   announceFinish,
   announceHint,
@@ -55,6 +56,11 @@ export default function HotseatPage() {
   const [soundOn, setSoundOn] = useState(true);
   const [rollbackEnabled, setRollbackEnabled] = useState(false);
   const [hint, setHint] = useState<{ text: string; key: number } | null>(null);
+  // Tracks the last-seen revertSeq so the turn-start effect below can tell a normal turn advance
+  // apart from one caused by a revert (both change currentTurnIndex in the same update) without
+  // racing two separate speak() calls against each other (speak() always cancels-and-replaces,
+  // so whichever effect fired second would silently cut off the first).
+  const prevRevertSeq = useRef(0);
 
   // Narrow deps deliberately: this should reset exactly once per new hint (keyed), not re-fire
   // on unrelated renders while a hint is showing.
@@ -77,11 +83,18 @@ export default function HotseatPage() {
 
   // Spoken immediately when a new turn begins (not just after the 5s idle nudge) — keyed on
   // currentTurnIndex so it fires once per turn change, including the very first turn on mount.
+  // If this turn change was caused by a revert (stuck pool / finish-with-leftover-dice), that
+  // gets its own combined announcement instead — see prevRevertSeq's own comment above.
   useEffect(() => {
     if (!game || game.phase !== 'awaiting-roll') return;
-    announceTurnStart(game.players[game.currentTurnIndex].name, true);
+    if (game.revertSeq !== prevRevertSeq.current) {
+      announceTurnReverted(game.lastRevertedPlayer, game.players[game.currentTurnIndex].name);
+    } else {
+      announceTurnStart(game.players[game.currentTurnIndex].name, true);
+    }
+    prevRevertSeq.current = game.revertSeq;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game?.currentTurnIndex]);
+  }, [game?.currentTurnIndex, game?.revertSeq]);
 
   useEffect(() => {
     if (!game || game.eventSeq === 0) return;
