@@ -18,7 +18,6 @@ import {
   announceCapture,
   announceFinish,
   announceHint,
-  announceIdle,
   setAnnouncerEnabled,
 } from '../audio/announcer';
 import Board from '../components/Board';
@@ -72,7 +71,7 @@ export default function HotseatPage() {
   useEffect(() => {
     if (!game || game.rollHistory.length === 0) return;
     const last = game.rollHistory[game.rollHistory.length - 1];
-    announceRoll(game.message, last.isBonus);
+    announceRoll(game.players[game.currentTurnIndex].name, last.label, last.isBonus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.rollHistory.length]);
 
@@ -80,7 +79,7 @@ export default function HotseatPage() {
   // currentTurnIndex so it fires once per turn change, including the very first turn on mount.
   useEffect(() => {
     if (!game || game.phase !== 'awaiting-roll') return;
-    announceTurnStart(game.message);
+    announceTurnStart(game.players[game.currentTurnIndex].name, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.currentTurnIndex]);
 
@@ -97,41 +96,6 @@ export default function HotseatPage() {
     if (finisher) announceFinish(finisher.name, game.rankings.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.rankings.length]);
-
-  // Idle nudge: if the current player hasn't rolled or moved within 5s, remind them — and keep
-  // repeating every 5s for as long as they stay idle. actionSeq (bumped by roll()/selectPiece())
-  // and currentTurnIndex/phase together cover "the player just acted" or "it's now someone
-  // else's turn / the game ended"; any modal having focus pauses it, since the player is
-  // legitimately doing something else then, not neglecting their turn.
-  //
-  // Deliberately NOT a fixed setInterval: the spoken reminder itself takes a couple of seconds,
-  // and a plain 5s interval could fire the *next* repeat's cancel()+speak() while the current one
-  // was still mid-playback — cutting it off right after the name (spoken first) but before the
-  // action (spoken after it) ever finished. Chaining each repeat off the previous one's actual
-  // completion (announceIdle's onEnd callback) guarantees every repeat is heard in full before
-  // the next one starts.
-  useEffect(() => {
-    if (!game || game.phase === 'game-over') return;
-    if (showAbort || showReportBug || showResults || statsFor) return;
-    const player = game.players[game.currentTurnIndex];
-    const awaitingRoll = game.phase === 'awaiting-roll';
-    let stopped = false;
-    let timeoutId: ReturnType<typeof setTimeout>;
-
-    const scheduleNext = () => {
-      timeoutId = setTimeout(() => {
-        if (stopped) return;
-        announceIdle(player.name, awaitingRoll, scheduleNext);
-      }, 5000);
-    };
-    scheduleNext();
-
-    return () => {
-      stopped = true;
-      clearTimeout(timeoutId);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game?.actionSeq, game?.currentTurnIndex, game?.phase, showAbort, showReportBug, showResults, statsFor]);
 
   function appendLog(line: string) {
     setGame((prev) => (prev ? { ...prev, debugLog: [...prev.debugLog, line] } : prev));
@@ -183,9 +147,8 @@ export default function HotseatPage() {
     if (game) endGameIfOver(selectPiece(game, pieceId));
   }
   function handlePieceClickedBeforeValue() {
-    const text = 'ಮೊದಲು ಗರ ಆಯ್ಕೆಮಾಡಿ.';
-    announceHint(text);
-    setHint({ text, key: Date.now() });
+    announceHint('Select a dice value first.');
+    setHint({ text: 'ಮೊದಲು ಗರ ಆಯ್ಕೆಮಾಡಿ.', key: Date.now() });
     appendLog('User clicked a piece before selecting a pool value');
   }
   function handleOpenAbort() {

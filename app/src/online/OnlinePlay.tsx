@@ -96,7 +96,7 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onAborted }: 
   useEffect(() => {
     if (game.rollHistory.length === 0) return;
     const last = game.rollHistory[game.rollHistory.length - 1];
-    announceRoll(game.message, last.isBonus);
+    announceRoll(game.players[game.currentTurnIndex].name, last.label, last.isBonus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.rollHistory.length]);
 
@@ -106,7 +106,7 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onAborted }: 
   // the roll/capture/finish announcements above.
   useEffect(() => {
     if (game.phase !== 'awaiting-roll') return;
-    announceTurnStart(game.message);
+    announceTurnStart(game.players[game.currentTurnIndex].name, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.currentTurnIndex]);
 
@@ -137,9 +137,8 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onAborted }: 
     socketRef.current?.emit('game:rollback', { gameId });
   }
   function handlePieceClickedBeforeValue() {
-    const text = 'ಮೊದಲು ಗರ ಆಯ್ಕೆಮಾಡಿ.';
-    announceHint(text);
-    setHint({ text, key: Date.now() });
+    announceHint('Select a dice value first.');
+    setHint({ text: 'ಮೊದಲು ಗರ ಆಯ್ಕೆಮಾಡಿ.', key: Date.now() });
   }
   function handleAbortRequest() {
     socketRef.current?.emit('abort:request', { gameId });

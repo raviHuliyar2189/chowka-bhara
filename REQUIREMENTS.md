@@ -225,14 +225,17 @@ gameplay screen mirrors this same layout, plus a Report Bug button — see §13.
 ### Audio / announcer
 Spoken (Web Speech) and chime (Web Audio) announcements fire for:
 - **The start of every turn** — spoken immediately (not just after a period of inactivity), naming
-  whose turn it is and what to do ("<name>, ನಿಮ್ಮ ಸರದಿ, ಕವಡೆ ಹಾಕಿ").
-- **A completed roll** — speaks the game's own full instructional message for that result (the
-  value rolled *and* what to do with it — e.g. "you got <label>, move your piece" — or, on a
-  bhara/chauka bonus, the bonus call-out plus "roll again"), not just the bare number, so every
-  spoken roll doubles as a complete instruction rather than requiring the value to be inferred.
+  whose turn it is and what to do.
+- **A completed roll** — states the result *and* what to do with it (e.g. "<name> rolled <label>.
+  Move your piece." — or, on a bhara/chauka bonus, the bonus call-out plus "roll again"), not just
+  the bare number, so every spoken roll doubles as a complete instruction on its own.
 - **A capture**, and **a piece/player finishing**.
-- Separately, if a player goes 5 seconds without acting, a repeating spoken idle nudge reminds them
-  by name what's still pending ("hurry, roll" / "hurry, move a piece").
+
+All spoken announcements are in **English**, regardless of the on-screen text (which stays
+Kannada, e.g. the turn banner's "<name>, ನಿಮ್ಮ ಸರದಿ, ಕವಡೆ ಹಾಕಿ" and the on-screen "select a value
+first" nudge) — most devices/browsers have no Kannada voice installed, so Kannada text either fails
+to speak at all or gets mangled through a fallback voice; English is close to universally
+supported, so the spoken announcement is reliably heard in full.
 
 **Every player hears every announcement**, not just whoever is currently acting — in hotseat this
 is automatic (one shared device/speaker); in online mode each connected device independently
@@ -301,6 +304,13 @@ Resolved during requirements gathering:
 - **Legal-move highlighting**: only pieces with an actual legal move (for the selected value, or
   any pending pool value before one is picked) are visually highlighted; finished pieces are never
   highlighted (§7, §11).
+- **Spoken language**: all *spoken* announcements are in English; on-screen text stays Kannada
+  (§11). Switched from all-Kannada speech after determining Kannada voices aren't reliably
+  available across devices/browsers, which was silently producing incomplete or garbled
+  announcements — English is close to universally supported by `speechSynthesis`.
+- **Idle-nudge announcement removed**: hotseat previously had a repeating spoken reminder after 5s
+  of inactivity ("hurry, roll"/"hurry, move"). Removed at the user's request; turn-start and
+  post-roll announcements (§11) already state what's pending without it.
 - **Online identity**: email + a mandatory display name, with no password and no email
   verification — logging in is just "does an account with this email exist?" (§13). Chosen for
   simplicity for a small trusted group, over magic-link email verification (tried first, then
