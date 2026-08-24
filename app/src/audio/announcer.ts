@@ -61,6 +61,37 @@ function getCtx(): AudioContext | null {
   return audioCtx;
 }
 
+// Mobile browsers (notably iOS Safari) can silently drop speech/audio triggered by code that
+// isn't directly, synchronously inside a user gesture — which online play's roll/capture/finish
+// announcements aren't, since they fire off a socket broadcast arriving asynchronously after the
+// gesture that caused it. Priming both APIs on the very first tap/click/key anywhere on the page
+// (well before any of that) keeps them unlocked for the rest of the session on browsers that
+// require an initial gesture but don't re-require one for every later call.
+let unlocked = false;
+export function unlockAudioOnFirstInteraction(): void {
+  if (unlocked || typeof window === 'undefined') return;
+  const unlock = () => {
+    if (unlocked) return;
+    unlocked = true;
+    try {
+      const ctx = getCtx();
+      if (ctx && ctx.state === 'suspended') void ctx.resume();
+      if ('speechSynthesis' in window) {
+        const utter = new SpeechSynthesisUtterance('');
+        utter.volume = 0;
+        window.speechSynthesis.speak(utter);
+      }
+    } catch {
+      // Best-effort — if this fails, later real announcements just fall back to whatever the
+      // browser's default gesture policy allows.
+    }
+    document.removeEventListener('pointerdown', unlock);
+    document.removeEventListener('keydown', unlock);
+  };
+  document.addEventListener('pointerdown', unlock, { once: true });
+  document.addEventListener('keydown', unlock, { once: true });
+}
+
 function tone(ctx: AudioContext, freq: number, start: number, duration: number, peak = 0.18): void {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -99,21 +130,18 @@ function chime(kind: 'bonus' | 'capture' | 'finish' | 'win'): void {
   }
 }
 
-// Non-bonus rolls only ever land on 1, 2, or 3 (bhara/chauka are always bonus — see dice.ts),
-// so this only needs to cover that range.
-const KANNADA_NUMBER: Record<number, string> = {
-  1: 'ಒಂದು',
-  2: 'ಎರಡು',
-  3: 'ಮೂರು',
-};
+// Speaks the game's own current message rather than a separately-composed phrase — that message
+// already states both the roll result AND what to do next (move a piece, or roll again on a
+// bonus), so the two can never drift out of sync with what's shown on screen.
+export function announceRoll(message: string, isBonus: boolean): void {
+  if (isBonus) chime('bonus');
+  speak(message, isBonus ? 1.15 : 1, isBonus ? 1.3 : 1);
+}
 
-export function announceRoll(label: string, value: number, isBonus: boolean): void {
-  if (isBonus) {
-    chime('bonus');
-    speak(`${label}! ಮತ್ತೆ ಎಸೆಯಿರಿ!`, 1.15, 1.3);
-  } else {
-    speak(KANNADA_NUMBER[value] ?? String(value));
-  }
+// Spoken the moment a new turn begins (not just after 5s idle, see announceIdle below) — same
+// reasoning as announceRoll: speaks the game's own message so the instruction is always complete.
+export function announceTurnStart(message: string): void {
+  speak(message);
 }
 
 export function announceCapture(playerName: string, count: number): void {

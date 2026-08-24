@@ -14,6 +14,7 @@ import { computePlacements, applyPlacementsToStats, applyAbortToStats, type Plac
 import { loadRoster, saveRoster, loadStats, saveStats, type PlayerStats } from '../game/storage';
 import {
   announceRoll,
+  announceTurnStart,
   announceCapture,
   announceFinish,
   announceHint,
@@ -71,9 +72,17 @@ export default function HotseatPage() {
   useEffect(() => {
     if (!game || game.rollHistory.length === 0) return;
     const last = game.rollHistory[game.rollHistory.length - 1];
-    announceRoll(last.label, last.value, last.isBonus);
+    announceRoll(game.message, last.isBonus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.rollHistory.length]);
+
+  // Spoken immediately when a new turn begins (not just after the 5s idle nudge) — keyed on
+  // currentTurnIndex so it fires once per turn change, including the very first turn on mount.
+  useEffect(() => {
+    if (!game || game.phase !== 'awaiting-roll') return;
+    announceTurnStart(game.message);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.currentTurnIndex]);
 
   useEffect(() => {
     if (!game || game.eventSeq === 0) return;

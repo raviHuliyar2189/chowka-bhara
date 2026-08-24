@@ -1,5 +1,5 @@
 import type { PlayerId } from './paths';
-import { type Player, canMovePiece, hasAnyLegalMove, movePiece } from './rules';
+import { type Player, canMovePiece, hasAnyLegalMove, hasCaptureChance, movePiece } from './rules';
 import { rollDice, type RollResult } from './dice';
 
 export type Phase = 'awaiting-roll' | 'awaiting-selection' | 'game-over';
@@ -235,14 +235,29 @@ export function selectPiece(state: GameState, pieceId: number): GameState {
 // make rollback unavailable for exactly the common case it exists for. It's cleared instead by
 // the next roll() (whoever rolls next, same player's bonus chain or the incoming player), by
 // rollbackLastMove() itself, or by forfeiting — see each's own comment.
+// A player who hasn't captured anyone and now has no remaining chance to ever do so (see
+// hasCaptureChance's own comment) would otherwise circle the outer ring forever, unable to reach
+// the inner ring and unable to finish — this declares them lost instead of letting the game stall.
+function markUncapturedDeadlocks(state: GameState): GameState {
+  let next = state;
+  for (const p of state.players) {
+    if (p.isFinished || p.hasLost || p.hasCaptured) continue;
+    if (hasCaptureChance(p, next.players)) continue;
+    const players = next.players.map((pp) => (pp.id === p.id ? { ...pp, hasLost: true } : pp));
+    next = withLog({ ...next, players }, `${p.name} has no remaining chance to capture — declared lost.`);
+  }
+  return next;
+}
+
 function advanceTurn(state: GameState): GameState {
-  const active = state.players.filter((p) => !p.isFinished && !p.hasLost);
+  const checked = markUncapturedDeadlocks(state);
+  const active = checked.players.filter((p) => !p.isFinished && !p.hasLost);
   if (active.length <= 1) {
-    const rankings = [...state.rankings];
+    const rankings = [...checked.rankings];
     if (active.length === 1 && !rankings.includes(active[0].id)) rankings.push(active[0].id);
     return withLog(
       {
-        ...state,
+        ...checked,
         rankings,
         phase: 'game-over',
         pool: [],
@@ -253,23 +268,23 @@ function advanceTurn(state: GameState): GameState {
     );
   }
 
-  let idx = state.currentTurnIndex;
+  let idx = checked.currentTurnIndex;
   do {
-    idx = (idx + 1) % state.players.length;
-  } while (state.players[idx].isFinished || state.players[idx].hasLost);
+    idx = (idx + 1) % checked.players.length;
+  } while (checked.players[idx].isFinished || checked.players[idx].hasLost);
 
   return withLog(
     {
-      ...state,
+      ...checked,
       currentTurnIndex: idx,
       pool: [],
       rollHistory: [],
       selectedPoolIndex: null,
       phase: 'awaiting-roll',
-      message: `${state.players[idx].name}, ನಿಮ್ಮ ಸರದಿ, ಕವಡೆ ಹಾಕಿ`,
-      turnStartSnapshot: clonePlayers(state.players),
+      message: `${checked.players[idx].name}, ನಿಮ್ಮ ಸರದಿ, ಕವಡೆ ಹಾಕಿ`,
+      turnStartSnapshot: clonePlayers(checked.players),
     },
-    `Turn passes to ${state.players[idx].name}`
+    `Turn passes to ${checked.players[idx].name}`
   );
 }
 

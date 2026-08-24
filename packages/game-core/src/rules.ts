@@ -52,6 +52,47 @@ export function hasAnyLegalMove(player: Player, pool: number[]): boolean {
   return pool.some((val) => player.pieces.some((p) => canMovePiece(player, p, val)));
 }
 
+function coordKey(c: Coord): string {
+  return `${c[0]},${c[1]}`;
+}
+
+// Every non-safe coordinate any of this player's own pieces could still reach by moving forward
+// along their own path, from wherever each piece currently sits.
+function remainingReach(player: Player): Set<string> {
+  const coords = new Set<string>();
+  for (const piece of player.pieces) {
+    for (let pos = piece.pos + 1; pos <= FINISH_POS; pos++) {
+      const c = coordAt(player.id, pos);
+      if (!isSafeCell(c)) coords.add(coordKey(c));
+    }
+  }
+  return coords;
+}
+
+// A player who hasn't captured anyone yet is permanently barred from the inner ring (see
+// canMovePiece above), so they can never finish without one. This checks whether that's still
+// mathematically possible: is there any active opponent piece — now or wherever it still has left
+// to travel on its own path — sitting on a coordinate this player's pieces could ever reach?
+// Movement is one-directional (positions only increase), so once that's false for every opponent
+// it stays false — this player has no path left to a win.
+export function hasCaptureChance(player: Player, allPlayers: Player[]): boolean {
+  if (player.hasCaptured) return true;
+  const myReach = remainingReach(player);
+  if (myReach.size === 0) return false;
+
+  for (const opp of allPlayers) {
+    if (opp.id === player.id || opp.hasLost) continue;
+    for (const piece of opp.pieces) {
+      if (piece.pos === FINISH_POS) continue; // permanently parked at center, never capturable again
+      for (let pos = piece.pos; pos <= FINISH_POS; pos++) {
+        const c = coordAt(opp.id, pos);
+        if (!isSafeCell(c) && myReach.has(coordKey(c))) return true;
+      }
+    }
+  }
+  return false;
+}
+
 export interface CaptureResult {
   player: Player;
   piece: Piece;

@@ -7,6 +7,7 @@ import OnlineGamePage from './online/OnlineGamePage';
 import AuthGate from './online/AuthGate';
 import HotseatPage from './hotseat/HotseatPage';
 import type { PlayerInfo } from './online/api';
+import { unlockAudioOnFirstInteraction } from './audio/announcer';
 import './App.css';
 
 // A game-invite link (/games/:id) opened fresh always means "online, right now" — skip the
@@ -39,6 +40,10 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(!isGameInviteLink);
   const [player, setPlayer] = useState<PlayerInfo | null>(null);
   const [showAuthToast, setShowAuthToast] = useState(false);
+
+  useEffect(() => {
+    unlockAudioOnFirstInteraction();
+  }, []);
 
   useEffect(() => {
     if (!showAuthToast) return;

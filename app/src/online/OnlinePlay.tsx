@@ -9,7 +9,14 @@ import Board from '../components/Board';
 import DiceTray from '../components/DiceTray';
 import ReportBugModal from '../components/ReportBugModal';
 import OnlineAbortModal, { type AbortUIState } from './OnlineAbortModal';
-import { announceRoll, announceCapture, announceFinish, announceHint, setAnnouncerEnabled } from '../audio/announcer';
+import {
+  announceRoll,
+  announceTurnStart,
+  announceCapture,
+  announceFinish,
+  announceHint,
+  setAnnouncerEnabled,
+} from '../audio/announcer';
 
 interface Props {
   gameId: string;
@@ -89,9 +96,19 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onAborted }: 
   useEffect(() => {
     if (game.rollHistory.length === 0) return;
     const last = game.rollHistory[game.rollHistory.length - 1];
-    announceRoll(last.label, last.value, last.isBonus);
+    announceRoll(game.message, last.isBonus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.rollHistory.length]);
+
+  // Spoken immediately when a new turn begins (not just after the 5s idle nudge) — keyed on
+  // currentTurnIndex so it fires once per turn change, including the very first turn on mount.
+  // Every connected player's device runs this independently off the same synced state, same as
+  // the roll/capture/finish announcements above.
+  useEffect(() => {
+    if (game.phase !== 'awaiting-roll') return;
+    announceTurnStart(game.message);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game.currentTurnIndex]);
 
   useEffect(() => {
     if (game.eventSeq === 0) return;
