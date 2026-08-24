@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { connectSocket } from './socket';
+import { rematchGame } from './api';
 import type { GameState } from '../game/turnEngine';
 import { moverOfLastMove } from '../game/turnEngine';
 import { computePlacements } from '../game/session';
@@ -23,7 +24,9 @@ interface Props {
   gameId: string;
   initialState: GameState;
   mySeat: PlayerId;
-  onAborted: () => void;
+  // Called whenever this player leaves the game entirely — a full in-game abort, or clicking
+  // Exit from the game-over screen — always the same destination (back to online setup).
+  onExit: () => void;
 }
 
 interface AbortPendingPayload {
@@ -36,12 +39,14 @@ interface AbortPendingPayload {
 // hotseat game uses, just driven by the server's broadcast state instead of a local reducer.
 // Every action (roll, pick a value, pick a piece, rollback) is sent to the server over the
 // socket and applied there; this component only ever renders whatever comes back.
-export default function OnlinePlay({ gameId, initialState, mySeat, onAborted }: Props) {
+export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Props) {
   const [game, setGame] = useState<GameState>(initialState);
   const [hint, setHint] = useState<{ text: string; key: number } | null>(null);
   const [soundOn, setSoundOn] = useState(true);
   const [showReportBug, setShowReportBug] = useState(false);
   const [abortUI, setAbortUI] = useState<AbortUIState | null>(null);
+  const [rematching, setRematching] = useState(false);
+  const [rematchError, setRematchError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
   // Starts from the rejoining/initial state's own revertSeq (not 0) — a player who rejoins mid-
   // game after several reverts already happened shouldn't get a spurious "reverted" announcement
@@ -83,7 +88,7 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onAborted }: 
     });
     socket.on('abort:resolved', ({ action }: { action: 'abort' | 'resume' | 'forfeit' }) => {
       setAbortUI(null);
-      if (action === 'abort') onAborted();
+      if (action === 'abort') onExit();
     });
 
     return () => {
@@ -162,6 +167,19 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onAborted }: 
   function handleForfeitDecision(forfeit: boolean) {
     socketRef.current?.emit('abort:forfeit-decision', { gameId, forfeit });
   }
+  async function handleRematch() {
+    setRematching(true);
+    setRematchError(null);
+    try {
+      await rematchGame(gameId);
+      // No local transition here on purpose — the game-updated broadcast (already listened for
+      // above) carries the fresh state to every participant, the same way for the clicker as for
+      // everyone else, so this screen naturally re-renders back into live gameplay.
+    } catch (err) {
+      setRematchError(err instanceof Error ? err.message : 'Could not start a rematch.');
+      setRematching(false);
+    }
+  }
   function toggleSound() {
     const next = !soundOn;
     setSoundOn(next);
@@ -181,6 +199,13 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onAborted }: 
               </li>
             ))}
           </ol>
+          {rematchError && <p className="online-error">{rematchError}</p>}
+          <button className="action-btn btn-start" onClick={handleRematch} disabled={rematching}>
+            {rematching ? 'Starting…' : 'Rematch'}
+          </button>
+          <button className="action-btn btn-abort" style={{ marginTop: 8 }} onClick={onExit}>
+            Exit
+          </button>
         </div>
       </div>
     );

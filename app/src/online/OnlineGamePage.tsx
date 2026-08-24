@@ -23,7 +23,7 @@ export default function OnlineGamePage({ gameId, me, onExit }: Props) {
         gameId={gameId}
         initialState={playing.state}
         mySeat={playing.mySeat}
-        onAborted={onExit}
+        onExit={onExit}
       />
     );
   }

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { pool } from '../db/pool';
 import { readSession, requireAuth } from '../auth/middleware';
 import { getIo, lobbyRoom } from '../realtime/io';
-import { createGame } from '@chowka/game-core/turnEngine';
+import { createGame, rematch, type GameState } from '@chowka/game-core/turnEngine';
 import { PLAYER_COLORS, SEATS_BY_COUNT, type PlayerId } from '@chowka/game-core/paths';
 import { recordPlayerDeclined } from './stats';
 
@@ -276,4 +276,40 @@ gamesRouter.post('/games/:id/start', async (req, res) => {
   getIo().to(lobbyRoom(gameId)).emit('game-updated', state);
 
   res.json({ game: state });
+});
+
+// POST /games/:id/rematch — any participant may restart a finished game with the same seats,
+// via @chowka/game-core's own rematch() (the same function hotseat's "play again" uses) so the
+// two never diverge. Not offered for a lobby-cancelled or in-game-aborted game — only a game that
+// actually concluded (status 'finished') can be replayed.
+gamesRouter.post('/games/:id/rematch', async (req, res) => {
+  const gameId = req.params.id;
+  const gameResult = await pool.query('select status, state from games where id = $1', [gameId]);
+  const game = gameResult.rows[0] as { status: string; state: GameState | null } | undefined;
+  if (!game) {
+    res.status(404).json({ error: 'Game not found.' });
+    return;
+  }
+  const seatResult = await pool.query('select 1 from game_seats where game_id = $1 and player_id = $2', [
+    gameId,
+    req.player!.playerId,
+  ]);
+  if (seatResult.rows.length === 0) {
+    res.status(403).json({ error: "You're not part of this game." });
+    return;
+  }
+  if (game.status !== 'finished' || !game.state) {
+    res.status(400).json({ error: "This game hasn't finished yet." });
+    return;
+  }
+
+  const next = rematch(game.state);
+  await pool.query('update games set status = $1, state = $2 where id = $3', [
+    'in_progress',
+    JSON.stringify(next),
+    gameId,
+  ]);
+  getIo().to(lobbyRoom(gameId)).emit('game-updated', next);
+
+  res.json({ game: next });
 });

@@ -125,3 +125,7 @@ export function abortLobby(gameId: string): Promise<void> {
 export function startGame(gameId: string): Promise<GameState> {
   return request<{ game: GameState }>(`/games/${gameId}/start`, { method: 'POST' }).then((r) => r.game);
 }
+
+export function rematchGame(gameId: string): Promise<GameState> {
+  return request<{ game: GameState }>(`/games/${gameId}/rematch`, { method: 'POST' }).then((r) => r.game);
+}

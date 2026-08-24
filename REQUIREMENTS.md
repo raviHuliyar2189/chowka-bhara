@@ -377,14 +377,25 @@ Resolved during requirements gathering:
 - **Creator's pre-start cancel is unilateral**: no vote, unlike in-game Abort (§9/§13) — the game
   hasn't started yet, so there's no shared investment to protect by requiring consensus, and it
   isn't counted in anyone's stats since no game was actually played.
+- **Eliminated players are never silently omitted from results**: found after a player eliminated
+  by the no-capture-chance rule (§7) could end up missing from the game-over screen entirely, with
+  the *survivor* incorrectly shown as the loss instead. Fixed by recording every elimination
+  (no-capture-chance or forfeit) into the placement order the instant it happens, rather than
+  inferring it later from "whoever's left"; the sole remaining survivor is only auto-ranked last
+  (§8's original rule) when every other player got there by genuinely *finishing* — never when
+  they got there because opponents were eliminated, which would wrongly blame the survivor. Also
+  fixed a related ordering bug where eliminating one player could spuriously cascade into
+  eliminating another in the same pass, purely because the first player's own elimination had
+  already made them look unreachable to the second — every candidate is now checked against one
+  consistent snapshot instead of each other's just-applied changes.
+- **Online rematch**: added so finishing an online game isn't a dead end the way it briefly was —
+  any participant can restart with the same seats, mirroring hotseat's existing "play again."
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has
   real per-account server-side stats (§10), just not yet surfaced in any UI.
 - **No online stats UI yet**: recorded server-side but not shown anywhere in the online screens.
-- **No rematch flow in online mode**: hotseat's "play again with the same players" has no online
-  equivalent yet — finishing or aborting an online game returns to the setup screen to start fresh.
 
 ## 13. Online Multiplayer
 
@@ -456,6 +467,15 @@ Adapted from hotseat's consensus flow (§9) for players on separate devices:
 - **2+ declines** → the *requester's* device (specifically, not anyone else's) is asked the
   forfeit-vs-resume follow-up question hotseat's shared modal would otherwise ask whoever's
   holding it.
+
+### Game over (online)
+The game-over screen lists every player's placement (or "Loss" — see §7/§8 for exactly who counts
+as a loss, including a no-capture-chance elimination or a forfeit, both of which are now always
+included here rather than silently omitted) and offers two actions:
+- **Rematch** — any participant can restart with the same seats (`rematch()`, the same function
+  hotseat's "play again" uses), broadcast to everyone the same way Start Game is.
+- **Exit** — leaves this game and returns to online setup; same destination as leaving via an
+  in-game Abort.
 
 ### Routing
 Each meaningful screen is a real URL with its own browser-history entry, so the browser/phone's
