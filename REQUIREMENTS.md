@@ -193,6 +193,9 @@ Tracked **per player**:
   seated player in that game (no one is placed), while a partial abort/forfeit counts as a Loss
   only for the forfeited player(s) — the players who continued get a normal placement-based result
   once their game ends.
+- "Declined" % (**online only**) — the player declined an invite (§13). Recorded the moment they
+  decline, independent of whether that game ever actually starts. Distinct from every other
+  category, including the pre-start creator cancellation (§13), which isn't recorded anywhere.
 
 **Hotseat**: stats are per-player-name, stored in the browser (`localStorage`) — see §12's "still
 open" note; not synced across devices or browsers.
@@ -352,6 +355,23 @@ Resolved during requirements gathering:
 - **Aborted games are terminal**: reopening a link to a game that was fully aborted shows "this
   game was aborted" rather than the stale last board state — the DB row's `state` column isn't
   cleared on abort (only `status`), so this had to be checked explicitly client-side (§13).
+- **Invitee selection lives entirely in WhatsApp, not this app**: the creator only ever shares one
+  link via WhatsApp's own contact picker — the app has no invitee list, phone numbers, or contacts
+  of its own. What the app *does* track is who actually opens that link afterward and whether they
+  join or decline (§13).
+- **Decline, not just non-response**: opening an invite link shows an explicit Join/Decline choice
+  rather than auto-joining. Declining claims a seat slot (as `status: 'declined'`), is recorded in
+  stats immediately, and is later shown distinctly on the board once the game starts — separate
+  from simply never responding, which leaves that slot open indefinitely (§13).
+- **Seat reassignment on start, not on join/decline**: because the final joined count isn't known
+  until Start is actually clicked, seat letters are finalized then — joined players re-seated onto
+  the fair topology for their count, declined players onto whatever's left over from the original
+  plan — rather than trying to keep a stable seat letter per player from the moment they respond
+  (§13). Explicit worked examples from the user: 4 planned/1 declined → joined get P1-P3, decliner
+  gets P4; 3 planned/1 declined → joined get the fair P1/P3 pair, decliner gets P2.
+- **Creator's pre-start cancel is unilateral**: no vote, unlike in-game Abort (§9/§13) — the game
+  hasn't started yet, so there's no shared investment to protect by requiring consensus, and it
+  isn't counted in anyone's stats since no game was actually played.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
@@ -373,19 +393,41 @@ Still open / assumed defaults (flag if any of these are wrong):
 - Login is required up front, before either hotseat or online mode is reachable — not just for
   online play. A returning visitor with a valid stored token skips straight past the login screen.
 
-### Creating & joining a game
+### Creating, inviting & joining a game
 - The creator picks a player count (2–4) and creates the game; they're automatically seated as P1.
-- The game gets a shareable URL (`/games/:id`). The creator can copy it or share it via a WhatsApp
-  link directly from the waiting-room screen.
-- Whoever opens that link next (signing in first if they don't already have a session) claims the
-  next open seat in order, up to the configured player count; once full, "Start Game" is enabled
-  for any seated player to press.
+- The game gets a shareable URL (`/games/:id`). **Who specifically gets invited is decided entirely
+  inside WhatsApp**, not this app — the creator shares the link via WhatsApp's own contact/forward
+  picker (a "Share on WhatsApp" link, pre-filled with who started the game, the planned player
+  count, and who's joined so far); a plain Copy Link option exists too. The app itself never knows
+  the intended invitee list, only who actually opens the link afterward.
+- Opening the link for the first time (signing in first if needed) shows an explicit **Join /
+  Decline** choice — naming who started the game, the planned player count, and who's joined so
+  far — rather than joining automatically. Only clicking Join actually claims a seat.
+- **Declining** claims a seat slot too (so the room can still fill up predictably) but as
+  `status: 'declined'` instead of `'joined'` — recorded in that player's statistics immediately
+  (§10), not deferred to whether the game ever starts. A player who declines sees a simple
+  confirmation and nothing further from that game.
+- **"Start Game" only requires at least 2 joined**, not every originally-planned seat — the room
+  adapts to however many people actually accept. **Seat fairness on start**: the joined players are
+  re-seated onto the fair topology for however many actually joined (`SEATS_BY_COUNT[joinedCount]`
+  — opposite bases for 2, etc.), in their original join order; declined players take whatever
+  seat(s) are left over from the originally-planned topology, e.g. 4 planned + 1 decline → the 3 who
+  joined get P1/P2/P3, the decliner gets P4. This keeps active play balanced regardless of exactly
+  who declined.
+- **The creator alone can cancel the game while it's still in the lobby** (before Start), with no
+  vote or confirmation needed from anyone else — different from in-game Abort (below), which does
+  require consensus once play has actually started. Not counted in anyone's stats, since the game
+  never started.
 - Opening a link to a game that's already in progress rejoins the participant straight into the
   live board (closed tab, refreshed page, or a different device) instead of a stale waiting room.
-- Opening a link to a game that was fully aborted shows an explicit "this game was aborted" message
-  instead of any board/lobby state.
+- Opening a link to a game that was aborted (whether cancelled pre-start by the creator or fully
+  aborted in-game) shows an explicit "this game was aborted" message instead of any board/lobby
+  state.
 - A non-participant opening a link to a game that's already started (and isn't full/available) is
   rejected, not allowed to claim a seat mid-game.
+- A declined player is shown distinctly on the game board itself (dimmed home label, "(declined)")
+  once the game they declined actually starts — see §7/§8 for how they're excluded from gameplay
+  (always created with `hasLost: true`, reusing every existing loss-exclusion path).
 
 ### Real-time sync
 - The server is the sole authority: it validates every action (is this really this player's turn?

@@ -51,6 +51,7 @@ export function createGame(playerDefs: PlayerDef[]): GameState {
     isFinished: false,
     hasLost: false,
     hasCaptured: false,
+    hasDeclined: false,
   }));
   return {
     players,
@@ -339,6 +340,7 @@ export function rematch(state: GameState): GameState {
     isFinished: false,
     hasLost: false,
     hasCaptured: false,
+    hasDeclined: false,
   }));
   return {
     players,

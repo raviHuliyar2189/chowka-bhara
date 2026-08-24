@@ -83,7 +83,7 @@ export interface SeatInfo {
   playerId: string;
   displayName: string;
   email: string;
-  status: 'invited' | 'joined';
+  status: 'joined' | 'declined';
   joinedAt: string | null;
 }
 
@@ -91,10 +91,12 @@ export interface LobbyState {
   id: string;
   status: string;
   createdBy: string;
+  createdByName: string;
   seatCount: number;
   state: GameState | null;
   seats: SeatInfo[];
-  allJoined: boolean;
+  joinedCount: number;
+  canStart: boolean;
 }
 
 export function createGame(seatCount: number): Promise<LobbyState> {
@@ -110,6 +112,14 @@ export function fetchGame(gameId: string): Promise<LobbyState> {
 
 export function joinGame(gameId: string): Promise<LobbyState> {
   return request<{ game: LobbyState }>(`/games/${gameId}/join`, { method: 'POST' }).then((r) => r.game);
+}
+
+export function declineGame(gameId: string): Promise<LobbyState> {
+  return request<{ game: LobbyState }>(`/games/${gameId}/decline`, { method: 'POST' }).then((r) => r.game);
+}
+
+export function abortLobby(gameId: string): Promise<void> {
+  return request<void>(`/games/${gameId}/abort-lobby`, { method: 'POST' });
 }
 
 export function startGame(gameId: string): Promise<GameState> {

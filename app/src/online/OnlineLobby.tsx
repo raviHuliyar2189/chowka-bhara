@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
-import { fetchGame, joinGame, startGame, type LobbyState, type PlayerInfo } from './api';
+import { fetchGame, joinGame, declineGame, abortLobby, startGame, type LobbyState, type PlayerInfo } from './api';
 import { connectSocket } from './socket';
 import type { GameState } from '../game/turnEngine';
 import { SEATS_BY_COUNT, type PlayerId } from '../game/paths';
@@ -11,76 +11,125 @@ interface Props {
   onStart: (state: GameState, mySeat: PlayerId) => void;
 }
 
+type Phase = 'loading' | 'choice' | 'declined' | 'waiting';
+
 export default function OnlineLobby({ gameId, me, onStart }: Props) {
+  const [phase, setPhase] = useState<Phase>('loading');
   const [lobby, setLobby] = useState<LobbyState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [copied, setCopied] = useState(false);
-  // Known as soon as the lobby loads, before the game exists — kept in a ref (not state) since
-  // it never changes and the game-updated handler below needs it without retriggering the effect.
+  // Known as soon as we're actually seated — kept in a ref (not state) since it never changes
+  // and the game-updated handler below needs it without retriggering the effect.
   const mySeatRef = useRef<PlayerId | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+
+  function connectAndListen() {
+    const socket = connectSocket();
+    socketRef.current = socket;
+    socket.emit('join-lobby-room', { gameId });
+    socket.on('lobby-updated', (updated: LobbyState) => {
+      if (updated.status === 'aborted') {
+        setError('This game was aborted.');
+        return;
+      }
+      setLobby(updated);
+    });
+    // Fires for whoever clicked "Start Game" AND everyone else watching — a single source of
+    // truth for "the game has begun" instead of the clicking button handling its own
+    // transition locally (which would leave everyone else stranded in the lobby).
+    socket.on('game-updated', (state: GameState) => {
+      if (mySeatRef.current) onStart(state, mySeatRef.current);
+    });
+  }
 
   useEffect(() => {
-    let socket: Socket | null = null;
     let cancelled = false;
 
     (async () => {
       try {
-        let current = await fetchGame(gameId);
+        const current = await fetchGame(gameId);
         if (current.status === 'aborted') {
           if (!cancelled) setError('This game was aborted.');
           return;
         }
-        let mySeat = current.seats.find((s) => s.playerId === me.id);
-        if (!mySeat) {
-          if (current.status !== 'lobby') {
-            if (!cancelled) setError("This game has already started and you weren't part of it.");
-            return;
+        const mySeat = current.seats.find((s) => s.playerId === me.id);
+
+        if (mySeat?.status === 'declined') {
+          if (!cancelled) {
+            setLobby(current);
+            setPhase('declined');
           }
-          if (current.seats.length >= current.seatCount) {
-            if (!cancelled) setError('This game is already full.');
+          return;
+        }
+
+        if (mySeat?.status === 'joined') {
+          mySeatRef.current = mySeat.seat as PlayerId;
+          // Already underway (or finished) — reopening the link (closed tab, refresh, new
+          // device) rejoins straight into the live board instead of a waiting room that's
+          // already moved on.
+          if (current.state) {
+            if (!cancelled) onStart(current.state, mySeatRef.current);
             return;
           }
           if (cancelled) return;
-          // Opening the link is what claims a seat — no separate "accept invite" step.
-          current = await joinGame(gameId);
-          mySeat = current.seats.find((s) => s.playerId === me.id);
-        }
-        const seat = mySeat!.seat as PlayerId;
-        mySeatRef.current = seat;
-        if (cancelled) return;
-
-        // Already underway (or finished) — reopening the link (closed tab, refresh, new device)
-        // rejoins straight into the live board instead of a waiting room that's already moved on.
-        if (current.state) {
-          onStart(current.state, seat);
+          setLobby(current);
+          setPhase('waiting');
+          connectAndListen();
           return;
         }
-        setLobby(current);
+
+        // Not seated at all yet — show the Join/Decline choice, don't claim a seat until they
+        // actually pick one.
+        if (current.status !== 'lobby') {
+          if (!cancelled) setError("This game has already started and you weren't part of it.");
+          return;
+        }
+        if (current.seats.length >= current.seatCount) {
+          if (!cancelled) setError('This game is already full.');
+          return;
+        }
+        if (!cancelled) {
+          setLobby(current);
+          setPhase('choice');
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load this game.');
-        return;
       }
-
-      socket = connectSocket();
-      socket.emit('join-lobby-room', { gameId });
-      socket.on('lobby-updated', (updated: LobbyState) => {
-        if (!cancelled) setLobby(updated);
-      });
-      // Fires for whoever clicked "Start Game" AND everyone else watching — a single source of
-      // truth for "the game has begun" instead of the clicking button handling its own
-      // transition locally (which would leave everyone else stranded in the lobby).
-      socket.on('game-updated', (state: GameState) => {
-        if (!cancelled && mySeatRef.current) onStart(state, mySeatRef.current);
-      });
     })();
 
     return () => {
       cancelled = true;
-      socket?.disconnect();
+      socketRef.current?.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, me.id]);
+
+  async function handleJoinClick() {
+    setError(null);
+    try {
+      const updated = await joinGame(gameId);
+      const seat = updated.seats.find((s) => s.playerId === me.id)!.seat as PlayerId;
+      mySeatRef.current = seat;
+      setLobby(updated);
+      setPhase('waiting');
+      connectAndListen();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not join.');
+    }
+  }
+
+  async function handleDeclineClick() {
+    setError(null);
+    try {
+      const updated = await declineGame(gameId);
+      setLobby(updated);
+      setPhase('declined');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not decline.');
+    }
+  }
 
   async function handleStart() {
     setStarting(true);
@@ -92,6 +141,19 @@ export default function OnlineLobby({ gameId, me, onStart }: Props) {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not start the game.');
       setStarting(false);
+    }
+  }
+
+  async function handleCancelGame() {
+    setCancelling(true);
+    setError(null);
+    try {
+      await abortLobby(gameId);
+      // No local transition here either — the lobby-updated broadcast's status==='aborted'
+      // check above handles it uniformly for the canceller and everyone else waiting.
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not cancel the game.');
+      setCancelling(false);
     }
   }
 
@@ -115,7 +177,7 @@ export default function OnlineLobby({ gameId, me, onStart }: Props) {
     );
   }
 
-  if (!lobby) {
+  if (phase === 'loading' || !lobby) {
     return (
       <div className="modal">
         <p>Loading game…</p>
@@ -123,15 +185,52 @@ export default function OnlineLobby({ gameId, me, onStart }: Props) {
     );
   }
 
+  const joinedNames = lobby.seats.filter((s) => s.status === 'joined').map((s) => s.displayName).join(', ');
+
+  if (phase === 'declined') {
+    return (
+      <div className="modal">
+        <h2>You declined this game.</h2>
+      </div>
+    );
+  }
+
+  if (phase === 'choice') {
+    return (
+      <div className="modal">
+        <h2>Game Invite</h2>
+        <p>
+          <strong>{lobby.createdByName}</strong> invited you to a <strong>{lobby.seatCount}</strong>-player
+          Chowka Bhara game.
+        </p>
+        <p>Joined so far: {joinedNames || 'no one yet'}.</p>
+        <button className="action-btn btn-start" onClick={handleJoinClick}>
+          Join
+        </button>
+        <button className="action-btn btn-abort" style={{ marginTop: 8 }} onClick={handleDeclineClick}>
+          Decline
+        </button>
+      </div>
+    );
+  }
+
   const seatOrder = SEATS_BY_COUNT[lobby.seatCount] ?? [];
   const seatByName = new Map(lobby.seats.map((s) => [s.seat, s]));
-  const whatsappText = encodeURIComponent(`Join my Chowka Bhara game: ${inviteLink}`);
+  const whatsappText = encodeURIComponent(
+    `${lobby.createdByName} started a Chowka Bhara game for ${lobby.seatCount} players. Joined so far: ${
+      joinedNames || 'no one yet'
+    }. Tap to join: ${inviteLink}`
+  );
+  const isCreator = lobby.createdBy === me.id;
 
   return (
     <div className="modal">
       <h2>Waiting Room</h2>
+      <p>
+        Started by <strong>{lobby.createdByName}</strong> — {lobby.seatCount} players planned.
+      </p>
 
-      {!lobby.allJoined && (
+      {!lobby.canStart && (
         <div className="setup-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.5rem' }}>
           <label className="setup-label">Share this link:</label>
           <input readOnly value={inviteLink} onFocus={(e) => e.currentTarget.select()} />
@@ -154,12 +253,25 @@ export default function OnlineLobby({ gameId, me, onStart }: Props) {
       <ul className="player-list">
         {seatOrder.map((seat) => {
           const s = seatByName.get(seat);
-          return <li key={seat}>{seat}: {s ? `${s.displayName} — ✅ Joined` : 'Waiting for a player…'}</li>;
+          let label = 'Waiting for a response…';
+          if (s?.status === 'joined') label = `${s.displayName} — ✅ Joined`;
+          else if (s?.status === 'declined') label = `${s.displayName} — ❌ Declined`;
+          return (
+            <li key={seat}>
+              {seat}: {label}
+            </li>
+          );
         })}
       </ul>
-      <button className="action-btn btn-start" disabled={!lobby.allJoined || starting} onClick={handleStart}>
-        {starting ? 'Starting…' : lobby.allJoined ? 'Start Game' : 'Waiting for everyone to join…'}
+      <button className="action-btn btn-start" disabled={!lobby.canStart || starting} onClick={handleStart}>
+        {starting ? 'Starting…' : lobby.canStart ? 'Start Game' : 'Waiting for at least 2 players…'}
       </button>
+
+      {isCreator && (
+        <button className="action-btn btn-abort" style={{ marginTop: 8 }} onClick={handleCancelGame} disabled={cancelling}>
+          {cancelling ? 'Cancelling…' : 'Cancel Game'}
+        </button>
+      )}
     </div>
   );
 }

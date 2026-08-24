@@ -22,6 +22,11 @@ export interface Player {
   isFinished: boolean;
   hasLost: boolean;
   hasCaptured: boolean; // must capture at least one opponent piece before entering the inner ring
+  // Online mode only: declined the invite rather than joining. Always paired with hasLost: true
+  // (so every existing hasLost-based exclusion — advanceTurn's active filter, resolveCaptures'
+  // "skip hasLost" check — excludes them from real gameplay for free) — this field only exists
+  // to tell "declined" apart from an in-game forfeit for display/stats purposes.
+  hasDeclined: boolean;
 }
 
 // Safe cells (all 4 bases + center) allow unlimited stacking of anyone's pieces and are never

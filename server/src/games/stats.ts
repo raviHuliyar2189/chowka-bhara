@@ -44,3 +44,13 @@ export async function recordGameAborted(gameId: string): Promise<void> {
     );
   }
 }
+
+// Recorded the moment someone declines an invite, not deferred to game-end — the game may not
+// even start yet, or may never start, but the decline itself already happened.
+export async function recordPlayerDeclined(playerId: string): Promise<void> {
+  await pool.query(
+    `insert into player_stats (player_id, games, declined) values ($1, 1, 1)
+     on conflict (player_id) do update set games = player_stats.games + 1, declined = player_stats.declined + 1`,
+    [playerId]
+  );
+}

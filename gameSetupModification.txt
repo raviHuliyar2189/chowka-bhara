@@ -1,0 +1,7 @@
+1. A player after selecting online mode, starts the game room.
+2. Select players to join the game room - using WhatsApp.
+3. Send an url link to game room as WhatsApp message body to all the players to join the game. By clicking the url from whatsapp, the player should be able to interact with the game. Provide additional details - who has initiated the game, how many players will be in the game and the List of players requested to join the game
+4. Wait for players to join. Allow the players to join the game and then decline. This should adjust the number of players available for the game. For the game to begin there should be minimum 2 players.
+5. After all players to join, initiate a real time communication capability among all players for the whole length of the game.
+6. Till the game starts, the player who initiated the game, should have the capability to abort the game without getting confirmation from other players.
+

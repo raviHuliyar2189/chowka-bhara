@@ -131,13 +131,17 @@ export default function Board({ game, onSelectPiece, onSelectStats, onPieceClick
   const labels = game.players.map((p) => (
     <button
       key={p.id}
-      className={`home-label side-${SIDES_CYCLE[(PLAYER_ORDER.indexOf(p.id) + rotationSteps) % 4]}${p.hasLost ? ' lost' : ''}`}
+      className={`home-label side-${SIDES_CYCLE[(PLAYER_ORDER.indexOf(p.id) + rotationSteps) % 4]}${
+        p.hasDeclined ? ' declined' : p.hasLost ? ' lost' : ''
+      }`}
       style={{ background: p.color }}
       onClick={() => onSelectStats(p.name)}
-      title={`${p.name}'s statistics${p.isFinished ? ' (finished)' : p.hasLost ? ' (left)' : ''}`}
+      title={`${p.name}'s statistics${
+        p.hasDeclined ? ' (declined)' : p.isFinished ? ' (finished)' : p.hasLost ? ' (left)' : ''
+      }`}
     >
       {p.name}
-      {p.isFinished ? ' ✓' : ''}
+      {p.hasDeclined ? ' (declined)' : p.isFinished ? ' ✓' : ''}
     </button>
   ));
 
