@@ -1,6 +1,15 @@
 import type { CSSProperties } from 'react';
 import { motion } from 'framer-motion';
-import { PATHS, SAFE_CELLS, BASE_POSITIONS, FINISH_POS, isSameCell, type Coord, type PlayerId } from '../game/paths';
+import {
+  PATHS,
+  SAFE_CELLS,
+  BASE_POSITIONS,
+  FINISH_POS,
+  isSameCell,
+  rotateCoord,
+  type Coord,
+  type PlayerId,
+} from '../game/paths';
 import type { GameState } from '../game/turnEngine';
 import { canMovePiece } from '../game/rules';
 
@@ -16,13 +25,19 @@ interface Props {
   viewerSeat?: PlayerId;
 }
 
-// Fixed seating: P1 bottom, P2 right, P3 top, P4 left (matches SetupModal's seat labels).
-const HOME_SIDE: Record<PlayerId, 'top' | 'bottom' | 'left' | 'right'> = {
-  P1: 'bottom',
-  P2: 'right',
-  P3: 'top',
-  P4: 'left',
-};
+// Canonical seating (P1 bottom, P2 right, P3 top, P4 left, matches SetupModal's seat labels) is
+// the frame every game-logic coordinate lives in. For a given viewer, the board is rotated purely
+// for DISPLAY so that viewer's own base always appears at the bottom — easier to read your own
+// path when it starts right in front of you, whichever seat you're actually in. Hotseat has no
+// single "viewer" (one shared screen), so it always renders the canonical, unrotated layout.
+const PLAYER_ORDER: PlayerId[] = ['P1', 'P2', 'P3', 'P4'];
+const SIDES_CYCLE = ['bottom', 'right', 'top', 'left'] as const;
+
+function rotationStepsFor(viewerSeat: PlayerId | undefined): number {
+  if (!viewerSeat) return 0;
+  const viewerIndex = PLAYER_ORDER.indexOf(viewerSeat);
+  return (4 - viewerIndex) % 4;
+}
 
 // Hoisted to stable references, not recreated per render: framer-motion treats a fresh object/
 // array literal passed to animate/transition as a new instruction, which can restart a piece's
@@ -44,11 +59,13 @@ export default function Board({ game, onSelectPiece, onSelectStats, onPieceClick
   const current = game.players[game.currentTurnIndex];
   const selectedVal = game.selectedPoolIndex !== null ? game.pool[game.selectedPoolIndex] : null;
   const colorOf = (id: PlayerId) => game.players.find((p) => p.id === id)?.color;
+  const rotationSteps = rotationStepsFor(viewerSeat);
 
   const cells = [];
   for (let r = 0; r < 5; r++) {
     for (let c = 0; c < 5; c++) {
       const coord: Coord = [r, c];
+      const [displayR, displayC] = rotateCoord(coord, rotationSteps);
       const isSafe = SAFE_CELLS.some((s) => isSameCell(s, coord));
       const homeOwner = (Object.keys(BASE_POSITIONS) as PlayerId[]).find((id) =>
         isSameCell(BASE_POSITIONS[id], coord)
@@ -67,7 +84,7 @@ export default function Board({ game, onSelectPiece, onSelectStats, onPieceClick
         <div
           key={`${r}-${c}`}
           className={`cell${isSafe ? ' marked' : ''}`}
-          style={tint ? ({ '--tint': tint } as CSSProperties) : undefined}
+          style={{ gridRow: displayR + 1, gridColumn: displayC + 1, ...(tint ? ({ '--tint': tint } as CSSProperties) : {}) }}
         >
           {piecesHere.map(({ player, piece }) => {
             const isCurrentPlayer = player.id === current.id && game.phase !== 'game-over';
@@ -114,7 +131,7 @@ export default function Board({ game, onSelectPiece, onSelectStats, onPieceClick
   const labels = game.players.map((p) => (
     <button
       key={p.id}
-      className={`home-label side-${HOME_SIDE[p.id]}${p.hasLost ? ' lost' : ''}`}
+      className={`home-label side-${SIDES_CYCLE[(PLAYER_ORDER.indexOf(p.id) + rotationSteps) % 4]}${p.hasLost ? ' lost' : ''}`}
       style={{ background: p.color }}
       onClick={() => onSelectStats(p.name)}
       title={`${p.name}'s statistics${p.isFinished ? ' (finished)' : p.hasLost ? ' (left)' : ''}`}

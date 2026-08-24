@@ -109,37 +109,28 @@ export function roll(state: GameState, rng?: () => number): GameState {
   );
 }
 
-// All the dice a turn produces must be played out. If the player gets stuck partway through
-// (some pool value has no legal move left for any piece), the whole turn's moves — including
-// any pieces moved and any captures made since the turn started — are undone, as if none of it
-// happened, rather than letting partial moves stand. The one exception: a player finishing the
-// game (all 4 pieces home) is never reverted just because a leftover die can't be used.
+// All the dice a turn produces must be played out — including finishing all 4 pieces: if a
+// player completes their last piece partway through the pool but still has unused values left
+// (and, being finished, can never have a legal move for them), the whole turn's moves — every
+// piece moved, every capture made, and the finish itself — are undone, as if none of it happened,
+// exactly like getting stuck mid-turn without finishing. A finish only counts once the turn's
+// entire pool has actually been used.
 function passIfNoLegalMove(state: GameState): GameState {
   const player = currentPlayer(state);
   if (state.pool.length === 0 || hasAnyLegalMove(player, state.pool)) {
     return state;
   }
 
-  // advanceTurn always sets its own "next player, roll!" (or "Game over!") message — prepend
-  // the explanation to that rather than passing it as the initial message, or advanceTurn's
-  // message would just overwrite it and the player would never see why their moves vanished.
-  if (player.isFinished) {
-    const logged = withLog(
-      { ...state, pool: [], rollHistory: [] },
-      `${player.name} finished; unused pool [${state.pool.join(',')}] discarded.`
-    );
-    const advanced = advanceTurn(logged);
-    return {
-      ...advanced,
-      message: `${player.name} has no pieces left to move — the remaining dice go unused. ${advanced.message}`,
-    };
-  }
-
   const revertedPlayers = clonePlayers(state.turnStartSnapshot);
   const revertedPlayer = revertedPlayers[state.currentTurnIndex];
+  // Undoing a finish-with-leftover-dice must also undo the ranking entry selectPiece added for
+  // it — otherwise the player would show as not-finished (reverted pieces) yet still ranked.
+  const rankings = state.rankings.filter((id) => id !== revertedPlayer.id);
   const logged = withLog(
-    { ...state, players: revertedPlayers, pool: [], rollHistory: [] },
-    `${revertedPlayer.name} stuck with pool [${state.pool.join(',')}] — turn undone, reverted to start-of-turn state.`
+    { ...state, players: revertedPlayers, rankings, pool: [], rollHistory: [] },
+    `${revertedPlayer.name} couldn't play out the whole pool [${state.pool.join(',')}]${
+      player.isFinished ? ' (including a finish)' : ''
+    } — turn undone, reverted to start-of-turn state.`
   );
   const advanced = advanceTurn(logged);
   return {

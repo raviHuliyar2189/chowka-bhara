@@ -27,7 +27,10 @@ const P1_PATH: Coord[] = [
   [2, 2],
 ];
 
-function rotateCoord([r, c]: Coord, times: number): Coord {
+// Exported so the board UI can reuse this exact same transform to rotate the *display* — showing
+// each viewer their own base at the bottom — while every game-logic coordinate (PATHS,
+// BASE_POSITIONS, a piece's actual position) stays in this canonical P1-at-bottom frame.
+export function rotateCoord([r, c]: Coord, times: number): Coord {
   let cur: Coord = [r, c];
   for (let i = 0; i < times; i++) {
     cur = [4 - cur[1], cur[0]];

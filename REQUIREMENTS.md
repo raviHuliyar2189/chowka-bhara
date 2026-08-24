@@ -27,6 +27,13 @@ online) and how players get into the same game.
   - Position 24 = center (final destination — shared cell for every player).
 - P2, P3, P4 paths are the same shape as P1's, rotated 90°/180°/270° respectively, so all four
   players move anticlockwise around an identical rotational path.
+- **Per-viewer display rotation (online only)**: every player's own device shows the board rotated
+  so *their own* base always appears at the bottom, regardless of their actual P1–P4 seat — makes
+  a player's own home and path easiest to read since it starts right in front of them. This is
+  purely a rendering transform (the same 90°-step rotation used to derive P2–P4's paths from P1's,
+  reused for display) — the underlying game coordinates, piece positions, and rules are unaffected
+  and identical to what every other player's device is computing. Hotseat has one shared screen for
+  every player at once, so it always shows the canonical, unrotated P1-at-bottom layout.
 
 ## 3. Players & Pieces
 
@@ -65,13 +72,16 @@ online) and how players get into the same game.
    that many steps forward along its path.
 4. That value is consumed from the pool. If pool values remain and at least one is a legal move for
    some piece, the player repeats step 3.
-5. **The whole pool must be played out.** If, at any point, no remaining pool value can legally
-   move any piece, the entire turn's moves — every piece moved and every capture made since the
-   turn began, including through any capture-bonus reroll chain — are **undone**, as if the turn
-   never happened, and the turn passes to the next player (anticlockwise: P1 → P2 → P3 → P4 →
-   P1 …, skipping players not in the game / already finished / declared lost — see §8). The one
-   exception: if the player has already finished (all 4 pieces home) by the time they get stuck,
-   that stands — a win is never reverted just because a leftover die can't be used.
+5. **The whole pool must be played out — including finishing.** If, at any point, no remaining
+   pool value can legally move any piece, the entire turn's moves — every piece moved and every
+   capture made since the turn began, including through any capture-bonus reroll chain, **and
+   including a finish** — are **undone**, as if the turn never happened, and the turn passes to
+   the next player (anticlockwise: P1 → P2 → P3 → P4 → P1 …, skipping players not in the game /
+   already finished / declared lost — see §8). A player finishing all 4 pieces partway through the
+   pool does **not** end their turn early or exempt them from this: if any pool value is left
+   unused once they've finished (and being finished, they can never have a legal move for it), the
+   finish itself is reverted along with everything else — finishing only counts once the turn's
+   entire pool has actually been used up.
 6. **Capturing an opponent piece grants a bonus roll**, on top of the current turn: the player
    rolls again (step 1 again, including the possibility of further bonus-roll chains), and the
    new value(s) join the move pool. Any value already in the pool that hadn't been used yet
@@ -296,8 +306,12 @@ Resolved during requirements gathering:
   continue playing (§9/§13). An earlier reading of this section had it backwards; corrected.
 - **Turn revert on a stuck pool**: if a player gets stuck with an unplayable pool value partway
   through a turn (including partway through a capture-bonus reroll chain), every move and capture
-  made since the turn began is undone before passing to the next player — unless the player has
-  already finished, in which case the win stands (§5.5). Implemented.
+  made since the turn began is undone before passing to the next player (§5.5). Implemented.
+- **Finishing does not exempt a turn from the stuck-pool revert**: originally, a player who
+  finished all 4 pieces mid-turn kept the win even if leftover dice went unused. Reversed at the
+  user's request — a finish reached with pool values still unplayed is now undone along with the
+  rest of that turn's moves, exactly like any other stuck turn; a finish only counts once the
+  entire pool has been used (§5.5).
 - **Stats categories**: placement stats are labeled "1st/2nd/3rd Win"; a full unanimous abort is
   tracked as a distinct "Aborted" stat rather than folded into "Loss", and counts toward total
   games played for every player in that game (§10).
@@ -308,6 +322,12 @@ Resolved during requirements gathering:
   (§11). Switched from all-Kannada speech after determining Kannada voices aren't reliably
   available across devices/browsers, which was silently producing incomplete or garbled
   announcements — English is close to universally supported by `speechSynthesis`.
+- **Per-viewer board rotation (online)**: added at the user's request so each player's own base
+  reads as "close to them" (bottom of their screen) and their own path is easiest to follow,
+  instead of every device showing the same fixed P1-at-bottom layout regardless of actual seat
+  (§2). Implemented as a pure display-layer rotation in `Board.tsx`, reusing the same coordinate
+  rotation `packages/game-core/paths.ts` already uses to derive P2–P4's paths from P1's — no
+  change to game logic, piece positions, or what any other player's device renders.
 - **Idle-nudge announcement removed**: hotseat previously had a repeating spoken reminder after 5s
   of inactivity ("hurry, roll"/"hurry, move"). Removed at the user's request; turn-start and
   post-roll announcements (§11) already state what's pending without it.
