@@ -396,6 +396,14 @@ Resolved during requirements gathering:
   (1 human + 1 AI), a rule-aware but not unbeatable heuristic opponent (§14) rather than a perfect
   solver. Implemented as its own page (not folded into hotseat's) to avoid adding AI-turn
   conditionals to the more heavily-used hotseat flow.
+- **No post-login "Welcome" screen**: removed at the user's request — login now leads straight to
+  mode-select, no separate acknowledgment screen in between (§13).
+- **Vs Computer pacing and silence**: the AI's turn now waits a full second between each step
+  (roll, move, capture, bonus roll) rather than a shorter delay, and stays silent throughout —
+  only the human's own turn is ever announced (§14), both per the user's explicit request.
+- **Mode-select order and labels**: reordered to Single player (vs computer) → Multiple players
+  (Local, hotseat) → Multiple Players (Online), relabeled from the original "Play vs
+  Computer"/"Play Locally"/"Play Online" wording, per the user's explicit request.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
@@ -414,6 +422,8 @@ Still open / assumed defaults (flag if any of these are wrong):
   Socket.IO connection handshake (see §12 for why not a cookie).
 - Login is required up front, before either hotseat or online mode is reachable — not just for
   online play. A returning visitor with a valid stored token skips straight past the login screen.
+- After the welcome splash and login, the app lands directly on mode-select — no separate
+  "Welcome, {name}!" acknowledgment screen in between.
 
 ### Creating, inviting & joining a game
 - The creator picks a player count (2–4) and creates the game; they're automatically seated as P1.
@@ -512,15 +522,21 @@ player — for every legal `(pool value, own piece)` combination, scores it and 
   capture-gate rule (§7) legal-move checking already enforces.
 - **A small forward-progress tiebreaker** otherwise.
 
-The computer's turn (rolling, and — after a short pacing delay so it doesn't feel instant —
-picking a value and piece) drives the exact same reducer functions (`roll`, `selectPoolValue`,
-`selectPiece`) a human's own button clicks call; a bonus roll or a capture naturally continues the
-computer's turn the same way it would for a human, no special-casing needed.
+The computer's turn (rolling, and picking a value and piece) drives the exact same reducer
+functions (`roll`, `selectPoolValue`, `selectPiece`) a human's own button clicks call, each step
+after a **1-second pacing delay** so the human can actually follow what happened (roll result,
+move, capture, bonus roll) before the next one fires; a bonus roll or a capture naturally
+continues the computer's turn the same way it would for a human, no special-casing needed.
 
 ### Differences from hotseat
 - **Setup**: just the human's name — no player-count or roster picker.
 - **Abort**: hotseat's multi-player consensus flow (§9) doesn't apply with only one real person to
   ask — clicking Abort Game ends the game immediately, no confirmation cycling.
-- **Announcements, stats, rematch/new-session**: identical to hotseat — the computer's moves are
-  announced the same way a human's would be, and results/stats use the same `localStorage`
-  roster-keyed persistence (§10), just always including "Computer" as one of the two players.
+- **Announcements are human-only**: unlike hotseat/online (where every announcement is heard
+  regardless of whose turn it is, §11), here only the human's own turn/rolls/captures/finishes are
+  spoken — the computer's turn plays out silently. A capture is attributed by comparing the mover
+  to the human's own name/seat, and a finish by checking who was actually added to the rankings,
+  rather than assuming whoever's turn it currently is, since a finish can advance the turn in the
+  same update.
+- **Stats, rematch/new-session**: identical to hotseat — results/stats use the same `localStorage`
+  roster-keyed persistence (§10), always including "Computer" as one of the two players.

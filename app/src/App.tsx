@@ -42,21 +42,13 @@ function OnlineGameRoute({ me }: { me: PlayerInfo }) {
 export default function App() {
   const [showWelcome, setShowWelcome] = useState(!isGameInviteLink);
   const [player, setPlayer] = useState<PlayerInfo | null>(null);
-  const [showAuthToast, setShowAuthToast] = useState(false);
 
   useEffect(() => {
     unlockAudioOnFirstInteraction();
   }, []);
 
-  useEffect(() => {
-    if (!showAuthToast) return;
-    const timer = setTimeout(() => setShowAuthToast(false), 1600);
-    return () => clearTimeout(timer);
-  }, [showAuthToast]);
-
   function handleAuthed(p: PlayerInfo) {
     setPlayer(p);
-    setShowAuthToast(true);
   }
 
   if (showWelcome) {
@@ -75,18 +67,6 @@ export default function App() {
           <span className="app-version">Version 0.2</span>
         </h1>
         <AuthGate onAuthed={handleAuthed} />
-      </div>
-    );
-  }
-
-  if (showAuthToast) {
-    return (
-      <div className="app">
-        <div className="setup-inline">
-          <div className="modal">
-            <h2>Welcome, {player.displayName}!</h2>
-          </div>
-        </div>
       </div>
     );
   }

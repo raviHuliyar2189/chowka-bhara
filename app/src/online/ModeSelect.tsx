@@ -8,14 +8,14 @@ export default function ModeSelect({ onChoose }: Props) {
       <div className="modal">
         <h2>How do you want to play?</h2>
         <div className="mode-select-options">
+          <button className="action-btn" onClick={() => onChoose('vs-computer')}>
+            🤖 Single player
+          </button>
           <button className="action-btn" onClick={() => onChoose('hotseat')}>
-            📱 Play Locally (Pass the Device)
+            📱 Multiple players (Local)
           </button>
           <button className="action-btn" onClick={() => onChoose('online')}>
-            🌐 Play Online
-          </button>
-          <button className="action-btn" onClick={() => onChoose('vs-computer')}>
-            🤖 Play vs Computer
+            🌐 Multiple Players (Online)
           </button>
         </div>
       </div>
