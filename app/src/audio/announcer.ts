@@ -130,10 +130,12 @@ export function announceTurnStart(playerName: string, awaitingRoll: boolean): vo
   speak(`${playerName}, it's your turn — ${action}.`);
 }
 
+// Capturing always grants a bonus roll (§5.6) — say so, not just the capture itself, so this
+// announcement is a complete instruction like the others.
 export function announceCapture(playerName: string, count: number): void {
   chime('capture');
   const what = count > 1 ? `${count} pieces` : 'a piece';
-  speak(`${playerName} captured ${what}!`, 1.1, 1.15);
+  speak(`${playerName} captured ${what}! Roll again.`, 1.1, 1.15);
 }
 
 // A short spoken nudge for UI-only guidance (e.g. "pick a value first") — no chime, doesn't

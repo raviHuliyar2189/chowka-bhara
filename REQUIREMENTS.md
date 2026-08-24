@@ -242,7 +242,8 @@ Spoken (Web Speech) and chime (Web Audio) announcements fire for:
 - **A completed roll** — states the result *and* what to do with it (e.g. "<name> rolled <label>.
   Move your piece." — or, on a bhara/chauka bonus, the bonus call-out plus "roll again"), not just
   the bare number, so every spoken roll doubles as a complete instruction on its own.
-- **A capture**, and **a piece/player finishing**.
+- **A capture** — including the "roll again" instruction, since capturing always grants a bonus
+  roll (§5.6) — and **a piece/player finishing**.
 
 All spoken announcements are in **English**, regardless of the on-screen text (which stays
 Kannada, e.g. the turn banner's "<name>, ನಿಮ್ಮ ಸರದಿ, ಕವಡೆ ಹಾಕಿ" and the on-screen "select a value
