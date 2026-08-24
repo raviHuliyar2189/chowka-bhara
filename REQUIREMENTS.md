@@ -234,6 +234,11 @@ Spoken (Web Speech) and chime (Web Audio) announcements fire for:
 - Separately, if a player goes 5 seconds without acting, a repeating spoken idle nudge reminds them
   by name what's still pending ("hurry, roll" / "hurry, move a piece").
 
+**Every player hears every announcement**, not just whoever is currently acting — in hotseat this
+is automatic (one shared device/speaker); in online mode each connected device independently
+speaks all of the above off the same synced game state, with no filtering by whose turn it is or
+which seat that device is viewing (only the per-device mute toggle, §13, silences a given device).
+
 Sound can be toggled off both from the setup screen and, independently, at any time during a game
 from the Play Area panel; the on/off state is shared between the two toggles (hotseat), and is its
 own independent toggle in online mode (see §13) since each device controls only its own audio.
