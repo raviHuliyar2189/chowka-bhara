@@ -329,6 +329,16 @@ tap/click/keypress anywhere on the page "primes" both the Web Speech and Web Aud
 utterance + resuming the audio context) so they're already unlocked well before gameplay starts,
 for every player regardless of which specific control they happen to interact with first.
 
+### Error resilience
+The whole app is wrapped in a React error boundary (`ErrorBoundary.tsx`, mounted around `<App />`
+in `main.tsx`): any render-time exception anywhere in the tree shows a plain "Something went
+wrong — Reload" screen instead of React's default behavior with no boundary in place, which is to
+silently unmount the entire tree and leave a blank page with no visible error at all. `localStorage`
+access throughout the app (the auth token, the language preference) is wrapped defensively, since
+some in-app browsers (notably some link-opening webviews, exactly the context an invite link gets
+opened in) restrict storage access and throw rather than just returning empty — an unguarded read
+here was a real, reproduced cause of the app getting stuck (see §12).
+
 ### Setup screen
 - Player count (2–4) selectable, with per-seat name entry; existing roster names can be reused,
   new names typed freely.
@@ -572,6 +582,20 @@ Resolved during requirements gathering:
   from "revisiting this lobby later" (don't) uses `react-router-dom`'s per-navigation
   `location.state`, not persisted storage — it's naturally only present on the one navigation
   right after creation, gone on any later visit via the URL itself.
+- **Blank-page-on-invite-link bug, root-caused and fixed** (§11): reported as "WhatsApp message
+  reached the player, but clicking the link doesn't join the game — just a blank page, no error."
+  Reproduced by simulating a browser that blocks `localStorage` access (throws instead of just
+  returning empty) — a real, documented behavior of some in-app/link-opening webviews, exactly the
+  context an invite link gets opened in. `api.ts`'s `getToken()` wasn't guarded against this
+  (unlike the language preference's own storage read, which already was), and the resulting thrown
+  error, surfacing as an *unhandled promise rejection* inside `AuthGate`'s unguarded
+  `fetchMe().then(...)` chain (rejections don't trigger a React error boundary — the `.then()`
+  callback just silently never runs), left the screen stuck on "Loading…" forever with nothing
+  else ever rendering. Fixed at three layers: guarded every `localStorage` call in `api.ts`; added
+  a `.catch()` so an auth-check failure of any kind falls back to the login screen instead of
+  hanging; and added a top-level React error boundary (above) as a general safety net for whatever
+  the next unforeseen render exception turns out to be, so "silently blank, no feedback" can't
+  happen again regardless of cause.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

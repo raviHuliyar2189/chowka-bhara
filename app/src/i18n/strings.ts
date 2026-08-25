@@ -17,6 +17,14 @@ function ordinalEn(n: number): string {
 // value (a player name, a count, a link) is a function taking those values as plain args — no
 // generic per-key typing, translate()/useT() below just forward whatever args were passed.
 const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
+  // --- Error boundary ---
+  'error.title': { en: 'Something went wrong', kn: 'ಏನೋ ತಪ್ಪಾಗಿದೆ' },
+  'error.message': {
+    en: 'This page ran into a problem. Reloading usually fixes it.',
+    kn: 'ಈ ಪುಟದಲ್ಲಿ ಸಮಸ್ಯೆ ಉಂಟಾಗಿದೆ. ಮರುಲೋಡ್ ಮಾಡುವುದರಿಂದ ಸಾಮಾನ್ಯವಾಗಿ ಇದು ಸರಿಯಾಗುತ್ತದೆ.',
+  },
+  'error.reload': { en: 'Reload', kn: 'ಮರುಲೋಡ್ ಮಾಡಿ' },
+
   // --- App header ---
   'app.title': { en: 'Chowka Bhara', kn: 'ಚೌಕಾ ಭಾರ' },
   'app.version': { en: 'Version 0.2', kn: 'ಆವೃತ್ತಿ 0.2' },

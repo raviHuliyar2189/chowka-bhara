@@ -7,16 +7,34 @@ const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 // block by default. A token the client attaches itself sidesteps that entirely.
 const TOKEN_KEY = 'chowka_token';
 
+// Some in-app browsers (notably some versions of WhatsApp's/Instagram's own link-opening
+// webview) run pages with restricted storage access, where localStorage.getItem/setItem throws
+// a SecurityError instead of just being unavailable — exactly the context an invite link gets
+// opened in. Guarded here the same way language.ts's own persistence already is, so a player on
+// such a browser still reaches the sign-in screen (just without a token to auto-restore) instead
+// of the whole app failing to render.
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
 }
 
 function setToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+  } catch {
+    // Best-effort — the session just won't survive a reload on a browser that blocks storage.
+  }
 }
 
 export function clearToken(): void {
-  localStorage.removeItem(TOKEN_KEY);
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // Nothing to clear if storage was never writable to begin with.
+  }
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {

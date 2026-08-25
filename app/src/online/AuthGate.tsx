@@ -17,10 +17,16 @@ export default function AuthGate({ onAuthed }: Props) {
   const [view, setView] = useState<View>({ kind: 'loading' });
 
   useEffect(() => {
-    fetchMe().then((me) => {
-      if (me) onAuthed(me);
-      else setView({ kind: 'login' });
-    });
+    fetchMe()
+      .then((me) => {
+        if (me) onAuthed(me);
+        else setView({ kind: 'login' });
+      })
+      // fetchMe() already swallows its own request failures internally, but a synchronous throw
+      // upstream of that (e.g. localStorage access blocked by a restrictive in-app browser) would
+      // otherwise surface as an unhandled promise rejection that leaves this screen stuck on
+      // "Loading…" forever, with no visible error — fall back to the login view instead.
+      .catch(() => setView({ kind: 'login' }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
