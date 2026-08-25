@@ -153,6 +153,14 @@ because every player's path physically crosses through the other three players' 
   automatically (no forced "loss" language before then).
 - Final placement order: 1st, 2nd, 3rd, and — for 4-player games — a 4th/last place, which counts
   as a "loss" for statistics purposes (see §10).
+- **Ranking order among forfeited/eliminated players**: a real finish always outranks a mere
+  forfeit or no-capture-chance elimination, regardless of which happened first in wall-clock time.
+  Among players who never finished, the order they dropped out in is reversed for ranking purposes
+  — whoever forfeits/is eliminated **first** lands in the **worst** remaining place, and each
+  player who drops out **later** outranks everyone who already dropped out before them, since they
+  lasted longer in the game. Example (4 players, nobody finishes): P2 aborts first while the other
+  3 continue → P2 ends up last (a Loss); P1 aborts next while P3/P4 continue → P1 ranks 3rd; P3
+  aborts last, leaving P4 the sole survivor → P3 ranks 2nd and P4 (who never quit) ranks 1st.
 
 ## 9. Hotseat: Setup, Abort & Session Flow
 
@@ -425,6 +433,18 @@ Resolved during requirements gathering:
 - **Capture-status indicator**: added at the user's request as a general, all-modes visual (§11),
   not specific to Develop Test — Develop Test's manual toggle (above) was requested as a companion
   feature once the general indicator existed, so the editor could set the same flag it displays.
+- **Forfeit/elimination ranking order fixed** (§8): both `removePlayers` (abort forfeits) and
+  `markUncapturedDeadlocks` (no-capture-chance eliminations) used to just append newly-removed
+  players to the end of `rankings` in the order they were removed — which, combined with
+  `rankings[0]` meaning 1st place, put the *first* player to quit in the *best* available slot and
+  each later quitter in a progressively worse one, backwards from the intuitive "the earlier you
+  quit, the worse you place." Found via a worked 4-player example from the user (sequential aborts
+  down to one survivor) that the old code placed in exactly the wrong order. Fixed with a shared
+  `insertRemoved` helper: new removals are inserted right after any already-recorded genuine
+  finishers (a finish can never rank worse than a mere forfeit/elimination) and right before any
+  previously-removed players (so the most recent quitter always outranks earlier ones). Lives in
+  `packages/game-core`, so hotseat, online, vs-computer, and Develop Test all picked up the fix
+  from the one shared reducer.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

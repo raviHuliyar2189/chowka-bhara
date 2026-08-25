@@ -252,6 +252,20 @@ export function selectPiece(state: GameState, pieceId: number): GameState {
 // though that second player had a perfectly real capture chance before this pass began. Whether a
 // player is currently deadlocked must depend only on the board as it stood before this check, not
 // on iteration order.
+// Where a newly-removed (forfeited or eliminated) player lands in `rankings`: always after every
+// already-recorded genuine finisher — a real finish must never end up ranked worse than a mere
+// forfeit/elimination, no matter which happened first chronologically — and before every
+// previously-removed player, so the most recently removed of a group of quitters ranks best among
+// them (they lasted longest) while the very first to go lands worst, i.e. closest to last place.
+// Finishers are always a contiguous prefix of `rankings` under this invariant, so counting how
+// many entries are genuine finishes tells us exactly where that boundary currently sits.
+function insertRemoved(rankings: PlayerId[], players: Player[], newIds: PlayerId[]): PlayerId[] {
+  const finisherCount = rankings.filter((id) => players.find((p) => p.id === id)?.isFinished).length;
+  const fresh = newIds.filter((id) => !rankings.includes(id));
+  if (fresh.length === 0) return rankings;
+  return [...rankings.slice(0, finisherCount), ...fresh, ...rankings.slice(finisherCount)];
+}
+
 function markUncapturedDeadlocks(state: GameState): GameState {
   const toEliminate = state.players.filter(
     (p) => !p.isFinished && !p.hasLost && !p.hasCaptured && !hasCaptureChance(p, state.players)
@@ -264,10 +278,7 @@ function markUncapturedDeadlocks(state: GameState): GameState {
   // drop to <=1 — otherwise a deadlocked player in a 3-4 player game could be silently omitted
   // from the final results entirely if the game later ends some other way (see
   // finalizeSurvivorRanking's own comment for why this also isn't left to positional inference).
-  let rankings = state.rankings;
-  for (const p of toEliminate) {
-    if (!rankings.includes(p.id)) rankings = [...rankings, p.id];
-  }
+  const rankings = insertRemoved(state.rankings, players, toEliminate.map((p) => p.id));
   let next: GameState = { ...state, players, rankings };
   for (const p of toEliminate) {
     next = withLog(next, `${p.name} has no remaining chance to capture — declared lost.`);
@@ -361,10 +372,7 @@ export function removePlayers(state: GameState, playerIds: PlayerId[]): GameStat
   const players = state.players.map((p) => (playerIds.includes(p.id) ? { ...p, hasLost: true } : p));
   // Record each forfeit as a loss immediately, same reasoning as markUncapturedDeadlocks — not
   // deferred to whether this forfeit happens to end the game right now.
-  const rankingsWithForfeits = playerIds.reduce(
-    (acc, id) => (acc.includes(id) ? acc : [...acc, id]),
-    state.rankings
-  );
+  const rankingsWithForfeits = insertRemoved(state.rankings, players, playerIds);
   const withLosses: GameState = withLog(
     { ...state, players, rankings: rankingsWithForfeits, pool: [], rollHistory: [], selectedPoolIndex: null, lastMoveSnapshot: null },
     `Forfeited: ${playerIds.join(', ')}`
