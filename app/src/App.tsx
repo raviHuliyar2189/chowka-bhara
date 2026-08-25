@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
 import WelcomeScreen from './components/WelcomeScreen';
 import ModeSelect from './online/ModeSelect';
 import OnlineSetup from './online/OnlineSetup';
@@ -66,7 +66,7 @@ function OnlineSetupRoute() {
   const navigate = useNavigate();
   return (
     <div className="setup-inline">
-      <OnlineSetup onCreated={(gameId) => navigate(`/games/${gameId}`)} />
+      <OnlineSetup onCreated={(gameId) => navigate(`/games/${gameId}`, { state: { justCreated: true } })} />
     </div>
   );
 }
@@ -74,7 +74,15 @@ function OnlineSetupRoute() {
 function OnlineGameRoute({ me }: { me: PlayerInfo }) {
   const { gameId } = useParams();
   const navigate = useNavigate();
-  return <OnlineGamePage gameId={gameId!} me={me} onExit={() => navigate('/online')} />;
+  const location = useLocation();
+  // Only true for the one navigation right after "Create Game" (react-router's location.state is
+  // just JS attached to that specific history entry — reopening this same URL later, a refresh,
+  // or a different device never carries it) — the signal the lobby uses to auto-open WhatsApp
+  // exactly once, right when there's actually a fresh invite to send.
+  const justCreated = Boolean((location.state as { justCreated?: boolean } | null)?.justCreated);
+  return (
+    <OnlineGamePage gameId={gameId!} me={me} justCreated={justCreated} onExit={() => navigate('/online')} />
+  );
 }
 
 export default function App() {

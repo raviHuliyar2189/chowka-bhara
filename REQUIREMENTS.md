@@ -563,6 +563,15 @@ Resolved during requirements gathering:
   name still just gets typed) has no such quirk: it always reopens on click and can be used to
   switch the chosen name as many times as needed. Reset back to its placeholder option after every
   pick so selecting the same name twice in a row still fires a change event.
+- **Copy Link removed; WhatsApp opens automatically for the creator** (§13): requested explicitly
+  to streamline "create → invite" into one continuous motion instead of a manual copy-and-paste
+  step. Auto-opening on page load (rather than only on a button click) risks being popup-blocked,
+  since it fires after an async fetch rather than synchronously inside the "Create Game" click —
+  accepted as a known tradeoff at the user's request; the manual "Share on WhatsApp" button stays
+  as a fallback and for inviting more people later. Distinguishing "just created it" (auto-open)
+  from "revisiting this lobby later" (don't) uses `react-router-dom`'s per-navigation
+  `location.state`, not persisted storage — it's naturally only present on the one navigation
+  right after creation, gone on any later visit via the URL itself.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
@@ -587,10 +596,18 @@ Still open / assumed defaults (flag if any of these are wrong):
 ### Creating, inviting & joining a game
 - The creator picks a player count (2–4) and creates the game; they're automatically seated as P1.
 - The game gets a shareable URL (`/games/:id`). **Who specifically gets invited is decided entirely
-  inside WhatsApp**, not this app — the creator shares the link via WhatsApp's own contact/forward
-  picker (a "Share on WhatsApp" link, pre-filled with who started the game, the planned player
-  count, and who's joined so far); a plain Copy Link option exists too. The app itself never knows
-  the intended invitee list, only who actually opens the link afterward.
+  inside WhatsApp**, not this app — a "Share on WhatsApp" link opens `wa.me` with the invite text
+  pre-filled (who started the game, the planned player count, who's joined so far, the link), where
+  WhatsApp's own contact/forward picker is used to choose one or more recipients. **Opens
+  automatically**, in a new tab, the moment the creator's own device first reaches the waiting room
+  right after clicking "Create Game" — the very next thing they do is pick who to send it to, no
+  separate "now go invite people" step. It doesn't re-trigger on a later visit to the same lobby
+  (a refresh, a different device, coming back to check on it) — only that one first arrival — and
+  it never fires for anyone who reaches the waiting room by actually opening the invite link
+  (nothing for them to send). The button itself stays available afterward too, for inviting more
+  people later or if the auto-open didn't fire (e.g. a browser that blocks it). There's no Copy
+  Link option — the app itself never knows or needs to know the intended invitee list, only who
+  actually opens the link afterward.
 - Opening the link for the first time (signing in first if needed) shows an explicit **Join /
   Decline** choice — naming who started the game, the planned player count, and who's joined so
   far — rather than joining automatically. Only clicking Join actually claims a seat.

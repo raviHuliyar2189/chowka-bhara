@@ -248,9 +248,6 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
     en: (name: string, seatCount: number) => `Started by ${name} — ${seatCount} players planned.`,
     kn: (name: string, seatCount: number) => `${name} ಪ್ರಾರಂಭಿಸಿದರು — ${seatCount} ಆಟಗಾರರು ಯೋಜಿತ.`,
   },
-  'lobby.shareLink': { en: 'Share this link:', kn: 'ಈ ಲಿಂಕ್ ಹಂಚಿಕೊಳ್ಳಿ:' },
-  'lobby.copied': { en: 'Copied!', kn: 'ನಕಲಿಸಲಾಗಿದೆ!' },
-  'lobby.copyLink': { en: 'Copy Link', kn: 'ಲಿಂಕ್ ನಕಲಿಸಿ' },
   'lobby.shareWhatsApp': { en: 'Share on WhatsApp', kn: 'WhatsApp ನಲ್ಲಿ ಹಂಚಿಕೊಳ್ಳಿ' },
   'lobby.whatsappText': {
     en: (name: string, seatCount: number, joined: string, link: string) =>

@@ -8,13 +8,17 @@ import type { PlayerId } from '../game/paths';
 interface Props {
   gameId: string;
   me: PlayerInfo;
+  // True only for the one navigation right after this player clicked "Create Game" — see
+  // App.tsx's OnlineGameRoute for how it's derived. Tells OnlineLobby it's safe (and wanted) to
+  // auto-open WhatsApp with the invite, rather than doing that on every visit to this URL.
+  justCreated?: boolean;
   onExit: () => void;
 }
 
 // The /games/:gameId page — lobby and gameplay for one specific game. Setup (picking a player
 // count and creating a game) lives on its own /online route now, so this only ever toggles
 // between waiting-room and in-progress states for a game that already exists.
-export default function OnlineGamePage({ gameId, me, onExit }: Props) {
+export default function OnlineGamePage({ gameId, me, justCreated, onExit }: Props) {
   const [playing, setPlaying] = useState<{ state: GameState; mySeat: PlayerId } | null>(null);
 
   if (playing) {
@@ -30,7 +34,12 @@ export default function OnlineGamePage({ gameId, me, onExit }: Props) {
 
   return (
     <div className="setup-inline">
-      <OnlineLobby gameId={gameId} me={me} onStart={(state, mySeat) => setPlaying({ state, mySeat })} />
+      <OnlineLobby
+        gameId={gameId}
+        me={me}
+        justCreated={justCreated}
+        onStart={(state, mySeat) => setPlaying({ state, mySeat })}
+      />
     </div>
   );
 }

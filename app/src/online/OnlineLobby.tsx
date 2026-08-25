@@ -9,23 +9,37 @@ import { useT } from '../i18n/strings';
 interface Props {
   gameId: string;
   me: PlayerInfo;
+  justCreated?: boolean;
   onStart: (state: GameState, mySeat: PlayerId) => void;
 }
 
 type Phase = 'loading' | 'choice' | 'declined' | 'waiting';
 
-export default function OnlineLobby({ gameId, me, onStart }: Props) {
+export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props) {
   const t = useT();
   const [phase, setPhase] = useState<Phase>('loading');
   const [lobby, setLobby] = useState<LobbyState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-  const [copied, setCopied] = useState(false);
   // Known as soon as we're actually seated — kept in a ref (not state) since it never changes
   // and the game-updated handler below needs it without retriggering the effect.
   const mySeatRef = useRef<PlayerId | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  // Guards the WhatsApp auto-open below to exactly once per mount, even though the effect that
+  // triggers it can in principle re-run (StrictMode double-invoke, a fast gameId/me.id change).
+  const autoOpenedRef = useRef(false);
+
+  // Single source of truth for the invite link/text, used both by the auto-open below and the
+  // manual "Share on WhatsApp" button in the render — invitee selection happens entirely inside
+  // WhatsApp's own picker (one or more contacts/groups), not in this app.
+  function whatsappLinkFor(state: LobbyState): string {
+    const link = `${window.location.origin}/games/${gameId}`;
+    const joined =
+      state.seats.filter((s) => s.status === 'joined').map((s) => s.displayName).join(', ') || t('lobby.noOneYet');
+    const text = encodeURIComponent(t('lobby.whatsappText', state.createdByName, state.seatCount, joined, link));
+    return `https://wa.me/?text=${text}`;
+  }
 
   function connectAndListen() {
     const socket = connectSocket();
@@ -79,6 +93,15 @@ export default function OnlineLobby({ gameId, me, onStart }: Props) {
           setLobby(current);
           setPhase('waiting');
           connectAndListen();
+          // Only for the creator's own first arrival right after clicking "Create Game" (see
+          // justCreated's own comment in App.tsx) — opens WhatsApp with the invite pre-filled so
+          // the very next thing they do is pick who to send it to, no separate "now go invite
+          // people" step. Everyone else who reaches this waiting room already came in via the
+          // link, so there's nothing for them to send.
+          if (justCreated && !autoOpenedRef.current) {
+            autoOpenedRef.current = true;
+            window.open(whatsappLinkFor(current), '_blank', 'noopener,noreferrer');
+          }
           return;
         }
 
@@ -159,18 +182,6 @@ export default function OnlineLobby({ gameId, me, onStart }: Props) {
     }
   }
 
-  const inviteLink = `${window.location.origin}/games/${gameId}`;
-
-  async function handleCopyLink() {
-    try {
-      await navigator.clipboard.writeText(inviteLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard access denied/unavailable — the link is still shown in the field to copy manually.
-    }
-  }
-
   if (error) {
     return (
       <div className="modal">
@@ -216,7 +227,6 @@ export default function OnlineLobby({ gameId, me, onStart }: Props) {
 
   const seatOrder = SEATS_BY_COUNT[lobby.seatCount] ?? [];
   const seatByName = new Map(lobby.seats.map((s) => [s.seat, s]));
-  const whatsappText = encodeURIComponent(t('lobby.whatsappText', lobby.createdByName, lobby.seatCount, joinedNamesOrNone, inviteLink));
   const isCreator = lobby.createdBy === me.id;
 
   return (
@@ -226,21 +236,9 @@ export default function OnlineLobby({ gameId, me, onStart }: Props) {
 
       {!lobby.canStart && (
         <div className="setup-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.5rem' }}>
-          <label className="setup-label">{t('lobby.shareLink')}</label>
-          <input readOnly value={inviteLink} onFocus={(e) => e.currentTarget.select()} />
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button className="action-btn" onClick={handleCopyLink}>
-              {copied ? t('lobby.copied') : t('lobby.copyLink')}
-            </button>
-            <a
-              className="action-btn"
-              href={`https://wa.me/?text=${whatsappText}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {t('lobby.shareWhatsApp')}
-            </a>
-          </div>
+          <a className="action-btn btn-start" href={whatsappLinkFor(lobby)} target="_blank" rel="noopener noreferrer">
+            {t('lobby.shareWhatsApp')}
+          </a>
         </div>
       )}
 
