@@ -72,7 +72,14 @@ function speak(text: string, rate = 1, pitch = 1, voice: SpeechSynthesisVoice | 
   // Chrome (and Android WebView) has a known race where speak() called immediately after
   // cancel() starts the new utterance but truncates it after only the first word or two, before
   // the cancel has actually finished. A tiny delay lets the cancel land first.
-  setTimeout(() => synth.speak(utter), 60);
+  setTimeout(() => {
+    // iOS Safari can leave the speech engine stuck in a 'paused' state (e.g. after the tab was
+    // backgrounded, or after a prior cancel()) without ever un-pausing itself — a paused engine
+    // silently swallows every speak() call after it, with no error. Cheap to clear defensively
+    // right before every real announcement rather than trying to detect exactly when it happened.
+    if (synth.paused) synth.resume();
+    synth.speak(utter);
+  }, 60);
 }
 
 // Every announce* function below goes through this rather than calling speak() directly: it
@@ -107,32 +114,68 @@ function getCtx(): AudioContext | null {
 // Mobile browsers (notably iOS Safari) can silently drop speech/audio triggered by code that
 // isn't directly, synchronously inside a user gesture — which online play's roll/capture/finish
 // announcements aren't, since they fire off a socket broadcast arriving asynchronously after the
-// gesture that caused it. Priming both APIs on the very first tap/click/key anywhere on the page
-// (well before any of that) keeps them unlocked for the rest of the session on browsers that
-// require an initial gesture but don't re-require one for every later call.
-let unlocked = false;
+// gesture that caused it. Priming both APIs on tap/click/key anywhere on the page keeps them
+// unlocked for the rest of the session on browsers that require an initial gesture but don't
+// re-require one for every later call.
+//
+// Deliberately NOT a one-shot: an earlier version primed once (`{ once: true }`) and permanently
+// marked itself unlocked regardless of whether priming actually succeeded, so a gesture that
+// happened to fail silently (e.g. the very first tap on a page still mid-navigation from an
+// invite link, or a WebKit quirk) could leave a player unlockable for the rest of the session —
+// plausibly why some devices (reported: a 2nd player joining from an iPhone) never heard
+// announcements even though the same broadcast-triggered speak() call worked correctly on other
+// connected devices. Instead, every qualifying gesture cheaply re-primes: resumes the audio
+// context and un-pauses speech synthesis if either drifted back to a suspended/paused state
+// (which backgrounding the tab — locking the phone, switching apps — is known to cause on iOS),
+// and (only until it succeeds once) attempts the actual unlock utterance.
+let voicePrimed = false;
+let listenersInstalled = false;
+
+function primeOnGesture(): void {
+  try {
+    const ctx = getCtx();
+    if (ctx && ctx.state === 'suspended') void ctx.resume();
+  } catch {
+    // Best-effort — retried on the next gesture regardless.
+  }
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  try {
+    const synth = window.speechSynthesis;
+    if (synth.paused) synth.resume();
+    if (voicePrimed) return;
+    // A genuinely-empty utterance is a silent no-op on some WebKit versions (no onstart/onend
+    // ever fires), which doesn't count as real speech usage for Safari's per-page activation
+    // grant — a single space is inaudible at volume 0 but still gets processed as a real
+    // utterance.
+    const utter = new SpeechSynthesisUtterance(' ');
+    utter.volume = 0;
+    utter.onend = () => {
+      voicePrimed = true;
+    };
+    utter.onerror = () => {
+      voicePrimed = true;
+    };
+    synth.speak(utter);
+  } catch {
+    // Left unprimed — the next gesture retries automatically, since these listeners are never
+    // removed.
+  }
+}
+
 export function unlockAudioOnFirstInteraction(): void {
-  if (unlocked || typeof window === 'undefined') return;
-  const unlock = () => {
-    if (unlocked) return;
-    unlocked = true;
-    try {
-      const ctx = getCtx();
-      if (ctx && ctx.state === 'suspended') void ctx.resume();
-      if ('speechSynthesis' in window) {
-        const utter = new SpeechSynthesisUtterance('');
-        utter.volume = 0;
-        window.speechSynthesis.speak(utter);
-      }
-    } catch {
-      // Best-effort — if this fails, later real announcements just fall back to whatever the
-      // browser's default gesture policy allows.
-    }
-    document.removeEventListener('pointerdown', unlock);
-    document.removeEventListener('keydown', unlock);
-  };
-  document.addEventListener('pointerdown', unlock, { once: true });
-  document.addEventListener('keydown', unlock, { once: true });
+  if (listenersInstalled || typeof window === 'undefined') return;
+  listenersInstalled = true;
+  document.addEventListener('pointerdown', primeOnGesture);
+  document.addEventListener('keydown', primeOnGesture);
+  document.addEventListener('touchend', primeOnGesture);
+  // Backgrounding (locking the phone, switching apps mid-game) is the other main trigger for a
+  // stuck-suspended audio context / stuck-paused speech engine on mobile — re-priming the moment
+  // the tab becomes visible again means a still-connected player isn't left silently unlockable
+  // for the rest of the game just because their next real announcement happens to arrive before
+  // their next tap does.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') primeOnGesture();
+  });
 }
 
 function tone(ctx: AudioContext, freq: number, start: number, duration: number, peak = 0.18): void {

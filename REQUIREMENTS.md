@@ -325,10 +325,16 @@ own independent toggle in online mode (see §13) since each device controls only
 Mobile browsers can silently block programmatic speech/audio that isn't tied closely enough to a
 user gesture — most relevant in online mode, where a roll's resulting announcement is triggered by
 a socket broadcast arriving asynchronously after the gesture that caused it, not synchronously
-inside a click handler the way hotseat's local reducer calls are. To mitigate this, the very first
+inside a click handler the way hotseat's local reducer calls are. To mitigate this, every
 tap/click/keypress anywhere on the page "primes" both the Web Speech and Web Audio APIs (a silent
-utterance + resuming the audio context) so they're already unlocked well before gameplay starts,
-for every player regardless of which specific control they happen to interact with first.
+utterance + resuming the audio context), not just the first one: priming keeps retrying on every
+qualifying gesture (and when the tab regains visibility, e.g. after the phone was locked
+mid-game) until it actually succeeds and on every gesture afterward re-resumes either API if it
+drifted back to suspended/paused, rather than a single first-gesture attempt that permanently
+marked itself "unlocked" even when it silently failed — the latter was the likely cause of a
+report where one connected device (a 2nd player joining from an iPhone, in a 2-player online game)
+never heard any announcements despite the exact same broadcast-triggered code working correctly on
+another device in the same game.
 
 ### Error resilience
 The whole app is wrapped in a React error boundary (`ErrorBoundary.tsx`, mounted around `<App />`
