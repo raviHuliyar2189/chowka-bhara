@@ -31,7 +31,10 @@ const HUMAN_SEAT: PlayerId = 'P1';
 const AI_SEAT: PlayerId = 'P3';
 const AI_NAME = 'Computer';
 const COLORS: Record<PlayerId, string> = { P1: '#b03a2e', P2: '#2e5f8a', P3: '#3f7d4f', P4: '#c07a12' };
-const AI_MOVE_DELAY_MS = 1000;
+// Applied before every step of the computer's turn (roll, then move) — since each step is
+// announced (below), this doubles as "give the human time to hear the previous announcement
+// before the next thing happens," not just a generic pacing delay.
+const AI_MOVE_DELAY_MS = 2000;
 
 type SessionEntry = { players: string[]; placements: PlacementEntry[] };
 
@@ -56,11 +59,8 @@ export default function VsComputerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hint?.key]);
 
-  // Every announcement below is gated to the human's own turn/moves — the computer plays silently
-  // (per the user's explicit request), so only the human ever hears anything spoken.
   useEffect(() => {
     if (!game || game.rollHistory.length === 0) return;
-    if (game.players[game.currentTurnIndex].id !== HUMAN_SEAT) return;
     const last = game.rollHistory[game.rollHistory.length - 1];
     announceRoll(game.players[game.currentTurnIndex].name, last.label, last.isBonus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -68,12 +68,10 @@ export default function VsComputerPage() {
 
   useEffect(() => {
     if (!game || game.phase !== 'awaiting-roll') return;
-    if (game.players[game.currentTurnIndex].id === HUMAN_SEAT) {
-      if (game.revertSeq !== prevRevertSeq.current) {
-        announceTurnReverted(game.lastRevertedPlayer, game.players[game.currentTurnIndex].name);
-      } else {
-        announceTurnStart(game.players[game.currentTurnIndex].name, true);
-      }
+    if (game.revertSeq !== prevRevertSeq.current) {
+      announceTurnReverted(game.lastRevertedPlayer, game.players[game.currentTurnIndex].name);
+    } else {
+      announceTurnStart(game.players[game.currentTurnIndex].name, true);
     }
     prevRevertSeq.current = game.revertSeq;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -81,8 +79,6 @@ export default function VsComputerPage() {
 
   useEffect(() => {
     if (!game || game.eventSeq === 0) return;
-    const human = game.players.find((p) => p.id === HUMAN_SEAT);
-    if (human?.name !== game.lastCapturePlayer) return;
     announceCapture(game.lastCapturePlayer, game.lastCaptureCount);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.eventSeq]);
@@ -90,7 +86,6 @@ export default function VsComputerPage() {
   useEffect(() => {
     if (!game || game.rankings.length === 0) return;
     const lastId = game.rankings[game.rankings.length - 1];
-    if (lastId !== HUMAN_SEAT) return;
     const finisher = game.players.find((p) => p.id === lastId);
     if (finisher) announceFinish(finisher.name, game.rankings.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps

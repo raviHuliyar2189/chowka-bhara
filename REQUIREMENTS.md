@@ -398,9 +398,11 @@ Resolved during requirements gathering:
   conditionals to the more heavily-used hotseat flow.
 - **No post-login "Welcome" screen**: removed at the user's request — login now leads straight to
   mode-select, no separate acknowledgment screen in between (§13).
-- **Vs Computer pacing and silence**: the AI's turn now waits a full second between each step
-  (roll, move, capture, bonus roll) rather than a shorter delay, and stays silent throughout —
-  only the human's own turn is ever announced (§14), both per the user's explicit request.
+- **Vs Computer pacing**: the AI's turn waits 2 seconds between each step (roll, move, capture,
+  bonus roll — up from an initial 1 second), long enough to actually hear each announcement before
+  the next one fires. Briefly made the computer's turn silent (human-only announcements) per an
+  earlier request, then reverted back to announcing every turn regardless of whose it is — same as
+  hotseat/online — per a follow-up request (§14).
 - **Mode-select order and labels**: reordered to Single player (vs computer) → Multiple players
   (Local, hotseat) → Multiple Players (Online), relabeled from the original "Play vs
   Computer"/"Play Locally"/"Play Online" wording, per the user's explicit request.
@@ -524,19 +526,16 @@ player — for every legal `(pool value, own piece)` combination, scores it and 
 
 The computer's turn (rolling, and picking a value and piece) drives the exact same reducer
 functions (`roll`, `selectPoolValue`, `selectPiece`) a human's own button clicks call, each step
-after a **1-second pacing delay** so the human can actually follow what happened (roll result,
-move, capture, bonus roll) before the next one fires; a bonus roll or a capture naturally
-continues the computer's turn the same way it would for a human, no special-casing needed.
+after a **2-second pacing delay** — long enough for the human to actually hear the announcement
+the previous step triggered (see below) before the next one fires; a bonus roll or a capture
+naturally continues the computer's turn the same way it would for a human, no special-casing
+needed.
 
 ### Differences from hotseat
 - **Setup**: just the human's name — no player-count or roster picker.
 - **Abort**: hotseat's multi-player consensus flow (§9) doesn't apply with only one real person to
   ask — clicking Abort Game ends the game immediately, no confirmation cycling.
-- **Announcements are human-only**: unlike hotseat/online (where every announcement is heard
-  regardless of whose turn it is, §11), here only the human's own turn/rolls/captures/finishes are
-  spoken — the computer's turn plays out silently. A capture is attributed by comparing the mover
-  to the human's own name/seat, and a finish by checking who was actually added to the rankings,
-  rather than assuming whoever's turn it currently is, since a finish can advance the turn in the
-  same update.
-- **Stats, rematch/new-session**: identical to hotseat — results/stats use the same `localStorage`
+- **Announcements, stats, rematch/new-session**: identical to hotseat — every announcement (turn
+  start, roll, capture, finish) is heard regardless of whose turn it is, same as hotseat/online
+  (§11), including the computer's own turn; results/stats use the same `localStorage`
   roster-keyed persistence (§10), always including "Computer" as one of the two players.
