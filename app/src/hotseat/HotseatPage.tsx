@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { PlayerId } from '../game/paths';
 import {
   type GameState,
@@ -53,6 +54,7 @@ interface Props {
 
 export default function HotseatPage({ allowCustomSetup = false }: Props) {
   const t = useT();
+  const navigate = useNavigate();
   const [inSetup, setInSetup] = useState(true);
   const [game, setGame] = useState<GameState | null>(null);
   const [editorState, setEditorState] = useState<GameState | null>(null);
@@ -254,7 +256,7 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
   }
   function handlePieceClickedBeforeValue() {
     const text = t('hint.selectValueFirst');
-    announceHint(text);
+    announceHint('hint.selectValueFirst');
     setHint({ text, key: Date.now() });
     appendLog('User clicked a piece before selecting a pool value');
   }
@@ -279,13 +281,11 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
     setBanner(t('banner.turnStart', next.players[next.currentTurnIndex].name));
     setGame(next);
   }
+  // Returns all the way to mode-select (not just this mode's own setup screen) so the player can
+  // pick from every option — switch player count/roster here, or a different mode entirely —
+  // rather than only being able to restart within whichever mode they happened to finish in.
   function handleNewSession() {
-    setShowResults(false);
-    setGame(null);
-    setEditorState(null);
-    setResignedIds([]);
-    setSessionResults([]);
-    setInSetup(true);
+    navigate('/');
   }
 
   return (

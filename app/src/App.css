@@ -299,6 +299,28 @@ h1 {
   width: 230px;
 }
 
+.setup-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 0 0 230px;
+  width: 230px;
+}
+
+/* Overrides the .setup-row input/select rule above: inside .setup-input-group's column-direction
+   flex context, that rule's flex-basis would size these along the COLUMN axis (i.e. as height,
+   not width) instead of the width it was written for — the group itself already carries the
+   230px width, these just need to fill it. */
+.setup-input-group input,
+.setup-input-group select {
+  flex: none;
+  width: 100%;
+}
+
+.roster-picker {
+  font-size: 13px;
+}
+
 .editor-captured-list {
   display: flex;
   flex-direction: column;
@@ -1238,6 +1260,11 @@ th {
     flex: none;
     width: 100%;
     box-sizing: border-box;
+  }
+
+  .setup-input-group {
+    flex: none;
+    width: 100%;
   }
 
   .modal {

@@ -4,6 +4,10 @@ import { useT } from '../i18n/strings';
 
 interface Props {
   placements: PlacementEntry[];
+  // True when this game ended via abort rather than a normal finish — placements are meaningless
+  // then (nobody was actually ranked), so the placement list is skipped in favor of a plain
+  // "Game Aborted" heading. Rematch/New Game are still offered either way.
+  aborted?: boolean;
   sessionResults: { players: string[]; placements: PlacementEntry[] }[];
   stats: Record<string, PlayerStats>;
   onRematch: () => void;
@@ -13,6 +17,7 @@ interface Props {
 
 export default function ResultsModal({
   placements,
+  aborted = false,
   sessionResults,
   stats,
   onRematch,
@@ -25,14 +30,16 @@ export default function ResultsModal({
   return (
     <div className="overlay">
       <div className="modal">
-        <h2>{t('results.gameFinished')}</h2>
-        <ol>
-          {placements.map((p) => (
-            <li key={p.playerId}>
-              <strong>{p.name}</strong> ({p.playerId}) — {p.isLoss ? t('results.loss') : t('results.place', p.place)}
-            </li>
-          ))}
-        </ol>
+        <h2>{aborted ? t('results.gameAborted') : t('results.gameFinished')}</h2>
+        {!aborted && (
+          <ol>
+            {placements.map((p) => (
+              <li key={p.playerId}>
+                <strong>{p.name}</strong> ({p.playerId}) — {p.isLoss ? t('results.loss') : t('results.place', p.place)}
+              </li>
+            ))}
+          </ol>
+        )}
 
         <h3>{t('results.sessionSummary', sessionResults.length)}</h3>
         <div className="table-scroll">

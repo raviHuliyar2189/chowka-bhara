@@ -17,22 +17,79 @@ export function isAnnouncerEnabled(): boolean {
   return enabled;
 }
 
-function speak(text: string, rate = 1, pitch = 1): void {
-  if (!enabled || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+// Resolves once the most recently spoken utterance actually finishes (onend/onerror) — set
+// synchronously inside speak() itself (not deferred to when the browser actually starts talking),
+// so a caller that awaits waitForAnnouncer() right after triggering an announcement always gets
+// the correct pending promise, never a stale already-resolved one. Exists for callers that drive
+// their own pacing off real speech duration instead of a guessed fixed delay — see vs-computer's
+// AI turn, whose fixed delay was firing the computer's next action before a longer announcement
+// (e.g. a bonus-roll or capture sentence) had finished, audibly cutting it off.
+let pendingSpeech: Promise<void> = Promise.resolve();
+
+export function waitForAnnouncer(): Promise<void> {
+  return pendingSpeech;
+}
+
+// Setting utter.lang = 'kn-IN' alone is only a hint — when no installed voice actually matches,
+// browsers commonly substitute a default (typically English-ish) voice anyway rather than
+// refusing to speak. That substitute voice can't pronounce Kannada script: in practice it reads
+// through any Latin-script run it recognizes (e.g. a player's own name) and then produces nothing
+// audible for the Kannada portion that follows — exactly the "only the name gets announced,
+// instructions missing" symptom this was built to fix. Checking for a real Kannada voice and
+// assigning it explicitly (utter.voice, not just utter.lang) is the only reliable way to know
+// Kannada speech will actually work.
+function findKannadaVoice(): SpeechSynthesisVoice | null {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+  return window.speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith('kn')) ?? null;
+}
+
+function speak(text: string, rate = 1, pitch = 1, voice: SpeechSynthesisVoice | null = null): void {
+  if (!enabled || typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    pendingSpeech = Promise.resolve();
+    return;
+  }
   const synth = window.speechSynthesis;
   synth.cancel();
   const utter = new SpeechSynthesisUtterance(text);
-  // Matches the current language setting. Kannada TTS is attempted at the user's explicit
-  // request even though many devices/browsers have no Kannada voice installed (which either
-  // fails to speak at all or mangles the text through a fallback voice) — English remains the
-  // more reliable choice, but Kannada is no longer avoided outright.
-  utter.lang = getLanguage() === 'kn' ? 'kn-IN' : 'en-US';
+  if (voice) {
+    utter.voice = voice;
+    utter.lang = voice.lang;
+  } else {
+    utter.lang = 'en-US';
+  }
   utter.rate = rate;
   utter.pitch = pitch;
+  pendingSpeech = new Promise((resolve) => {
+    utter.onend = () => resolve();
+    utter.onerror = () => resolve();
+    // Safety net: some environments (headless browsers, certain devices) never fire onend/
+    // onerror at all, which would otherwise wedge any caller awaiting waitForAnnouncer() forever
+    // — vs-computer's AI turn needs this to resolve before taking its next action. Capped well
+    // above any real announcement's spoken length, so it only ever matters when events are truly
+    // silent.
+    setTimeout(resolve, 8000);
+  });
   // Chrome (and Android WebView) has a known race where speak() called immediately after
   // cancel() starts the new utterance but truncates it after only the first word or two, before
   // the cancel has actually finished. A tiny delay lets the cancel land first.
   setTimeout(() => synth.speak(utter), 60);
+}
+
+// Every announce* function below goes through this rather than calling speak() directly: it
+// picks Kannada only when a real Kannada voice is actually installed (see findKannadaVoice above)
+// and otherwise falls back to the English phrasing of the same key, so the spoken announcement is
+// always a complete, intelligible sentence — never a partial Kannada readout. The on-screen text
+// (banner, labels) is unaffected by this fallback; it always shows the selected language exactly,
+// this only concerns what gets spoken aloud.
+function speakLocalized(key: string, args: unknown[], rate = 1, pitch = 1): void {
+  if (getLanguage() === 'kn') {
+    const voice = findKannadaVoice();
+    if (voice) {
+      speak(translate(key, 'kn', ...args), rate, pitch, voice);
+      return;
+    }
+  }
+  speak(translate(key, 'en', ...args), rate, pitch, null);
 }
 
 type AudioContextCtor = typeof AudioContext;
@@ -118,21 +175,21 @@ function chime(kind: 'bonus' | 'capture' | 'finish' | 'win'): void {
 
 // Full sentence, not just the bare value — states the result AND what to do next, so the
 // announcement is a complete instruction on its own. Phrase templates live in i18n/strings.ts
-// (shared with the on-screen turn banner, so speech and text never drift apart) — this just picks
-// the right key for the current language and speaks it.
+// (shared with the on-screen turn banner, so speech and text never drift apart) — speakLocalized
+// picks the right key for the current language (falling back to English if Kannada speech isn't
+// actually available, see above) and speaks it.
 export function announceRoll(playerName: string, label: string, isBonus: boolean): void {
-  const lang = getLanguage();
   if (isBonus) {
     chime('bonus');
-    speak(translate('banner.rollBonus', lang, playerName, label), 1.15, 1.3);
+    speakLocalized('banner.rollBonus', [playerName, label], 1.15, 1.3);
   } else {
-    speak(translate('banner.rollResult', lang, playerName, label));
+    speakLocalized('banner.rollResult', [playerName, label]);
   }
 }
 
 // Spoken the moment a new turn begins.
 export function announceTurnStart(playerName: string): void {
-  speak(translate('banner.turnStart', getLanguage(), playerName));
+  speakLocalized('banner.turnStart', [playerName]);
 }
 
 // Spoken whenever a stuck turn (or a finish reached with pool values still unplayed) gets undone
@@ -141,29 +198,31 @@ export function announceTurnStart(playerName: string): void {
 // speak() always cancels-and-replaces (no queueing) — a second call right after this one would
 // just cut it off before it finished.
 export function announceTurnReverted(revertedPlayerName: string, nextPlayerName: string): void {
-  speak(translate('banner.turnReverted', getLanguage(), revertedPlayerName, nextPlayerName));
+  speakLocalized('banner.turnReverted', [revertedPlayerName, nextPlayerName]);
 }
 
 // Capturing always grants a bonus roll (§5.6) — say so, not just the capture itself, so this
 // announcement is a complete instruction like the others.
 export function announceCapture(playerName: string, count: number): void {
   chime('capture');
-  speak(translate('banner.captured', getLanguage(), playerName, count), 1.1, 1.15);
+  speakLocalized('banner.captured', [playerName, count], 1.1, 1.15);
 }
 
 // A short spoken nudge for UI-only guidance (e.g. "pick a value first") — no chime, doesn't
-// touch the persistent game message, just a transient voice hint.
-export function announceHint(text: string): void {
-  speak(text);
+// touch the persistent game message, just a transient voice hint. Takes a strings.ts key (not
+// pre-translated text) like every other announce* function, so it can apply the same
+// Kannada-voice-availability fallback — the caller still uses t(key) separately for the on-screen
+// hint text, which always shows the selected language regardless of what gets spoken.
+export function announceHint(key: string): void {
+  speakLocalized(key, []);
 }
 
 export function announceFinish(playerName: string, place: number): void {
-  const lang = getLanguage();
   if (place === 1) {
     chime('win');
-    speak(translate('banner.won', lang, playerName), 1, 1.2);
+    speakLocalized('banner.won', [playerName], 1, 1.2);
   } else {
     chime('finish');
-    speak(translate('banner.finished', lang, playerName, place));
+    speakLocalized('banner.finished', [playerName, place]);
   }
 }

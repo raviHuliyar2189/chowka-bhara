@@ -74,19 +74,40 @@ export default function SetupModal({
         {seats.map((id, i) => (
           <div key={id} className="setup-row">
             <label className="setup-label">{t('setup.seatName', `${id} (${t(SEAT_SIDE_KEY[id])})`)}</label>
-            <input
-              list="roster-list"
-              value={names[i]}
-              placeholder={t('setup.namePlaceholder', i + 1)}
-              onChange={(e) => updateName(i, e.target.value)}
-            />
+            <div className="setup-input-group">
+              <input
+                value={names[i]}
+                placeholder={t('setup.namePlaceholder', i + 1)}
+                onChange={(e) => updateName(i, e.target.value)}
+              />
+              {/* A plain <select> rather than <input list>/<datalist>: many browsers (Chrome
+                  included) stop reopening a datalist's suggestions once the field's value exactly
+                  matches one of them, so picking a different roster name required clearing the
+                  field first. A real <select> has no such quirk — it always reopens on click,
+                  letting the same picker be used to switch players as many times as needed. Reset
+                  back to the placeholder option after every pick so choosing the same name twice
+                  in a row still fires a change event. */}
+              {roster.length > 0 && (
+                <select
+                  className="roster-picker"
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) updateName(i, e.target.value);
+                    e.target.value = '';
+                  }}
+                  aria-label={t('setup.pickFromRoster')}
+                >
+                  <option value="">{t('setup.pickFromRoster')}</option>
+                  {roster.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
           </div>
         ))}
-        <datalist id="roster-list">
-          {roster.map((n) => (
-            <option key={n} value={n} />
-          ))}
-        </datalist>
 
         <div className="sound-prompt">
           <div className="sound-prompt-question">{t('setup.announcements')}</div>

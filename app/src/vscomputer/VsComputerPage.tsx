@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { PlayerId } from '../game/paths';
 import {
   type GameState,
@@ -19,6 +20,7 @@ import {
   announceFinish,
   announceHint,
   setAnnouncerEnabled,
+  waitForAnnouncer,
 } from '../audio/announcer';
 import { useT } from '../i18n/strings';
 import Board from '../components/Board';
@@ -32,21 +34,28 @@ const HUMAN_SEAT: PlayerId = 'P1';
 const AI_SEAT: PlayerId = 'P3';
 const AI_NAME = 'Computer';
 const COLORS: Record<PlayerId, string> = { P1: '#b03a2e', P2: '#2e5f8a', P3: '#3f7d4f', P4: '#c07a12' };
-// Applied before every step of the computer's turn (roll, then move) — since each step is
-// announced (below), this doubles as "give the human time to hear the previous announcement
-// before the next thing happens," not just a generic pacing delay.
+// A floor on the pause before every step of the computer's turn (roll, then move) — the actual
+// wait is whichever is longer of this and the previous step's announcement actually finishing
+// (see waitForAnnouncer in announcer.ts), so a short announcement still gets this minimum pacing
+// and a longer one (e.g. a bonus-roll or capture sentence) is never cut off by firing the next
+// action too early.
 const AI_MOVE_DELAY_MS = 2000;
 
 type SessionEntry = { players: string[]; placements: PlacementEntry[] };
 
 export default function VsComputerPage() {
   const t = useT();
+  const navigate = useNavigate();
   const [humanName, setHumanName] = useState('');
   const [game, setGame] = useState<GameState | null>(null);
   const [stats, setStats] = useState<Record<string, PlayerStats>>(() => loadStats());
   const [sessionResults, setSessionResults] = useState<SessionEntry[]>([]);
   const [showReportBug, setShowReportBug] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  // Distinguishes an abort from a natural finish while showResults is true — both now offer the
+  // same Rematch/New Game choice (see ResultsModal's aborted prop), rather than abort silently
+  // dropping straight back to the name-entry screen with no way to quickly play again.
+  const [resultsAborted, setResultsAborted] = useState(false);
   const [statsFor, setStatsFor] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
   const [hint, setHint] = useState<{ text: string; key: number } | null>(null);
@@ -154,12 +163,14 @@ export default function VsComputerPage() {
   }
   function handlePieceClickedBeforeValue() {
     const text = t('hint.selectValueFirst');
-    announceHint(text);
+    announceHint('hint.selectValueFirst');
     setHint({ text, key: Date.now() });
   }
 
   // No AbortModal cycling here — with only one real person to ask, clicking Abort just ends the
-  // game immediately, unlike hotseat's multi-player consensus flow.
+  // game immediately, unlike hotseat's multi-player consensus flow. Keeps `game` around (rather
+  // than nulling it) and shows the same Rematch/New Game choice a natural finish does, instead of
+  // dropping straight back to the name-entry screen.
   function handleAbort() {
     if (!game) return;
     const updatedStats = applyAbortToStats(
@@ -168,22 +179,25 @@ export default function VsComputerPage() {
     );
     setStats(updatedStats);
     saveStats(updatedStats);
-    setGame(null);
+    setSessionResults((prev) => [...prev, { players: game.players.map((p) => p.name), placements: [] }]);
+    setResultsAborted(true);
+    setShowResults(true);
   }
 
   function handleRematch() {
     if (!game) return;
     setShowResults(false);
+    setResultsAborted(false);
     prevRevertSeq.current = 0;
     prevRankingIds.current = [];
     const next = rematch(game);
     setBanner(t('banner.turnStart', next.players[next.currentTurnIndex].name));
     setGame(next);
   }
+  // Returns all the way to mode-select (not just this mode's own name-entry screen) so the player
+  // can pick from every option — a different mode entirely, not just another vs-computer game.
   function handleNewSession() {
-    setShowResults(false);
-    setGame(null);
-    setSessionResults([]);
+    navigate('/');
   }
 
   // Drives the computer's turn automatically, reusing the exact same reducer calls the human's
@@ -194,7 +208,12 @@ export default function VsComputerPage() {
     if (!game || game.phase === 'game-over') return;
     if (game.players[game.currentTurnIndex].id !== AI_SEAT) return;
 
-    const timer = setTimeout(() => {
+    let cancelled = false;
+    Promise.all([
+      new Promise((resolve) => setTimeout(resolve, AI_MOVE_DELAY_MS)),
+      waitForAnnouncer(),
+    ]).then(() => {
+      if (cancelled) return;
       if (game.phase === 'awaiting-roll') {
         handleRoll();
       } else if (game.phase === 'awaiting-selection') {
@@ -204,8 +223,10 @@ export default function VsComputerPage() {
           endGameIfOver(selectPiece(afterValue, move.pieceId));
         }
       }
-    }, AI_MOVE_DELAY_MS);
-    return () => clearTimeout(timer);
+    });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.currentTurnIndex, game?.phase, game?.pool.length, game?.rollHistory.length]);
 
@@ -288,7 +309,8 @@ export default function VsComputerPage() {
 
       {showResults && (
         <ResultsModal
-          placements={computePlacements(game)}
+          placements={resultsAborted ? [] : computePlacements(game)}
+          aborted={resultsAborted}
           sessionResults={sessionResults}
           stats={stats}
           onRematch={handleRematch}

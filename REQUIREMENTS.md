@@ -174,7 +174,10 @@ which differ meaningfully since players aren't sharing one device.)*
 ### Setup
 - At the start of a session, let the host pick 2–4 players.
 - For each seat, allow either selecting an existing/previously-played player (from stored roster) or
-  entering a new player name.
+  entering a new player name. The roster picker is a plain `<select>` next to the free-text name
+  input (not an `<input list>`/`<datalist>` combobox — see §12's Decisions log for why: several
+  browsers stop reopening a datalist's suggestions once the field's value exactly matches one of
+  them, so switching to a different roster name required clearing the field first).
 - Assign colors/base positions per §3 and display them on the board and player list.
 - A **"Resignation Allowed?"** toggle, alongside the sound and roll-back toggles, defaulting to
   **Not Allowed**. Controls whether the Resign Game button (below) appears during the game at all.
@@ -196,7 +199,11 @@ which differ meaningfully since players aren't sharing one device.)*
 - A **session** is one continuous sequence of games played by the same browser instance.
 - When a game ends, show that game's final ranking, then ask whether to play again with the same
   players (same session).
-- If yes → reset the board/pieces and start a new game, keeping the running session tally.
+- If yes (**"Play Again (Same Players)"**) → reset the board/pieces and start a new game, keeping
+  the running session tally, staying in this same mode.
+- If no (**"End Session"**) → return all the way to **mode-select** (`/`), not just this mode's own
+  setup screen — the player can pick a different player count/roster here, or switch to a different
+  mode entirely, rather than only being able to restart within whichever mode they just finished.
 - A session has no cap on the number of games played.
 - Show a cumulative **session summary table** (all players, all games played so far this session)
   after every game.
@@ -294,11 +301,16 @@ Spoken (Web Speech) and chime (Web Audio) announcements fire for:
   own start announcement into one utterance, rather than firing both back to back (the announcer
   has no queue — a second `speak()` call cuts off whatever was still playing).
 
-All spoken announcements are in **English**, regardless of the on-screen text (which stays
-Kannada, e.g. the turn banner's "<name>, ನಿಮ್ಮ ಸರದಿ, ಕವಡೆ ಹಾಕಿ" and the on-screen "select a value
-first" nudge) — most devices/browsers have no Kannada voice installed, so Kannada text either fails
-to speak at all or gets mangled through a fallback voice; English is close to universally
-supported, so the spoken announcement is reliably heard in full.
+Spoken announcements follow the Language setting (§16) — but only when a real Kannada voice is
+actually installed on the device. Setting `utter.lang = 'kn-IN'` alone is not a reliable enough
+signal: when no matching voice exists, browsers commonly substitute a default voice anyway rather
+than refusing to speak, and that substitute can't pronounce Kannada script — in practice it reads
+through any Latin-script run it recognizes (e.g. a player's own name) and produces nothing audible
+for the Kannada text that follows, so only the name gets announced. The announcer checks for an
+actual installed Kannada voice (`speechSynthesis.getVoices()`) before attempting Kannada speech;
+if none is found, it falls back to the English announcement instead of a partial, broken Kannada
+one. This fallback is speech-only — the on-screen banner and labels always show the selected
+language exactly, regardless of what gets spoken.
 
 **Every player hears every announcement**, not just whoever is currently acting — in hotseat this
 is automatic (one shared device/speaker); in online mode each connected device independently
@@ -510,6 +522,47 @@ Resolved during requirements gathering:
   toggle exists to make a choice with. Implemented entirely as a display-layer concern (an
   `app/src/i18n/` module plus a sweep of every component) — no `packages/game-core` changes, same
   principle as board rotation (§2) and the capture/player-status indicators.
+- **Kannada speech falls back to English when no real Kannada voice is installed** (§11): reported
+  as "only the player's name gets announced, the instructions are missing" — root cause was that
+  `utter.lang = 'kn-IN'` is only a hint; with no matching voice actually installed, browsers
+  commonly substitute a default voice anyway instead of refusing to speak, and that substitute
+  reads through the Latin-script name it recognizes but produces nothing audible for the Kannada
+  text after it. Fixed by checking `speechSynthesis.getVoices()` for an actual Kannada voice and
+  explicitly assigning it (`utter.voice`, not just `utter.lang`) — falling back to the English
+  announcement (of the same key) when none is found, rather than a partial, broken Kannada one.
+  Speech-only; the on-screen banner/labels are unaffected and always show the selected language.
+- **Vs Computer AI pacing waits for the announcement to actually finish**: the fixed 2-second delay
+  between the computer's turn steps was a guess at how long an announcement takes to speak — a
+  longer sentence (a bonus roll or capture) could still be playing when the next action fired,
+  audibly cutting it off (`speak()` always cancels-and-replaces). Fixed by adding
+  `waitForAnnouncer()` to `announcer.ts` (resolves once the current utterance's `onend`/`onerror`
+  fires, with an 8-second safety-net timeout so a caller can never get stuck waiting on an
+  environment where those events never fire at all) and having the AI-turn effect wait for
+  whichever is longer of the fixed delay and the announcement actually finishing.
+- **Vs Computer abort now offers the same Rematch/End Session choice a natural finish does**:
+  previously `handleAbort` nulled the game state directly, dropping straight back to the name-entry
+  screen with no way to quickly play again. Now reuses `ResultsModal` with a new `aborted` prop
+  (skips the placement list, since nobody was actually ranked) rather than inventing a separate
+  modal — requested for "abort or natural end of game" generally; implemented for hotseat (already
+  had this via Resign's natural end, §9) and Vs Computer. Not extended to online's own Abort flow:
+  its `/rematch` endpoint explicitly rejects anything but a `'finished'` game, and reopening an
+  aborted online game already deliberately shows "this game was aborted" as terminal (§12) — making
+  rematch-after-abort work there would mean reversing that design decision, not just a UI tweak, so
+  it was left alone pending an explicit ask.
+- **"End Session" now returns to mode-select, not just the same mode's own setup screen** (§9):
+  previously each mode's "End Session"/"New Game" only reset back into its own setup form
+  (`SetupModal` for hotseat, the name-entry form for Vs Computer), so switching modes mid-session
+  meant manually navigating away first. Now navigates to `/` via `react-router-dom`'s `useNavigate`,
+  matching "many options available to continue playing" — every mode reachable from mode-select,
+  not just a restart of the one just played.
+- **Roster picker replaced with a plain `<select>`**: the seat-name field used `<input list=".../">`
+  with a `<datalist>` of roster names — several browsers (Chrome included) stop reopening a
+  datalist's suggestion popup once the field's value exactly matches one of the listed options, so
+  picking a *different* roster name required clearing the field first before the list would show
+  again. A real `<select>` (rendered alongside the free-text input, not replacing it — a brand-new
+  name still just gets typed) has no such quirk: it always reopens on click and can be used to
+  switch the chosen name as many times as needed. Reset back to its placeholder option after every
+  pick so selecting the same name twice in a row still fires a change event.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
@@ -630,19 +683,28 @@ player — for every legal `(pool value, own piece)` combination, scores it and 
 
 The computer's turn (rolling, and picking a value and piece) drives the exact same reducer
 functions (`roll`, `selectPoolValue`, `selectPiece`) a human's own button clicks call, each step
-after a **2-second pacing delay** — long enough for the human to actually hear the announcement
-the previous step triggered (see below) before the next one fires; a bonus roll or a capture
+after a **2-second minimum pacing delay, extended to also wait for the previous step's
+announcement to actually finish playing** (`waitForAnnouncer()` in `announcer.ts`) — long enough
+for the human to actually hear the announcement the previous step triggered before the next one
+fires, whichever of the two takes longer. Fixes a real cutoff: the delay used to be a flat 2
+seconds regardless of how long the announcement actually took to speak, so a longer sentence (e.g.
+a bonus-roll or capture announcement) could still be mid-utterance when the computer's next action
+fired and the announcer's own cancel-and-replace behavior cut it off. A bonus roll or a capture
 naturally continues the computer's turn the same way it would for a human, no special-casing
 needed.
 
 ### Differences from hotseat
 - **Setup**: just the human's name — no player-count or roster picker.
 - **Abort**: hotseat's multi-player consensus flow (§9) doesn't apply with only one real person to
-  ask — clicking Abort Game ends the game immediately, no confirmation cycling.
+  ask — clicking Abort Game ends the game immediately, no confirmation cycling, but (like a normal
+  finish) offers the same **Rematch / End Session** choice afterward rather than dropping straight
+  back to the name-entry screen — just with no placement list shown, since nobody was actually
+  ranked.
 - **Announcements, stats, rematch/new-session**: identical to hotseat — every announcement (turn
   start, roll, capture, finish) is heard regardless of whose turn it is, same as hotseat/online
   (§11), including the computer's own turn; results/stats use the same `localStorage`
-  roster-keyed persistence (§10), always including "Computer" as one of the two players.
+  roster-keyed persistence (§10), always including "Computer" as one of the two players; "End
+  Session" returns to mode-select the same way hotseat's does (§9).
 
 ## 15. Develop Test
 

@@ -179,7 +179,7 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
   }
   function handlePieceClickedBeforeValue() {
     const text = t('hint.selectValueFirst');
-    announceHint(text);
+    announceHint('hint.selectValueFirst');
     setHint({ text, key: Date.now() });
   }
   function handleAbortRequest() {

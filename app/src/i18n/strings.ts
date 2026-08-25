@@ -59,6 +59,7 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'setup.nPlayers': { en: (n: number) => `${n} Players`, kn: (n: number) => `${n} ಆಟಗಾರರು` },
   'setup.seatName': { en: (seat: string) => `${seat} Name:`, kn: (seat: string) => `${seat} ಹೆಸರು:` },
   'setup.namePlaceholder': { en: (n: number) => `Player ${n}`, kn: (n: number) => `ಆಟಗಾರ ${n}` },
+  'setup.pickFromRoster': { en: '— choose from roster —', kn: '— ಪಟ್ಟಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ —' },
   'side.bottom': { en: 'Bottom', kn: 'ಕೆಳಗೆ' },
   'side.right': { en: 'Right', kn: 'ಬಲ' },
   'side.top': { en: 'Top', kn: 'ಮೇಲೆ' },
@@ -148,6 +149,7 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
 
   // --- Results / session ---
   'results.gameFinished': { en: 'Game Finished!', kn: 'ಆಟ ಮುಗಿದಿದೆ!' },
+  'results.gameAborted': { en: 'Game Aborted', kn: 'ಆಟ ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ' },
   'results.place': { en: (place: number) => `Place ${place}`, kn: (place: number) => `${place}ನೇ ಸ್ಥಾನ` },
   'results.loss': { en: 'Loss', kn: 'ಸೋಲು' },
   'results.sessionSummary': {
