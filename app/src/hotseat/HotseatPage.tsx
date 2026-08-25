@@ -10,7 +10,7 @@ import {
   rematch,
   rollbackLastMove,
 } from '../game/turnEngine';
-import { computePlacements, applyPlacementsToStats, applyAbortToStats, type PlacementEntry } from '../game/session';
+import { computePlacements, applyPlacementsToStats, type PlacementEntry } from '../game/session';
 import { loadRoster, saveRoster, loadStats, saveStats, type PlayerStats } from '../game/storage';
 import {
   announceRoll,
@@ -24,7 +24,7 @@ import {
 import Board from '../components/Board';
 import DiceTray from '../components/DiceTray';
 import SetupModal from '../components/SetupModal';
-import AbortModal from '../components/AbortModal';
+import ResignModal from '../components/ResignModal';
 import ReportBugModal from '../components/ReportBugModal';
 import StatsModal from '../components/StatsModal';
 import ResultsModal from '../components/ResultsModal';
@@ -58,12 +58,13 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
   const [roster, setRoster] = useState<string[]>(() => loadRoster());
   const [stats, setStats] = useState<Record<string, PlayerStats>>(() => loadStats());
   const [sessionResults, setSessionResults] = useState<SessionEntry[]>([]);
-  const [showAbort, setShowAbort] = useState(false);
+  const [resignedPlayerName, setResignedPlayerName] = useState<string | null>(null);
   const [showReportBug, setShowReportBug] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [statsFor, setStatsFor] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
   const [rollbackEnabled, setRollbackEnabled] = useState(false);
+  const [resignAllowed, setResignAllowed] = useState(false);
   const [hint, setHint] = useState<{ text: string; key: number } | null>(null);
   // Tracks the last-seen revertSeq so the turn-start effect below can tell a normal turn advance
   // apart from one caused by a revert (both change currentTurnIndex in the same update) without
@@ -132,6 +133,9 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
 
   function toggleRollback() {
     setRollbackEnabled((v) => !v);
+  }
+  function toggleResignAllowed() {
+    setResignAllowed((v) => !v);
   }
   function handleRollback() {
     // Never roll back a move that already ended the game — stats/session results from that
@@ -220,30 +224,15 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
     setHint({ text: 'ಮೊದಲು ಗರ ಆಯ್ಕೆಮಾಡಿ.', key: Date.now() });
     appendLog('User clicked a piece before selecting a pool value');
   }
-  function handleOpenAbort() {
-    appendLog('User requested to abort the game');
-    setShowAbort(true);
-  }
-  function handleAbortResolved(action: 'abort' | 'resume' | 'forfeit', losers?: PlayerId[]) {
-    setShowAbort(false);
+  // Resigning is unconditional and always applies to whoever's turn it currently is — no vote
+  // from the other players, since the resigning player has already made the call themselves.
+  // Their pieces come off the board immediately; the Resign Information notice (shown below) is
+  // just an acknowledgment for the rest of the table, not a decision point.
+  function handleResign() {
     if (!game) return;
-    if (action === 'abort') {
-      // No point logging into game.debugLog here — game is about to be nulled out below in
-      // this same handler, so the entry would never be visible to copy.
-      const updatedStats = applyAbortToStats(
-        stats,
-        game.players.map((p) => p.name)
-      );
-      setStats(updatedStats);
-      saveStats(updatedStats);
-      setGame(null);
-      setEditorState(null);
-      setInSetup(true);
-    } else if (action === 'forfeit' && losers) {
-      endGameIfOver(removePlayers(game, losers));
-    } else if (action === 'resume') {
-      appendLog('Abort declined — game resumes');
-    }
+    const resigningPlayer = game.players[game.currentTurnIndex];
+    setResignedPlayerName(resigningPlayer.name);
+    endGameIfOver(removePlayers(game, [resigningPlayer.id]));
   }
   function handleRematch() {
     if (!game) return;
@@ -268,6 +257,8 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
           onToggleSound={toggleSound}
           rollbackEnabled={rollbackEnabled}
           onToggleRollback={toggleRollback}
+          resignAllowed={resignAllowed}
+          onToggleResignAllowed={toggleResignAllowed}
         />
       )}
 
@@ -342,9 +333,11 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
               onRollback={handleRollback}
             />
             <div className="post-dice-actions">
-              <button className="action-btn btn-abort" onClick={handleOpenAbort}>
-                Abort Game
-              </button>
+              {resignAllowed && (
+                <button className="action-btn btn-abort" onClick={handleResign}>
+                  Resign Game
+                </button>
+              )}
               <button className="btn-debug-log" onClick={() => setShowReportBug(true)} title="Report a bug">
                 🐞 Report Bug
               </button>
@@ -360,7 +353,9 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
         </div>
       )}
 
-      {showAbort && game && <AbortModal players={game.players} onResolve={handleAbortResolved} />}
+      {resignedPlayerName && (
+        <ResignModal playerName={resignedPlayerName} onDismiss={() => setResignedPlayerName(null)} />
+      )}
 
       {showReportBug && game && (
         <ReportBugModal debugLog={game.debugLog} onClose={() => setShowReportBug(false)} />
@@ -368,7 +363,7 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
 
       {statsFor && <StatsModal name={statsFor} stats={stats[statsFor]} onClose={() => setStatsFor(null)} />}
 
-      {showResults && game && (
+      {!resignedPlayerName && showResults && game && (
         <ResultsModal
           placements={computePlacements(game)}
           sessionResults={sessionResults}

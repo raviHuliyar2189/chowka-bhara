@@ -9,6 +9,8 @@ interface Props {
   onToggleSound: () => void;
   rollbackEnabled: boolean;
   onToggleRollback: () => void;
+  resignAllowed: boolean;
+  onToggleResignAllowed: () => void;
 }
 
 const SEATS: Record<number, PlayerId[]> = {
@@ -31,6 +33,8 @@ export default function SetupModal({
   onToggleSound,
   rollbackEnabled,
   onToggleRollback,
+  resignAllowed,
+  onToggleResignAllowed,
 }: Props) {
   const [count, setCount] = useState(4);
   const [names, setNames] = useState<string[]>(['', '', '', '']);
@@ -101,6 +105,17 @@ export default function SetupModal({
             title={rollbackEnabled ? 'Disable roll-back' : 'Enable roll-back'}
           >
             {rollbackEnabled ? '⟲ Roll Back: On' : '⟲ Roll Back: Off'}
+          </button>
+        </div>
+
+        <div className="sound-prompt">
+          <div className="sound-prompt-question">Resignation Allowed?</div>
+          <button
+            className={`btn-sound ${resignAllowed ? 'is-on' : 'is-off'}`}
+            onClick={onToggleResignAllowed}
+            title={resignAllowed ? 'Disable resigning' : 'Enable resigning'}
+          >
+            {resignAllowed ? '🏳 Resign: Allowed' : '🏳 Resign: Not Allowed'}
           </button>
         </div>
 

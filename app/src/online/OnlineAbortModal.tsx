@@ -10,8 +10,9 @@ interface Props {
   onForfeitDecision: (forfeit: boolean) => void;
 }
 
-// Online counterpart to AbortModal.tsx — that one polls every player through a single shared
-// modal (fine on one shared device); here each device only ever sees its own step, driven by the
+// Online's own abort flow — still a multi-player vote (unlike hotseat's unconditional Resign,
+// see ResignModal.tsx), since separate devices can't share one player's on-the-spot decision the
+// way a single shared screen can. Each device only ever sees its own step, driven by the
 // abort:pending / abort:forfeit-needed / abort:resolved socket events (see OnlinePlay.tsx).
 export default function OnlineAbortModal({ state, onRespond, onForfeitDecision }: Props) {
   if (state.kind === 'prompt') {

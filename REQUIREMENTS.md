@@ -172,16 +172,21 @@ which differ meaningfully since players aren't sharing one device.)*
 - For each seat, allow either selecting an existing/previously-played player (from stored roster) or
   entering a new player name.
 - Assign colors/base positions per §3 and display them on the board and player list.
+- A **"Resignation Allowed?"** toggle, alongside the sound and roll-back toggles, defaulting to
+  **Not Allowed**. Controls whether the Resign Game button (below) appears during the game at all.
 
-### Abort
-- Any player can request an abort at any time during a game.
-- All current players are asked to confirm, one after another, through a single shared modal (all
-  players are on the same device).
-- If everyone agrees → the game is aborted (return to setup / session menu).
-- If 2 or more players decline → ask the group whether to continue by removing the pieces of the
-  player(s) who **agreed to abort** (not the decliners) from the board and treating them as having
-  lost the game, letting the declining players — the ones who want to keep playing — play on.
-- If fewer than 2 decline (i.e., exactly 1 or 0) → abort request is cancelled, play resumes normally.
+### Resign
+- Shown only when Resignation Allowed was turned on at setup; hidden entirely otherwise.
+- Not a vote: clicking Resign Game **unconditionally** resigns whoever's turn it currently is (the
+  same player the shared device is currently "on") — no confirmation is asked of anyone, since the
+  resigning player has already made their own call. Equivalent to a forfeit (§8): their pieces are
+  removed from the board and they're ranked out immediately (see §8's ranking-order rule for where
+  they land relative to other forfeits/eliminations).
+- After resigning, a **Resign Information** notice is shown (title "Resign Information", body
+  "<player> accepted defeat and resigned. The player pieces will be removed from the board. Do you
+  want to continue playing with remaining players") — purely informational (a single acknowledgment
+  button), not a yes/no decision; the remaining players always continue automatically once
+  dismissed (or the results screen shows immediately, if that resignation ended the game).
 
 ### Session & Rematch
 - A **session** is one continuous sequence of games played by the same browser instance.
@@ -232,7 +237,10 @@ matching the board's height so it never resizes as its content changes) contains
    then the scattered result (black/white ovals) of the latest throw once rolled.
 5. The cumulative list of pool values still to be played this turn, labeled in Kannada
    "ನಡೆಸಬೇಕಾದ ಗರಗಳು" ("moves still to be made").
-6. The Abort Game button.
+6. The Resign Game button (hotseat only, and only when Resignation Allowed was turned on at setup
+   — §9). Online mode keeps its own separate Abort Game button/flow instead (§13); Vs Computer
+   keeps its own unconditional, always-shown Abort Game button (§14) — resigning/aborting mid-game
+   is still spelled differently across modes on purpose, matching each one's own semantics.
 7. The sound on/off toggle (mirrors the one on the setup screen — see below).
 
 *(Numbering above follows the original spec as given; item 4 was not specified. Online mode's
@@ -445,6 +453,21 @@ Resolved during requirements gathering:
   previously-removed players (so the most recent quitter always outranks earlier ones). Lives in
   `packages/game-core`, so hotseat, online, vs-computer, and Develop Test all picked up the fix
   from the one shared reducer.
+- **Hotseat "Abort Game" replaced by unconditional "Resign Game"** (§9): the old flow (screenshot
+  from a bug report) asked every active player, including whoever actually wanted to quit, to
+  Agree/Decline one-by-one through `AbortModal.tsx`, then asked a further Yes/No about removing the
+  agreers' pieces — confusing, and never actually fixed to skip the initiator despite an earlier,
+  separate attempt (that fix only ever landed in online's own abort flow, §13). Replaced with an
+  unconditional resign, always applying to whoever's turn it currently is, with no vote at all —
+  followed by a purely informational "Resign Information" notice (`ResignModal.tsx`, replacing the
+  deleted `AbortModal.tsx`) rather than another decision. Reuses the same `removePlayers` forfeit
+  path (and its now-correct ranking order, above) internally. Scoped to hotseat/Develop Test only
+  — online's own multi-device abort flow (§13) and Vs Computer's single-human immediate abort
+  (§14) were left untouched, since neither had the bug this was reported against.
+- **"Resignation Allowed?" setup toggle**: added alongside the rename so resigning isn't always
+  available — defaults to **off** (`Not Allowed`), matching the pattern of the sound/roll-back
+  toggles already on the setup screen. The Resign Game button is only rendered at all when this is
+  turned on for that session.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
