@@ -17,7 +17,12 @@ import './App.css';
 // it mounts, so no separate redirect-preservation bookkeeping is needed once auth completes.
 const isGameInviteLink = typeof window !== 'undefined' && /^\/games\/[^/]+$/.test(window.location.pathname);
 
-const MODE_PATHS = { hotseat: '/hotseat', online: '/online', 'vs-computer': '/vs-computer' } as const;
+const MODE_PATHS = {
+  hotseat: '/hotseat',
+  online: '/online',
+  'vs-computer': '/vs-computer',
+  'develop-test': '/develop-test',
+} as const;
 
 function ModeSelectRoute() {
   const navigate = useNavigate();
@@ -81,6 +86,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<ModeSelectRoute />} />
           <Route path="/hotseat" element={<HotseatPage />} />
+          <Route path="/develop-test" element={<HotseatPage allowCustomSetup />} />
           <Route path="/vs-computer" element={<VsComputerPage />} />
           <Route path="/online" element={<OnlineSetupRoute />} />
           <Route path="/games/:gameId" element={<OnlineGameRoute me={player} />} />

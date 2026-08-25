@@ -71,6 +71,18 @@ export function coordAt(playerId: PlayerId, pos: number): Coord {
   return PATHS[playerId][pos];
 }
 
+// The reverse of coordAt — which path position of this player's own path a given board
+// coordinate corresponds to. Every player's 25-cell path is a Hamiltonian route over the whole
+// 5x5 board (1 home + 15 outer + 8 inner + 1 center = 25 cells), so this only ever returns null
+// for a coordinate that isn't a real board cell at all, never a "not on this path" case.
+export function pathPositionAt(playerId: PlayerId, coord: Coord): number | null {
+  const path = PATHS[playerId];
+  for (let pos = 0; pos < path.length; pos++) {
+    if (isSameCell(path[pos], coord)) return pos;
+  }
+  return null;
+}
+
 export function isSameCell(a: Coord, b: Coord): boolean {
   return a[0] === b[0] && a[1] === b[1];
 }

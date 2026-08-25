@@ -43,9 +43,18 @@ export interface SetupPlayer {
 
 type SessionEntry = { players: string[]; placements: PlacementEntry[] };
 
-export default function HotseatPage() {
+interface Props {
+  // Develop Test mode only: adds a Board Editor screen between setup and play, letting player 1
+  // drag pieces to any legal position, manually flag who has already captured, and pick who
+  // resumes first. Defaults to false so plain /hotseat is completely unaffected.
+  allowCustomSetup?: boolean;
+}
+
+export default function HotseatPage({ allowCustomSetup = false }: Props) {
   const [inSetup, setInSetup] = useState(true);
   const [game, setGame] = useState<GameState | null>(null);
+  const [editorState, setEditorState] = useState<GameState | null>(null);
+  const [resumeAsSeat, setResumeAsSeat] = useState<PlayerId>('P1');
   const [roster, setRoster] = useState<string[]>(() => loadRoster());
   const [stats, setStats] = useState<Record<string, PlayerStats>>(() => loadStats());
   const [sessionResults, setSessionResults] = useState<SessionEntry[]>([]);
@@ -134,8 +143,55 @@ export default function HotseatPage() {
     const nextRoster = Array.from(new Set([...roster, ...players.map((p) => p.name)]));
     setRoster(nextRoster);
     saveRoster(nextRoster);
-    setGame(createGame(players.map((p) => ({ id: p.id, name: p.name, color: COLORS[p.id] }))));
+    const fresh = createGame(players.map((p) => ({ id: p.id, name: p.name, color: COLORS[p.id] })));
+    if (allowCustomSetup) {
+      setEditorState(fresh);
+      setResumeAsSeat(fresh.players[0].id);
+    } else {
+      setGame(fresh);
+    }
     setInSetup(false);
+  }
+
+  // Develop Test mode only — see the Board Editor screen below.
+  function handleEditMove(playerId: PlayerId, pieceId: number, newPos: number) {
+    setEditorState((prev) =>
+      prev
+        ? {
+            ...prev,
+            players: prev.players.map((p) =>
+              p.id === playerId
+                ? { ...p, pieces: p.pieces.map((pc) => (pc.id === pieceId ? { ...pc, pos: newPos } : pc)) }
+                : p
+            ),
+          }
+        : prev
+    );
+  }
+  function handleToggleCaptured(playerId: PlayerId) {
+    setEditorState((prev) =>
+      prev
+        ? { ...prev, players: prev.players.map((p) => (p.id === playerId ? { ...p, hasCaptured: !p.hasCaptured } : p)) }
+        : prev
+    );
+  }
+  function handleResetPositions() {
+    if (!editorState) return;
+    setEditorState(createGame(editorState.players.map((p) => ({ id: p.id, name: p.name, color: p.color }))));
+  }
+  function handleResumeFromEditor() {
+    if (!editorState) return;
+    const idx = editorState.players.findIndex((p) => p.id === resumeAsSeat);
+    const finalIdx = idx === -1 ? 0 : idx;
+    const snapshot = editorState.players.map((p) => ({ ...p, pieces: p.pieces.map((pc) => ({ ...pc })) }));
+    setGame({
+      ...editorState,
+      currentTurnIndex: finalIdx,
+      message: `${editorState.players[finalIdx].name}, ನಿಮ್ಮ ಸರದಿ, ಕವಡೆ ಹಾಕಿ`,
+      turnStartSnapshot: snapshot,
+      debugLog: [...editorState.debugLog, `Custom setup: resuming as ${editorState.players[finalIdx].name}`],
+    });
+    setEditorState(null);
   }
 
   function endGameIfOver(next: GameState) {
@@ -181,6 +237,7 @@ export default function HotseatPage() {
       setStats(updatedStats);
       saveStats(updatedStats);
       setGame(null);
+      setEditorState(null);
       setInSetup(true);
     } else if (action === 'forfeit' && losers) {
       endGameIfOver(removePlayers(game, losers));
@@ -196,6 +253,7 @@ export default function HotseatPage() {
   function handleNewSession() {
     setShowResults(false);
     setGame(null);
+    setEditorState(null);
     setSessionResults([]);
     setInSetup(true);
   }
@@ -211,6 +269,51 @@ export default function HotseatPage() {
           rollbackEnabled={rollbackEnabled}
           onToggleRollback={toggleRollback}
         />
+      )}
+
+      {!inSetup && editorState && !game && (
+        <div className="container">
+          <div className="board-container">
+            <Board
+              game={editorState}
+              onSelectPiece={() => {}}
+              onSelectStats={() => {}}
+              onPieceClickedBeforeValue={() => {}}
+              editable
+              onEditMove={handleEditMove}
+            />
+          </div>
+          <div className="play-area">
+            <h2>Board Editor</h2>
+            <p>Drag pieces to any position on the board, then choose who resumes first.</p>
+            <div className="editor-captured-list">
+              {editorState.players.map((p) => (
+                <label key={p.id} className="editor-captured-row">
+                  <input type="checkbox" checked={p.hasCaptured} onChange={() => handleToggleCaptured(p.id)} />
+                  {p.name} — {p.hasCaptured ? 'Capture Done' : 'Not Captured'}
+                </label>
+              ))}
+            </div>
+            <div className="setup-row">
+              <label className="setup-label" htmlFor="resumeAsSeat">
+                Resume as:
+              </label>
+              <select id="resumeAsSeat" value={resumeAsSeat} onChange={(e) => setResumeAsSeat(e.target.value as PlayerId)}>
+                {editorState.players.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button className="action-btn btn-start" onClick={handleResumeFromEditor}>
+              Start Game From Here
+            </button>
+            <button className="action-btn" onClick={handleResetPositions}>
+              Reset Positions
+            </button>
+          </div>
+        </div>
       )}
 
       {!inSetup && game && (

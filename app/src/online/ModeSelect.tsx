@@ -1,5 +1,5 @@
 interface Props {
-  onChoose: (mode: 'hotseat' | 'online' | 'vs-computer') => void;
+  onChoose: (mode: 'hotseat' | 'online' | 'vs-computer' | 'develop-test') => void;
 }
 
 export default function ModeSelect({ onChoose }: Props) {
@@ -16,6 +16,9 @@ export default function ModeSelect({ onChoose }: Props) {
           </button>
           <button className="action-btn" onClick={() => onChoose('online')}>
             🌐 Multiple Players (Online)
+          </button>
+          <button className="action-btn" onClick={() => onChoose('develop-test')}>
+            🛠️ Develop Test
           </button>
         </div>
       </div>

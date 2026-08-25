@@ -1,12 +1,16 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, DragEvent } from 'react';
 import { motion } from 'framer-motion';
 import {
   PATHS,
   SAFE_CELLS,
   BASE_POSITIONS,
   FINISH_POS,
+  INNER_RING_START,
+  INNER_RING_END,
   isSameCell,
+  isSafeCell,
   rotateCoord,
+  pathPositionAt,
   type Coord,
   type PlayerId,
 } from '../game/paths';
@@ -23,6 +27,10 @@ interface Props {
   // that player's active pieces, they just can't act on someone else's behalf. Omitted (the
   // default) in hotseat mode, where any device-holder acting for the current player is correct.
   viewerSeat?: PlayerId;
+  // Develop Test mode only: replaces normal click/select/legal-highlight interaction with drag-
+  // and-drop piece placement — every piece becomes draggable, every cell a drop target.
+  editable?: boolean;
+  onEditMove?: (playerId: PlayerId, pieceId: number, newPos: number) => void;
 }
 
 // Canonical seating (P1 bottom, P2 right, P3 top, P4 left, matches SetupModal's seat labels) is
@@ -55,11 +63,45 @@ const STILL_TRANSITION = { layout: LAYOUT_SPRING, scale: LAYOUT_SPRING } as cons
 const HOVER_LEGAL = { scale: 1.35 };
 const TAP_LEGAL = { scale: 0.9 };
 
-export default function Board({ game, onSelectPiece, onSelectStats, onPieceClickedBeforeValue, viewerSeat }: Props) {
+export default function Board({
+  game,
+  onSelectPiece,
+  onSelectStats,
+  onPieceClickedBeforeValue,
+  viewerSeat,
+  editable,
+  onEditMove,
+}: Props) {
   const current = game.players[game.currentTurnIndex];
   const selectedVal = game.selectedPoolIndex !== null ? game.pool[game.selectedPoolIndex] : null;
   const colorOf = (id: PlayerId) => game.players.find((p) => p.id === id)?.color;
   const rotationSteps = rotationStepsFor(viewerSeat);
+
+  function handleDragStart(e: DragEvent<HTMLDivElement>, playerId: PlayerId, pieceId: number) {
+    e.dataTransfer.setData('text/plain', JSON.stringify({ playerId, pieceId }));
+  }
+
+  // Mirrors canMovePiece's own friendly-blocking rule as a static placement check: no two of a
+  // player's own pieces may share a non-safe outer-ring cell. Different players (or a player's
+  // own pieces on safe/inner-ring cells) may freely share a cell during editing — no capture
+  // simulation here, this is placement, not a move.
+  function handleDrop(e: DragEvent<HTMLDivElement>, targetCoord: Coord) {
+    e.preventDefault();
+    const raw = e.dataTransfer.getData('text/plain');
+    if (!raw) return;
+    const { playerId, pieceId } = JSON.parse(raw) as { playerId: PlayerId; pieceId: number };
+    const newPos = pathPositionAt(playerId, targetCoord);
+    if (newPos === null) return;
+    const isInner = newPos >= INNER_RING_START && newPos <= INNER_RING_END;
+    if (!isSafeCell(targetCoord) && !isInner) {
+      const player = game.players.find((p) => p.id === playerId);
+      const blocked = player?.pieces.some(
+        (p) => p.id !== pieceId && isSameCell(PATHS[playerId][p.pos], targetCoord)
+      );
+      if (blocked) return;
+    }
+    onEditMove?.(playerId, pieceId, newPos);
+  }
 
   const cells = [];
   for (let r = 0; r < 5; r++) {
@@ -83,10 +125,25 @@ export default function Board({ game, onSelectPiece, onSelectStats, onPieceClick
       cells.push(
         <div
           key={`${r}-${c}`}
-          className={`cell${isSafe ? ' marked' : ''}`}
+          className={`cell${isSafe ? ' marked' : ''}${editable ? ' editable' : ''}`}
           style={{ gridRow: displayR + 1, gridColumn: displayC + 1, ...(tint ? ({ '--tint': tint } as CSSProperties) : {}) }}
+          onDragOver={editable ? (e) => e.preventDefault() : undefined}
+          onDrop={editable ? (e) => handleDrop(e, coord) : undefined}
         >
           {piecesHere.map(({ player, piece }) => {
+            if (editable) {
+              return (
+                <div
+                  key={`${player.id}-${piece.id}`}
+                  className="piece"
+                  style={{ background: player.color }}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, player.id, piece.id)}
+                >
+                  {piece.id}
+                </div>
+              );
+            }
             const isCurrentPlayer = player.id === current.id && game.phase !== 'game-over';
             const isSelectable =
               isCurrentPlayer && game.phase === 'awaiting-selection' && (viewerSeat === undefined || viewerSeat === current.id);
@@ -138,10 +195,11 @@ export default function Board({ game, onSelectPiece, onSelectStats, onPieceClick
       onClick={() => onSelectStats(p.name)}
       title={`${p.name}'s statistics${
         p.hasDeclined ? ' (declined)' : p.isFinished ? ' (finished)' : p.hasLost ? ' (left)' : ''
-      }`}
+      } — ${p.hasCaptured ? 'Capture Done' : 'Not Captured'}`}
     >
       {p.name}
       {p.hasDeclined ? ' (declined)' : p.isFinished ? ' ✓' : ''}
+      <span className="capture-status">{p.hasCaptured ? 'Capture Done' : 'Not Captured'}</span>
     </button>
   ));
 

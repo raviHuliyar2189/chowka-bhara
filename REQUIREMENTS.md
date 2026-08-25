@@ -2,18 +2,21 @@
 
 ## 1. Overview
 A digital implementation of the traditional cross-board race/capture game Chowka Bhara (a.k.a.
-Ashta Chamma), for 2–4 players, with three modes:
+Ashta Chamma), for 2–4 players, with four modes:
 
 - **Hotseat**: a single device passed between players in person, no account required.
 - **Online**: players on separate devices (laptop/tablet/phone), each signed in with their own
   account, playing together over the internet in real time.
 - **Vs Computer**: one human against a computer-controlled opponent, on a single device.
+- **Develop Test**: identical to hotseat, plus an initial board-editor screen for setting up an
+  arbitrary starting position (see §15) — a testing/debugging tool, not a normal way to play.
 
-All three modes share the exact same game engine (`packages/game-core`) and the exact same
+All four modes share the exact same game engine (`packages/game-core`) and the exact same
 board/dice UI components (`Board`, `DiceTray`) — the rules, legality, and animations are identical
-across all of them. What differs is who computes a move (the browser locally in hotseat and vs
-computer; the server authoritatively in online), how players get into the same game, and — for vs
-computer only — that one seat's moves come from a heuristic AI instead of a person (§14).
+across all of them. What differs is who computes a move (the browser locally in hotseat, vs
+computer, and develop test; the server authoritatively in online), how players get into the same
+game, and — for vs computer only — that one seat's moves come from a heuristic AI instead of a
+person (§14).
 
 ## 2. Board
 
@@ -227,6 +230,13 @@ matching the board's height so it never resizes as its content changes) contains
 *(Numbering above follows the original spec as given; item 4 was not specified. Online mode's
 gameplay screen mirrors this same layout, plus a Report Bug button — see §13.)*
 
+### Capture-status indicator
+Every player's home label shows, in addition to their name, whether they've captured a piece yet —
+"Not Captured" until their first capture, then "Capture Done" for the rest of the game (also in the
+label's hover tooltip). Reflects the same `hasCaptured` flag that gates inner-ring entry (§7), so it
+doubles as a visible explanation for why a player's pieces can't yet enter the inner ring. Shown in
+every mode, on the shared `Board` component — not mode-specific.
+
 ### Highlighting & attention cues
 - Legal-move piece highlighting per §7.
 - Whenever more than one pool value is still owed this turn, both the moves-list panel and each
@@ -405,7 +415,16 @@ Resolved during requirements gathering:
   hotseat/online — per a follow-up request (§14).
 - **Mode-select order and labels**: reordered to Single player (vs computer) → Multiple players
   (Local, hotseat) → Multiple Players (Online), relabeled from the original "Play vs
-  Computer"/"Play Locally"/"Play Online" wording, per the user's explicit request.
+  Computer"/"Play Locally"/"Play Online" wording, per the user's explicit request. Develop Test
+  (§15) was added afterward as a 4th button, appended at the end.
+- **Develop Test's "has captured" flag is set manually, not inferred**: the original plan
+  auto-derived a player's `hasCaptured` flag from whether any of their pieces was placed in the
+  inner ring during editing. Superseded, before implementation, by an explicit request for a manual
+  per-player checkbox in the editor (defaulting to unchecked/"Not Captured") instead — placing a
+  piece in the inner ring during editing has no side effect on the flag (§15).
+- **Capture-status indicator**: added at the user's request as a general, all-modes visual (§11),
+  not specific to Develop Test — Develop Test's manual toggle (above) was requested as a companion
+  feature once the general indicator existed, so the editor could set the same flag it displays.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
@@ -539,3 +558,41 @@ needed.
   start, roll, capture, finish) is heard regardless of whose turn it is, same as hotseat/online
   (§11), including the computer's own turn; results/stats use the same `localStorage`
   roster-keyed persistence (§10), always including "Computer" as one of the two players.
+
+## 15. Develop Test
+
+A testing/debugging mode for reaching a specific board position without playing through many
+random dice rolls first — identical to hotseat (§9) in every respect (setup, gameplay, abort,
+session/rematch, stats) except for one extra screen inserted between player setup and the first
+turn: a **Board Editor**.
+
+### Board Editor screen
+- Shown immediately after picking player count/names, before any dice are rolled.
+- Every piece (all players, all starting stacked at home as normal) is **draggable**; every board
+  cell is a **drop target**. Dragging a piece onto a cell moves it to that player's corresponding
+  path position for that cell (native HTML5 drag-and-drop — mouse-only, no touch support; accepted
+  as a limitation since this is a dev tool, not normal gameplay).
+- **Placement rule**: the same friendly-blocking rule real play enforces (§7) applies statically —
+  a drop that would put two of the *same* player's pieces on the same non-safe outer-ring cell is
+  rejected (the piece stays at its previous position). Multiple pieces (same or different players)
+  may freely share a safe cell (§6) or an inner-ring cell (§7), exactly as in real play. No capture
+  simulation happens while editing — this is placement, not a move.
+- **Per-player "has captured" toggle**: a checkbox per player, defaulting to **unchecked ("Not
+  Captured")**, that directly sets that player's `hasCaptured` flag (the same flag §7's inner-ring
+  gate and §11's capture-status indicator use). Set manually by whoever's running the setup —
+  placing a piece in the inner ring during editing has **no automatic effect** on this flag (see the
+  Decisions log, §12, for why this is manual rather than inferred).
+- **"Resume as"**: a selector for which configured player's turn the game should start on once
+  editing is done (not necessarily the first-listed player).
+- **"Start Game From Here"**: finalizes the edited positions and flags into a real starting game
+  state — turn order/whose-turn-it-is set to the selected "resume as" player, the normal turn-start
+  message and turn-start-revert snapshot (§5.5) rebuilt from this custom position (so an
+  early stuck-pool revert on the very first turn reverts back to the custom setup, not to
+  everyone-at-home) — then proceeds into the exact same, unmodified gameplay screen hotseat uses.
+- **"Reset Positions"**: discards all edits and returns every piece to its owner's home cell,
+  `hasCaptured` back to unchecked for everyone — a fresh editor, not a fresh player setup.
+
+### Routing & entry point
+- `/develop-test` (a 4th mode-select button, "🛠️ Develop Test") — the same `HotseatPage` component
+  as `/hotseat`, given an `allowCustomSetup` prop that's `false` (and therefore has zero effect) on
+  the plain `/hotseat` route.
