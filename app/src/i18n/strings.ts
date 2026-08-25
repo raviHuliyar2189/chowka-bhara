@@ -150,6 +150,19 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
     kn: (player: string, count: number) => `${player} ${count} ಕಾಯಿ ಸೆರೆ ಹಿಡಿದಿದ್ದಾರೆ!`,
   },
 
+  // --- Gatti-Tollu (shared: hotseat, vs-computer, online) --- Kannada wording for "gatti"/"tollu"
+  // themselves is my own transliteration (ಗಟ್ಟಿ / ತೊಳ್ಳು) of the terms as given — flag me to correct
+  // if that's not the spelling/word actually used for this game.
+  'gatti.formButton': { en: 'Form Gatti', kn: 'ಗಟ್ಟಿ ಮಾಡಿ' },
+  'gatti.formTitle': {
+    en: 'Bond this tollu (2 pieces) into a permanent gatti and move it forward one square',
+    kn: 'ಈ ತೊಳ್ಳನ್ನು (2 ಕಾಯಿಗಳು) ಶಾಶ್ವತ ಗಟ್ಟಿಯನ್ನಾಗಿ ಮಾಡಿ ಒಂದು ಚೌಕ ಮುಂದೆ ಸರಿಸಿ',
+  },
+  'banner.gattiFormed': {
+    en: (name: string) => `${name} formed a Gatti!`,
+    kn: (name: string) => `${name} ಗಟ್ಟಿ ಮಾಡಿದರು!`,
+  },
+
   // --- Vs Computer ---
   'vsComputer.title': { en: 'Play vs Computer', kn: 'ಕಂಪ್ಯೂಟರ್ ವಿರುದ್ಧ ಆಡಿ' },
   'vsComputer.yourName': { en: 'Your Name:', kn: 'ನಿಮ್ಮ ಹೆಸರು:' },

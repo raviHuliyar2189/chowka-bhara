@@ -16,6 +16,7 @@ import {
   announceTurnReverted,
   announceCapture,
   announceFinish,
+  announceGattiFormed,
   announceHint,
   setAnnouncerEnabled,
 } from '../audio/announcer';
@@ -127,6 +128,13 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
   }, [game.eventSeq]);
 
   useEffect(() => {
+    if (game.gattiSeq === 0) return;
+    announceGattiFormed(game.lastGattiPlayer);
+    setBanner(t('banner.gattiFormed', game.lastGattiPlayer));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game.gattiSeq]);
+
+  useEffect(() => {
     const prevIds = prevRankingIds.current;
     const newIds = game.rankings.filter((id) => !prevIds.includes(id));
     prevRankingIds.current = game.rankings;
@@ -148,6 +156,9 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
   }
   function handleSelectPiece(pieceId: number) {
     socketRef.current?.emit('game:select-piece', { gameId, pieceId });
+  }
+  function handleFormGatti(pos: number) {
+    socketRef.current?.emit('game:form-gatti', { gameId, pos });
   }
   function handleRollback() {
     socketRef.current?.emit('game:rollback', { gameId });
@@ -224,6 +235,7 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
           onSelectPiece={handleSelectPiece}
           onSelectStats={() => {}}
           onPieceClickedBeforeValue={handlePieceClickedBeforeValue}
+          onFormGatti={handleFormGatti}
           viewerSeat={mySeat}
         />
       </div>

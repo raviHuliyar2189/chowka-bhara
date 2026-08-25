@@ -143,6 +143,42 @@ because every player's path physically crosses through the other three players' 
   at least one still-pending pool value before a value has been picked. A piece that has already
   reached the center is never highlighted, regardless of turn state.
 
+### Gatti & Tollu (inner ring only)
+
+Scoped entirely to the inner ring (positions 16–23) — nothing here changes outer-ring or home/
+center behavior, which stay exactly as described above.
+
+- **Tollu**: 2 of a player's own pieces sharing one inner-ring cell (already legal per the
+  inner-ring stacking rule above). Purely incidental — either piece can still be moved away
+  individually like normal, dissolving the tollu, unless the player instead chooses to bond it
+  (below).
+- **Tollu capture (by a single opposing piece)**: landing on an opponent's tollu with an ordinary
+  (non-gatti) piece captures only **one** of the two pieces — the other stays put, no longer part
+  of a tollu.
+- **Forming a Gatti**: with a pool value of exactly **2** selected, a player may bond an eligible
+  tollu into a permanent **gatti** — both pieces move together 1 square forward and are bonded for
+  the rest of the game. This is a distinct action from an ordinary move (a "Form Gatti" button/
+  badge on the board, shown only when eligible), since it moves both pieces together by a
+  different distance than either would move alone with the same value. Once bonded, the two
+  pieces can never be split apart again — they always move together until either both are
+  captured (sent home, unbonded) or both reach the center.
+- **Gatti movement**: a bonded gatti advances only on pool values **2, 4, or 8**, moving by
+  (respectively) **1, 2, or 4** squares — half the normal per-value distance. Every other value
+  (1, 3) is simply not a legal move for that gatti; the player can still use it on another piece.
+- **Gatti capture (by a gatti)**: a gatti landing on any occupied opponent cell captures
+  **everything** there — a lone piece, an entire tollu (both pieces), or an opposing gatti (both
+  pieces) — all sent home. A gatti capture grants the normal capture bonus roll (§5.6), same as
+  any other capture.
+- **A single piece can never capture a gatti** — landing exactly on an opponent's gatti's cell is
+  legal but captures nothing; the two simply coexist on that cell.
+- **A single piece can never cross (jump over) a cell occupied by an opponent's gatti** — a move
+  whose path would pass over such a cell is illegal outright, even if the final landing square
+  itself is empty. Landing *exactly* on the gatti's cell is fine (see above); continuing further
+  past it is only possible on some later turn, once actually starting from that cell.
+- **A gatti moving away exposes whoever it left behind**: any single opposing piece that had been
+  resting on a gatti's cell (having stopped there instead of crossing it) is captured the instant
+  that gatti moves off the cell, whichever direction/turn that happens.
+
 ## 8. Winning & Rankings
 
 - A player finishes (and is ranked) the moment all 4 of their pieces reach the center (position 24).
@@ -264,6 +300,15 @@ Every player's home label shows, in addition to their name, whether they've capt
 label's hover tooltip). Reflects the same `hasCaptured` flag that gates inner-ring entry (§7), so it
 doubles as a visible explanation for why a player's pieces can't yet enter the inner ring. Shown in
 every mode, on the shared `Board` component — not mode-specific.
+
+### Gatti formation control
+When an inner-ring cell holds an eligible tollu of the current player's own pieces (§7) and a pool
+value of exactly 2 is selected, a small "Form Gatti" badge appears pinned to that cell — a
+distinct affordance from clicking a piece, since bonding moves both pieces together by a
+different distance than selecting either one alone would. A bonded gatti's two pieces render with
+a distinct ring/outline so their state is visible at a glance, separate from the ordinary
+legal/illegal/active-turn piece highlighting. Shown in every mode (hotseat, Vs Computer, online),
+on the shared `Board` component.
 
 ### Player status indicator
 A second line on every player's home label shows their live status, one of: **Playing** (still
@@ -626,6 +671,33 @@ Resolved during requirements gathering:
   (Start Game visible to both) was unrelated — the endpoint never actually restricted who could
   call it — fixed separately by requiring `createdBy` server-side, mirroring abort-lobby's already
   existing creator-only restriction, plus hiding the button client-side for anyone else.
+
+- **Gatti & Tollu** (§7): a new inner-ring-only rule set from a separate requirements doc
+  ("gatti tollu requirement.txt"), implemented across `packages/game-core` (so hotseat, online,
+  Vs Computer, and Develop Test all share one engine), `Board.tsx` (the "Form Gatti" affordance
+  and gatti piece styling), and the server's socket handlers (`game:form-gatti`, mirroring
+  `game:select-piece`). Several interpretive points were confirmed explicitly with the user before
+  implementing, since the source doc left them ambiguous:
+  - **Scope**: applies *only* once pieces are inside the inner ring (16–23) — no change to
+    outer-ring or home/center stacking behavior, which already allowed (inner ring) or disallowed
+    (outer ring) a player's own pieces sharing a cell exactly as before.
+  - **Permanence**: once a tollu is bonded into a gatti, the two pieces can never be split apart
+    again — they move together for the rest of the game until captured (both sent home, unbonded)
+    or both reach the center.
+  - **Capture bonus**: a gatti capturing anything grants the same bonus roll as any other capture
+    (§5.6) — no special case.
+  - **The "resting piece" mechanic**: a single piece that stopped on an opponent's gatti cell
+    (unable to cross it) is captured the instant that gatti later moves off the cell — confirmed
+    this triggers automatically as part of resolving the gatti's own move, not as a separate
+    player action.
+  Verified two ways before shipping: a scripted check against `packages/game-core` directly
+  (bypassing dice randomness) covering all 9 documented mechanics — tollu detection, gatti
+  formation and its 2/4/8 → 1/2/4 movement mapping, single-vs-tollu capturing exactly one piece,
+  gatti-vs-tollu and gatti-vs-gatti capturing everything, a single piece being unable to capture or
+  cross a gatti, the resting-piece capture on gatti departure, and the center-overshoot bound — and
+  a live browser pass (Develop Test's Board Editor, dragging a tollu into place) confirming the
+  on-board "Form Gatti" button and gatti styling actually appear and work end-to-end, not just the
+  underlying reducer logic.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

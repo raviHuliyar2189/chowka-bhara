@@ -1,6 +1,13 @@
 import type { Server, Socket } from 'socket.io';
 import { pool } from '../db/pool';
-import { roll, selectPoolValue, selectPiece, rollbackLastMove, moverOfLastMove } from '@chowka/game-core/turnEngine';
+import {
+  roll,
+  selectPoolValue,
+  selectPiece,
+  formGattiMove,
+  rollbackLastMove,
+  moverOfLastMove,
+} from '@chowka/game-core/turnEngine';
 import type { GameState } from '@chowka/game-core/turnEngine';
 import type { SessionPayload } from '../auth/tokens';
 import { lobbyRoom } from './io';
@@ -70,6 +77,16 @@ export function registerGameplayHandlers(io: Server, socket: Socket, session: Se
     if (!seat) return;
     await applyAndBroadcast(io, gameId, (state) =>
       state.players[state.currentTurnIndex].id === seat ? selectPiece(state, pieceId) : state
+    );
+  });
+
+  // Gatti-tollu requirement: bonds a tollu at `pos` into a permanent gatti using the currently
+  // selected pool value — same validation shape as game:select-piece.
+  socket.on('game:form-gatti', async ({ gameId, pos }: { gameId: string; pos: number }) => {
+    const seat = await seatFor(gameId, session.playerId);
+    if (!seat) return;
+    await applyAndBroadcast(io, gameId, (state) =>
+      state.players[state.currentTurnIndex].id === seat ? formGattiMove(state, pos) : state
     );
   });
 

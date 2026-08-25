@@ -15,7 +15,7 @@ import {
   type PlayerId,
 } from '../game/paths';
 import type { GameState } from '../game/turnEngine';
-import { canMovePiece, type Player } from '../game/rules';
+import { canMovePiece, tolluAt, type Player } from '../game/rules';
 import { computePlacements } from '../game/session';
 import { useT, type T } from '../i18n/strings';
 
@@ -24,6 +24,10 @@ interface Props {
   onSelectPiece: (pieceId: number) => void;
   onSelectStats: (name: string) => void;
   onPieceClickedBeforeValue: () => void;
+  // Gatti-tollu requirement: bonds an eligible tollu (2 of the current player's own pieces sharing
+  // an inner-ring cell) into a permanent gatti. Omitted in contexts with no such action available
+  // (the Board Editor's `editable` mode).
+  onFormGatti?: (pos: number) => void;
   // Online mode only: this device's own seat. When set, pieces are only clickable/highlighted
   // as legal when it's actually THIS seat's turn — everyone still sees whose turn it is and
   // that player's active pieces, they just can't act on someone else's behalf. Omitted (the
@@ -98,6 +102,7 @@ export default function Board({
   onSelectPiece,
   onSelectStats,
   onPieceClickedBeforeValue,
+  onFormGatti,
   viewerSeat,
   editable,
   onEditMove,
@@ -155,6 +160,23 @@ export default function Board({
             .map((piece) => ({ player: p, piece }))
         );
 
+      // Gatti-tollu requirement: this cell holds an eligible tollu of the current player's own
+      // pieces (2 of them, not yet bonded, inside the inner ring) that a selected pool value of 2
+      // could bond into a gatti. Shown as its own affordance rather than folded into a piece
+      // click, since forming a gatti moves both pieces together by a different (halved) distance
+      // than clicking either one alone would — a genuinely separate choice, not just "select this
+      // piece."
+      const currentPos = !editable ? pathPositionAt(current.id, coord) : null;
+      const canFormGattiHere =
+        !editable &&
+        !!onFormGatti &&
+        game.phase !== 'game-over' &&
+        game.phase === 'awaiting-selection' &&
+        selectedVal === 2 &&
+        (viewerSeat === undefined || viewerSeat === current.id) &&
+        currentPos !== null &&
+        tolluAt(current, currentPos) !== null;
+
       cells.push(
         <div
           key={`${r}-${c}`}
@@ -163,6 +185,19 @@ export default function Board({
           onDragOver={editable ? (e) => e.preventDefault() : undefined}
           onDrop={editable ? (e) => handleDrop(e, coord) : undefined}
         >
+          {canFormGattiHere && (
+            <button
+              type="button"
+              className="gatti-form-btn"
+              title={t('gatti.formTitle')}
+              onClick={(e) => {
+                e.stopPropagation();
+                onFormGatti!(currentPos!);
+              }}
+            >
+              {t('gatti.formButton')}
+            </button>
+          )}
           {piecesHere.map(({ player, piece }) => {
             if (editable) {
               return (
@@ -180,7 +215,8 @@ export default function Board({
             const isCurrentPlayer = player.id === current.id && game.phase !== 'game-over';
             const isSelectable =
               isCurrentPlayer && game.phase === 'awaiting-selection' && (viewerSeat === undefined || viewerSeat === current.id);
-            const isLegal = isSelectable && selectedVal !== null && canMovePiece(player, piece, selectedVal);
+            const isLegal =
+              isSelectable && selectedVal !== null && canMovePiece(game.players, player, piece, selectedVal);
             const isIllegal = isSelectable && selectedVal !== null && !isLegal;
             // Pulse (the "active-turn" cue) only pieces that can actually be played: a finished
             // piece (reached the center) never has a legal move, and once a value is picked only
@@ -189,7 +225,7 @@ export default function Board({
             const isFinished = piece.pos === FINISH_POS;
             const relevantVals = selectedVal !== null ? [selectedVal] : game.pool;
             const hasValidMove =
-              relevantVals.length === 0 || relevantVals.some((v) => canMovePiece(player, piece, v));
+              relevantVals.length === 0 || relevantVals.some((v) => canMovePiece(game.players, player, piece, v));
             const isActive = isCurrentPlayer && !isFinished && hasValidMove;
             return (
               <motion.div
@@ -197,7 +233,7 @@ export default function Board({
                 layoutId={`${player.id}-${piece.id}`}
                 animate={isActive ? PULSE_ANIMATE : STILL_ANIMATE}
                 transition={isActive ? PULSE_TRANSITION : STILL_TRANSITION}
-                className={`piece${isActive ? ' active-turn' : ''}${isLegal ? ' legal' : ''}${isIllegal ? ' illegal' : ''}`}
+                className={`piece${isActive ? ' active-turn' : ''}${isLegal ? ' legal' : ''}${isIllegal ? ' illegal' : ''}${piece.isGatti ? ' gatti' : ''}`}
                 style={{ background: player.color }}
                 whileHover={isLegal ? HOVER_LEGAL : undefined}
                 whileTap={isLegal ? TAP_LEGAL : undefined}

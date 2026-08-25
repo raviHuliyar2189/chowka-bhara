@@ -7,6 +7,7 @@ import {
   roll,
   selectPoolValue,
   selectPiece,
+  formGattiMove,
   rematch,
 } from '../game/turnEngine';
 import { computePlacements, applyPlacementsToStats, applyAbortToStats, type PlacementEntry } from '../game/session';
@@ -18,6 +19,7 @@ import {
   announceTurnReverted,
   announceCapture,
   announceFinish,
+  announceGattiFormed,
   announceHint,
   setAnnouncerEnabled,
   waitForAnnouncer,
@@ -105,6 +107,13 @@ export default function VsComputerPage() {
   }, [game?.eventSeq]);
 
   useEffect(() => {
+    if (!game || game.gattiSeq === 0) return;
+    announceGattiFormed(game.lastGattiPlayer);
+    setBanner(t('banner.gattiFormed', game.lastGattiPlayer));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.gattiSeq]);
+
+  useEffect(() => {
     if (!game) return;
     const prevIds = prevRankingIds.current;
     const newIds = game.rankings.filter((id) => !prevIds.includes(id));
@@ -160,6 +169,9 @@ export default function VsComputerPage() {
   }
   function handleSelectPiece(pieceId: number) {
     if (game) endGameIfOver(selectPiece(game, pieceId));
+  }
+  function handleFormGatti(pos: number) {
+    if (game) endGameIfOver(formGattiMove(game, pos));
   }
   function handlePieceClickedBeforeValue() {
     const text = t('hint.selectValueFirst');
@@ -220,7 +232,11 @@ export default function VsComputerPage() {
         const move = chooseAiMove(game, AI_SEAT);
         if (move) {
           const afterValue = selectPoolValue(game, move.poolIndex);
-          endGameIfOver(selectPiece(afterValue, move.pieceId));
+          if (move.kind === 'move') {
+            endGameIfOver(selectPiece(afterValue, move.pieceId));
+          } else {
+            endGameIfOver(formGattiMove(afterValue, move.pos));
+          }
         }
       }
     });
@@ -272,6 +288,7 @@ export default function VsComputerPage() {
             onSelectPiece={handleSelectPiece}
             onSelectStats={setStatsFor}
             onPieceClickedBeforeValue={handlePieceClickedBeforeValue}
+            onFormGatti={handleFormGatti}
             viewerSeat={HUMAN_SEAT}
           />
         </div>

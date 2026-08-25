@@ -1,5 +1,14 @@
 import type { PlayerId } from './paths';
-import { type Player, canMovePiece, hasAnyLegalMove, hasCaptureChance, movePiece } from './rules';
+import {
+  type Player,
+  type CaptureResult,
+  canMovePiece,
+  hasAnyLegalMove,
+  hasCaptureChance,
+  movePiece,
+  canFormGatti,
+  formGatti,
+} from './rules';
 import { rollDice, type RollResult } from './dice';
 
 export type Phase = 'awaiting-roll' | 'awaiting-selection' | 'game-over';
@@ -30,6 +39,11 @@ export interface GameState {
   // never reaches further back than the one move that was just made
   actionSeq: number; // increments on every roll or piece move — the UI watches this to know the
   // current player just acted, so it can reset the "you've been idle" nudge timer
+  gattiSeq: number; // increments whenever a tollu is bonded into a gatti WITHOUT also capturing
+  // something on that same move (a capture already has its own eventSeq/announcement, which takes
+  // priority) — same "event counter" pattern as eventSeq/revertSeq, for a UI/announcer trigger that
+  // fires exactly once per formation, not on every unrelated state change
+  lastGattiPlayer: string;
 }
 
 function withLog(state: GameState, line: string): GameState {
@@ -51,7 +65,7 @@ export function createGame(playerDefs: PlayerDef[]): GameState {
     id: d.id,
     name: d.name,
     color: d.color,
-    pieces: [1, 2, 3, 4].map((id) => ({ id, pos: 0 })),
+    pieces: [1, 2, 3, 4].map((id) => ({ id, pos: 0, isGatti: false })),
     isFinished: false,
     hasLost: false,
     hasCaptured: false,
@@ -75,6 +89,8 @@ export function createGame(playerDefs: PlayerDef[]): GameState {
     debugLog: [`Game started: ${players.map((p) => `${p.id}=${p.name}`).join(', ')}`],
     lastMoveSnapshot: null,
     actionSeq: 0,
+    gattiSeq: 0,
+    lastGattiPlayer: '',
   };
 }
 
@@ -124,7 +140,7 @@ export function roll(state: GameState, rng?: () => number): GameState {
 // entire pool has actually been used.
 function passIfNoLegalMove(state: GameState): GameState {
   const player = currentPlayer(state);
-  if (state.pool.length === 0 || hasAnyLegalMove(player, state.pool)) {
+  if (state.pool.length === 0 || hasAnyLegalMove(state.players, player, state.pool)) {
     return state;
   }
 
@@ -169,31 +185,20 @@ export function selectPoolValue(state: GameState, index: number): GameState {
   return withLog({ ...state, selectedPoolIndex: index }, `${player.name} picked value ${state.pool[index]} from the pool`);
 }
 
-export function selectPiece(state: GameState, pieceId: number): GameState {
-  if (state.phase !== 'awaiting-selection' || state.selectedPoolIndex === null) return state;
-  const player = currentPlayer(state);
-  const piece = player.pieces.find((p) => p.id === pieceId);
-  if (!piece) return state;
-  const val = state.pool[state.selectedPoolIndex];
-  if (!canMovePiece(player, piece, val)) return state;
-
-  // Snapshot the pre-move state for a possible one-level rollback — must deep-clone players
-  // since movePiece mutates piece objects in place, and the snapshot carries no history of its
-  // own (lastMoveSnapshot: null) so undo never reaches back more than this one move.
-  const preMoveSnapshot: GameState = { ...state, players: clonePlayers(state.players), lastMoveSnapshot: null };
-
-  const beforePos = piece.pos;
-  const captured = movePiece(state.players, player, piece, val);
-  const pool = state.pool.filter((_, i) => i !== state.selectedPoolIndex);
-
-  let logged = withLog(state, `${player.name} piece ${pieceId} uses ${val}: ${beforePos} -> ${piece.pos}`);
-  if (captured.length > 0) {
-    logged = withLog(
-      logged,
-      `${player.name} captured ${captured.map((c) => `${c.player.name}#${c.piece.id}`).join(', ')} at pos ${piece.pos}`
-    );
-  }
-
+// Shared tail for every action that consumes a pool value and moves piece(s): selectPiece's
+// ordinary single-piece move and formGattiMove's tollu-to-gatti bonding move both fall into
+// exactly the same three outcomes afterward (bonus roll on a capture, more values still to play,
+// or the turn ends) — this is that shared outcome logic, parameterized only by what actually moved
+// and what it captured.
+function finalizeMove(
+  state: GameState,
+  logged: GameState,
+  player: Player,
+  captured: CaptureResult[],
+  pool: number[],
+  preMoveSnapshot: GameState,
+  actionLabel: string
+): GameState {
   let next: GameState = {
     ...logged,
     pool,
@@ -201,9 +206,7 @@ export function selectPiece(state: GameState, pieceId: number): GameState {
     lastMoveSnapshot: preMoveSnapshot,
     // The player just acted — reset the UI's idle-nudge timer.
     actionSeq: state.actionSeq + 1,
-    message: captured.length
-      ? `${player.name} captured ${captured.length} piece(s)!`
-      : `${player.name} moved piece ${pieceId}.`,
+    message: captured.length ? `${player.name} captured ${captured.length} piece(s)!` : `${player.name} ${actionLabel}.`,
   };
 
   if (player.isFinished && !next.rankings.includes(player.id)) {
@@ -234,6 +237,67 @@ export function selectPiece(state: GameState, pieceId: number): GameState {
   }
 
   return advanceTurn(next);
+}
+
+export function selectPiece(state: GameState, pieceId: number): GameState {
+  if (state.phase !== 'awaiting-selection' || state.selectedPoolIndex === null) return state;
+  const player = currentPlayer(state);
+  const piece = player.pieces.find((p) => p.id === pieceId);
+  if (!piece) return state;
+  const val = state.pool[state.selectedPoolIndex];
+  if (!canMovePiece(state.players, player, piece, val)) return state;
+
+  // Snapshot the pre-move state for a possible one-level rollback — must deep-clone players
+  // since movePiece mutates piece objects in place, and the snapshot carries no history of its
+  // own (lastMoveSnapshot: null) so undo never reaches back more than this one move.
+  const preMoveSnapshot: GameState = { ...state, players: clonePlayers(state.players), lastMoveSnapshot: null };
+
+  const beforePos = piece.pos;
+  const captured = movePiece(state.players, player, piece, val);
+  const pool = state.pool.filter((_, i) => i !== state.selectedPoolIndex);
+
+  let logged = withLog(state, `${player.name} piece ${pieceId} uses ${val}: ${beforePos} -> ${piece.pos}`);
+  if (captured.length > 0) {
+    logged = withLog(
+      logged,
+      `${player.name} captured ${captured.map((c) => `${c.player.name}#${c.piece.id}`).join(', ')} at pos ${piece.pos}`
+    );
+  }
+
+  return finalizeMove(state, logged, player, captured, pool, preMoveSnapshot, `moved piece ${pieceId}`);
+}
+
+// Gatti-tollu requirement: bonds the tollu (2 of this player's own pieces) sitting at `pos` into a
+// permanent gatti, using the currently-selected pool value (must be exactly 2 — see canFormGatti).
+// A distinct action from selectPiece rather than a variant of it, since it moves two pieces at
+// once by a different (halved) distance than either would move alone with the same value — the
+// player is explicitly choosing to bond them, not just moving one piece normally.
+export function formGattiMove(state: GameState, pos: number): GameState {
+  if (state.phase !== 'awaiting-selection' || state.selectedPoolIndex === null) return state;
+  const player = currentPlayer(state);
+  const val = state.pool[state.selectedPoolIndex];
+  if (!canFormGatti(player, pos, val)) return state;
+
+  const preMoveSnapshot: GameState = { ...state, players: clonePlayers(state.players), lastMoveSnapshot: null };
+  const captured = formGatti(state.players, player, pos);
+  const pool = state.pool.filter((_, i) => i !== state.selectedPoolIndex);
+
+  let logged = withLog(state, `${player.name} bonded a tollu at position ${pos} into a gatti, advancing to ${pos + 1}`);
+  if (captured.length > 0) {
+    logged = withLog(
+      logged,
+      `${player.name}'s new gatti captured ${captured.map((c) => `${c.player.name}#${c.piece.id}`).join(', ')} at pos ${pos + 1}`
+    );
+  }
+
+  const result = finalizeMove(state, logged, player, captured, pool, preMoveSnapshot, 'formed a gatti');
+  // A capture on the forming move already gets its own eventSeq-driven announcement (see
+  // finalizeMove above), which takes priority — only bump the gatti-formed counter when nothing
+  // was also captured, so the UI never fires two announcements for one move.
+  if (captured.length === 0) {
+    return { ...result, gattiSeq: state.gattiSeq + 1, lastGattiPlayer: player.name };
+  }
+  return result;
 }
 
 // Note: deliberately does NOT clear lastMoveSnapshot — advanceTurn is routinely called as part
@@ -405,7 +469,7 @@ export function removePlayers(state: GameState, playerIds: PlayerId[]): GameStat
 export function rematch(state: GameState): GameState {
   const players: Player[] = state.players.map((p) => ({
     ...p,
-    pieces: [1, 2, 3, 4].map((id) => ({ id, pos: 0 })),
+    pieces: [1, 2, 3, 4].map((id) => ({ id, pos: 0, isGatti: false })),
     isFinished: false,
     hasLost: false,
     hasCaptured: false,
@@ -429,5 +493,7 @@ export function rematch(state: GameState): GameState {
     debugLog: [`Rematch started: ${players.map((p) => `${p.id}=${p.name}`).join(', ')}`],
     lastMoveSnapshot: null,
     actionSeq: 0,
+    gattiSeq: 0,
+    lastGattiPlayer: '',
   };
 }

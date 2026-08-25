@@ -7,6 +7,7 @@ import {
   roll,
   selectPoolValue,
   selectPiece,
+  formGattiMove,
   removePlayers,
   rematch,
   rollbackLastMove,
@@ -19,6 +20,7 @@ import {
   announceTurnReverted,
   announceCapture,
   announceFinish,
+  announceGattiFormed,
   announceHint,
   setAnnouncerEnabled,
 } from '../audio/announcer';
@@ -133,6 +135,13 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
     setBanner(t('banner.captured', game.lastCapturePlayer, game.lastCaptureCount));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.eventSeq]);
+
+  useEffect(() => {
+    if (!game || game.gattiSeq === 0) return;
+    announceGattiFormed(game.lastGattiPlayer);
+    setBanner(t('banner.gattiFormed', game.lastGattiPlayer));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.gattiSeq]);
 
   useEffect(() => {
     if (!game) return;
@@ -254,6 +263,9 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
   function handleSelectPiece(pieceId: number) {
     if (game) endGameIfOver(selectPiece(game, pieceId));
   }
+  function handleFormGatti(pos: number) {
+    if (game) endGameIfOver(formGattiMove(game, pos));
+  }
   function handlePieceClickedBeforeValue() {
     const text = t('hint.selectValueFirst');
     announceHint('hint.selectValueFirst');
@@ -361,6 +373,7 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
               onSelectPiece={handleSelectPiece}
               onSelectStats={setStatsFor}
               onPieceClickedBeforeValue={handlePieceClickedBeforeValue}
+              onFormGatti={handleFormGatti}
               resignedIds={resignedIds}
             />
           </div>

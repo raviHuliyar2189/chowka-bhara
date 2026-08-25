@@ -251,6 +251,14 @@ export function announceCapture(playerName: string, count: number): void {
   speakLocalized('banner.captured', [playerName, count], 1.1, 1.15);
 }
 
+// Gatti-tollu requirement: spoken when a tollu is bonded into a permanent gatti (and nothing was
+// also captured on that same move — a capture gets announceCapture instead, see turnEngine.ts's
+// gattiSeq comment for why the two never both fire for one move).
+export function announceGattiFormed(playerName: string): void {
+  chime('bonus');
+  speakLocalized('banner.gattiFormed', [playerName], 1, 1.1);
+}
+
 // A short spoken nudge for UI-only guidance (e.g. "pick a value first") — no chime, doesn't
 // touch the persistent game message, just a transient voice hint. Takes a strings.ts key (not
 // pre-translated text) like every other announce* function, so it can apply the same
