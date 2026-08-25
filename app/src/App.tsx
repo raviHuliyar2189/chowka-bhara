@@ -9,7 +9,40 @@ import HotseatPage from './hotseat/HotseatPage';
 import VsComputerPage from './vscomputer/VsComputerPage';
 import type { PlayerInfo } from './online/api';
 import { unlockAudioOnFirstInteraction } from './audio/announcer';
+import { useT } from './i18n/strings';
+import { useLanguage } from './i18n/useLanguage';
+import { setLanguage } from './i18n/language';
 import './App.css';
+
+// Shared header for every screen after the welcome splash (mode-select, login, and every game
+// screen) — includes the language toggle so switching is reachable from anywhere, not buried in
+// a settings screen.
+function AppHeader() {
+  const t = useT();
+  const lang = useLanguage();
+  return (
+    <h1>
+      <span className="app-title-main">{t('app.title')}</span>
+      <span className="app-version">{t('app.version')}</span>
+      <span className="lang-toggle">
+        <button
+          className={`lang-btn${lang === 'en' ? ' active' : ''}`}
+          onClick={() => setLanguage('en')}
+          disabled={lang === 'en'}
+        >
+          EN
+        </button>
+        <button
+          className={`lang-btn${lang === 'kn' ? ' active' : ''}`}
+          onClick={() => setLanguage('kn')}
+          disabled={lang === 'kn'}
+        >
+          ಕನ್ನಡ
+        </button>
+      </span>
+    </h1>
+  );
+}
 
 // A game-invite link (/games/:id) opened fresh always means "online, right now" — skip the
 // dedication splash for that case, since the person just clicked a link that only makes sense in
@@ -67,10 +100,7 @@ export default function App() {
   if (!player) {
     return (
       <div className="app">
-        <h1>
-          <span className="app-title-main">Chowka Bhara</span>
-          <span className="app-version">Version 0.2</span>
-        </h1>
+        <AppHeader />
         <AuthGate onAuthed={handleAuthed} />
       </div>
     );
@@ -78,10 +108,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <h1>
-        <span className="app-title-main">Chowka Bhara</span>
-        <span className="app-version">Version 0.2</span>
-      </h1>
+      <AppHeader />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<ModeSelectRoute />} />

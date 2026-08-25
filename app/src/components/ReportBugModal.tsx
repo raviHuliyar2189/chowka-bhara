@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useT } from '../i18n/strings';
 
 interface Props {
   debugLog: string[];
@@ -6,6 +7,7 @@ interface Props {
 }
 
 export default function ReportBugModal({ debugLog, onClose }: Props) {
+  const t = useT();
   const [observation, setObservation] = useState('');
   const [expected, setExpected] = useState('');
   const [suggestion, setSuggestion] = useState('');
@@ -14,18 +16,18 @@ export default function ReportBugModal({ debugLog, onClose }: Props) {
 
   function handleCollate() {
     const text = [
-      '## Bug Report',
+      t('bug.sectionReport'),
       '',
-      '### Observation',
-      observation.trim() || '(not provided)',
+      t('bug.sectionObservation'),
+      observation.trim() || t('bug.notProvided'),
       '',
-      '### Expected',
-      expected.trim() || '(not provided)',
+      t('bug.sectionExpected'),
+      expected.trim() || t('bug.notProvided'),
       '',
-      '### Suggestion',
-      suggestion.trim() || '(not provided)',
+      t('bug.sectionSuggestion'),
+      suggestion.trim() || t('bug.notProvided'),
       '',
-      '### Debug Log',
+      t('bug.sectionDebugLog'),
       ...debugLog,
     ].join('\n');
     setCollated(text);
@@ -35,9 +37,9 @@ export default function ReportBugModal({ debugLog, onClose }: Props) {
     if (!collated) return;
     try {
       await navigator.clipboard.writeText(collated);
-      setCopyLabel('Copied!');
+      setCopyLabel(t('bug.copied'));
     } catch {
-      setCopyLabel('Copy failed');
+      setCopyLabel(t('bug.copyFailed'));
     }
     setTimeout(() => setCopyLabel(null), 1500);
   }
@@ -45,53 +47,53 @@ export default function ReportBugModal({ debugLog, onClose }: Props) {
   return (
     <div className="overlay">
       <div className="modal report-bug-modal">
-        <h3>Report a Bug</h3>
+        <h3>{t('bug.title')}</h3>
         {collated === null ? (
           <>
-            <p>What did you observe?</p>
+            <p>{t('bug.observePrompt')}</p>
             <textarea
               className="report-bug-textarea"
               value={observation}
               onChange={(e) => setObservation(e.target.value)}
-              placeholder="e.g. I had two dice values pending and a piece in the outer ring looked disabled even though the cell it was moving to was empty..."
+              placeholder={t('bug.observePlaceholder')}
               rows={3}
               autoFocus
             />
-            <p>What did you expect instead?</p>
+            <p>{t('bug.expectPrompt')}</p>
             <textarea
               className="report-bug-textarea"
               value={expected}
               onChange={(e) => setExpected(e.target.value)}
-              placeholder="e.g. The piece should have been highlighted and clickable since the target cell was empty."
+              placeholder={t('bug.expectPlaceholder')}
               rows={3}
             />
-            <p>Any suggestion (optional)?</p>
+            <p>{t('bug.suggestPrompt')}</p>
             <textarea
               className="report-bug-textarea"
               value={suggestion}
               onChange={(e) => setSuggestion(e.target.value)}
-              placeholder="e.g. Double-check the friendly-blocking logic for that cell."
+              placeholder={t('bug.suggestPlaceholder')}
               rows={3}
             />
             <div className="report-bug-actions">
               <button className="action-btn" onClick={handleCollate}>
-                Report Bug Details
+                {t('bug.reportDetails')}
               </button>
               <button className="action-btn btn-abort" onClick={onClose}>
-                Cancel
+                {t('bug.cancel')}
               </button>
             </div>
           </>
         ) : (
           <>
-            <p>Copy this and paste it to Claude for debugging:</p>
+            <p>{t('bug.copyPrompt')}</p>
             <textarea className="report-bug-textarea" value={collated} readOnly rows={14} />
             <div className="report-bug-actions">
               <button className="action-btn" onClick={handleCopy}>
-                {copyLabel ?? 'Copy to Clipboard'}
+                {copyLabel ?? t('bug.copyToClipboard')}
               </button>
               <button className="action-btn btn-abort" onClick={onClose}>
-                Close
+                {t('bug.close')}
               </button>
             </div>
           </>

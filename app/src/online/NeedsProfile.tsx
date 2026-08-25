@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { signup, type PlayerInfo } from './api';
+import { useT } from '../i18n/strings';
 
 interface Props {
   email: string;
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export default function NeedsProfile({ email, onDone }: Props) {
+  const t = useT();
   const [displayName, setDisplayName] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -15,7 +17,7 @@ export default function NeedsProfile({ email, onDone }: Props) {
     e.preventDefault();
     const trimmed = displayName.trim();
     if (!trimmed) {
-      setError('A display name is required.');
+      setError(t('auth.displayNameRequired'));
       return;
     }
     setSaving(true);
@@ -24,7 +26,7 @@ export default function NeedsProfile({ email, onDone }: Props) {
       const result = await signup(email, trimmed);
       onDone(result.player);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create your account.');
+      setError(err instanceof Error ? err.message : t('auth.createAccountFailed'));
     } finally {
       setSaving(false);
     }
@@ -32,12 +34,12 @@ export default function NeedsProfile({ email, onDone }: Props) {
 
   return (
     <div className="modal">
-      <h2>No account yet for {email}</h2>
-      <p>Pick a display name — this is what other players will see on the board.</p>
+      <h2>{t('auth.noAccountTitle', email)}</h2>
+      <p>{t('auth.pickDisplayName')}</p>
       <form onSubmit={handleSubmit}>
         <div className="setup-row">
           <label className="setup-label" htmlFor="displayName">
-            Display Name:
+            {t('auth.displayNameLabel')}
           </label>
           <input
             id="displayName"
@@ -50,7 +52,7 @@ export default function NeedsProfile({ email, onDone }: Props) {
         </div>
         {error && <p className="online-error">{error}</p>}
         <button className="action-btn btn-start" type="submit" disabled={saving}>
-          {saving ? 'Creating…' : 'Create Account'}
+          {saving ? t('auth.creating') : t('auth.createAccount')}
         </button>
       </form>
     </div>

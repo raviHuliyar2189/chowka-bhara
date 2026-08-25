@@ -1,5 +1,6 @@
 import type { PlacementEntry } from '../game/session';
 import { EMPTY_STATS, type PlayerStats } from '../game/storage';
+import { useT } from '../i18n/strings';
 
 interface Props {
   placements: PlacementEntry[];
@@ -18,34 +19,33 @@ export default function ResultsModal({
   onNewSession,
   onShowStats,
 }: Props) {
+  const t = useT();
   const names = Array.from(new Set(sessionResults.flatMap((g) => g.players)));
 
   return (
     <div className="overlay">
       <div className="modal">
-        <h2>Game Finished!</h2>
+        <h2>{t('results.gameFinished')}</h2>
         <ol>
           {placements.map((p) => (
             <li key={p.playerId}>
-              <strong>{p.name}</strong> ({p.playerId}) — {p.isLoss ? 'Loss' : `Place ${p.place}`}
+              <strong>{p.name}</strong> ({p.playerId}) — {p.isLoss ? t('results.loss') : t('results.place', p.place)}
             </li>
           ))}
         </ol>
 
-        <h3>
-          Session Summary ({sessionResults.length} game{sessionResults.length === 1 ? '' : 's'})
-        </h3>
+        <h3>{t('results.sessionSummary', sessionResults.length)}</h3>
         <div className="table-scroll">
           <table>
             <thead>
               <tr>
-                <th>Player</th>
-                <th>Games</th>
-                <th>1st Win %</th>
-                <th>2nd Win %</th>
-                <th>3rd Win %</th>
-                <th>Loss %</th>
-                <th>Aborted %</th>
+                <th>{t('results.player')}</th>
+                <th>{t('results.games')}</th>
+                <th>{t('results.firstWinPct')}</th>
+                <th>{t('results.secondWinPct')}</th>
+                <th>{t('results.thirdWinPct')}</th>
+                <th>{t('results.lossPct')}</th>
+                <th>{t('results.abortedPct')}</th>
               </tr>
             </thead>
             <tbody>
@@ -73,10 +73,10 @@ export default function ResultsModal({
         </div>
 
         <button className="action-btn" style={{ width: '100%', marginTop: 15 }} onClick={onRematch}>
-          Play Again (Same Players)
+          {t('results.playAgain')}
         </button>
         <button className="action-btn btn-abort" style={{ width: '100%', marginTop: 8 }} onClick={onNewSession}>
-          End Session
+          {t('results.endSession')}
         </button>
       </div>
     </div>

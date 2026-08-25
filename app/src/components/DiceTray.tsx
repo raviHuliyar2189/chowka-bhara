@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { GameState } from '../game/turnEngine';
+import { useT } from '../i18n/strings';
 import kavadeBlack from '../assets/kavade-black.png';
 import kavadeWhite from '../assets/kavade-white.png';
 
@@ -83,6 +84,7 @@ function DiceIdleFigure() {
 }
 
 export default function DiceTray({ game, onRoll, onSelectValue, showRollback, onRollback, isMyTurn = true }: Props) {
+  const t = useT();
   const canRoll = game.phase === 'awaiting-roll' && isMyTurn;
   const current = game.players[game.currentTurnIndex];
   // Only 4 physical shells exist — the tray shows the latest throw, not one row per past roll
@@ -96,15 +98,11 @@ export default function DiceTray({ game, onRoll, onSelectValue, showRollback, on
          above this component), with the roll-back button alongside it when available */}
       <div className="roll-row">
         <button className="action-btn btn-roll" disabled={!canRoll} onClick={onRoll}>
-          ಕವಡೆ ಹಾಕಿ
+          {t('dice.rollButton')}
         </button>
         {showRollback && (
-          <button
-            className="action-btn btn-rollback"
-            onClick={onRollback}
-            title="Undo the last move and restore the pending dice value/piece choice"
-          >
-            ⟲ Roll Back Last Move
+          <button className="action-btn btn-rollback" onClick={onRollback} title={t('dice.rollbackTitle')}>
+            {t('dice.rollbackButton')}
           </button>
         )}
       </div>
@@ -142,7 +140,7 @@ export default function DiceTray({ game, onRoll, onSelectValue, showRollback, on
                   <img
                     src={f === 0 ? kavadeBlack : kavadeWhite}
                     className="die-face"
-                    alt={f === 0 ? 'Black' : 'White'}
+                    alt={f === 0 ? t('dice.faceBlack') : t('dice.faceWhite')}
                   />
                 </span>
               ))}
@@ -154,10 +152,10 @@ export default function DiceTray({ game, onRoll, onSelectValue, showRollback, on
         {lastRoll ? (
           <>
             {lastRoll.label}
-            {lastRoll.isBonus ? ' (bonus)' : ''}
+            {lastRoll.isBonus ? t('dice.bonus') : ''}
           </>
         ) : (
-          `${current.name}'s turn`
+          t('dice.currentTurn', current.name)
         )}
       </div>
 
@@ -166,9 +164,9 @@ export default function DiceTray({ game, onRoll, onSelectValue, showRollback, on
         const needsChoice = game.phase === 'awaiting-selection' && game.pool.length > 1;
         return (
           <div className={needsChoice ? 'pool-section needs-choice' : 'pool-section'}>
-            <strong>ನಡೆಸಬೇಕಾದ ಗರಗಳು:</strong>
+            <strong>{t('dice.movesRemaining')}</strong>
             <div className="pool-container">
-              {game.pool.length === 0 && <span>None</span>}
+              {game.pool.length === 0 && <span>{t('dice.none')}</span>}
               {game.pool.map((val, i) => (
                 <button
                   key={i}

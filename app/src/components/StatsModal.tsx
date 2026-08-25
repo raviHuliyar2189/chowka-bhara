@@ -1,4 +1,5 @@
 import { EMPTY_STATS, type PlayerStats } from '../game/storage';
+import { useT } from '../i18n/strings';
 
 interface Props {
   name: string;
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export default function StatsModal({ name, stats, onClose }: Props) {
+  const t = useT();
   const s = stats ?? EMPTY_STATS;
   const g = s.games || 1;
   const pct = (n: number) => `${((n / g) * 100).toFixed(1)}%`;
@@ -14,37 +16,37 @@ export default function StatsModal({ name, stats, onClose }: Props) {
   return (
     <div className="overlay">
       <div className="modal">
-        <h3>{name}'s Lifetime Stats</h3>
+        <h3>{t('stats.title', name)}</h3>
         <table>
           <tbody>
             <tr>
-              <th>Total Games Played</th>
+              <th>{t('stats.totalGames')}</th>
               <td>{s.games}</td>
             </tr>
             <tr>
-              <th>1st Win</th>
+              <th>{t('stats.firstWin')}</th>
               <td>{pct(s.first)}</td>
             </tr>
             <tr>
-              <th>2nd Win</th>
+              <th>{t('stats.secondWin')}</th>
               <td>{pct(s.second)}</td>
             </tr>
             <tr>
-              <th>3rd Win</th>
+              <th>{t('stats.thirdWin')}</th>
               <td>{pct(s.third)}</td>
             </tr>
             <tr>
-              <th>Loss</th>
+              <th>{t('stats.loss')}</th>
               <td>{pct(s.losses)}</td>
             </tr>
             <tr>
-              <th>Aborted</th>
+              <th>{t('stats.aborted')}</th>
               <td>{pct(s.aborted)}</td>
             </tr>
           </tbody>
         </table>
         <button className="action-btn" style={{ width: '100%', marginTop: 15 }} onClick={onClose}>
-          Close
+          {t('common.close')}
         </button>
       </div>
     </div>

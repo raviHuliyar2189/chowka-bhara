@@ -21,6 +21,7 @@ import {
   announceHint,
   setAnnouncerEnabled,
 } from '../audio/announcer';
+import { useT } from '../i18n/strings';
 import Board from '../components/Board';
 import DiceTray from '../components/DiceTray';
 import SetupModal from '../components/SetupModal';
@@ -51,6 +52,7 @@ interface Props {
 }
 
 export default function HotseatPage({ allowCustomSetup = false }: Props) {
+  const t = useT();
   const [inSetup, setInSetup] = useState(true);
   const [game, setGame] = useState<GameState | null>(null);
   const [editorState, setEditorState] = useState<GameState | null>(null);
@@ -59,6 +61,7 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
   const [stats, setStats] = useState<Record<string, PlayerStats>>(() => loadStats());
   const [sessionResults, setSessionResults] = useState<SessionEntry[]>([]);
   const [resignedPlayerName, setResignedPlayerName] = useState<string | null>(null);
+  const [resignedIds, setResignedIds] = useState<PlayerId[]>([]);
   const [showReportBug, setShowReportBug] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [statsFor, setStatsFor] = useState<string | null>(null);
@@ -66,11 +69,22 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
   const [rollbackEnabled, setRollbackEnabled] = useState(false);
   const [resignAllowed, setResignAllowed] = useState(false);
   const [hint, setHint] = useState<{ text: string; key: number } | null>(null);
+  // The persistent turn banner's current text — replaces reading game.message directly (see
+  // i18n/strings.ts: that field is generated inside the language-agnostic game-core reducer and
+  // was never one consistent language to begin with). Updated by the same triggers that already
+  // drive the spoken announcements below, just rendered instead of spoken.
+  const [banner, setBanner] = useState('');
   // Tracks the last-seen revertSeq so the turn-start effect below can tell a normal turn advance
   // apart from one caused by a revert (both change currentTurnIndex in the same update) without
   // racing two separate speak() calls against each other (speak() always cancels-and-replaces,
   // so whichever effect fired second would silently cut off the first).
   const prevRevertSeq = useRef(0);
+  // Tracks which player ids were already in game.rankings as of the last render, so the finish
+  // effect below can tell exactly which id(s) are newly added (rankings insertion order no longer
+  // matches array-append order once a finish can land ahead of an earlier forfeit — see
+  // insertIntoRankings in turnEngine.ts) and can skip forfeited/eliminated players entirely (only
+  // a genuine finish or the auto-ranked survivor deserves the "finished"/"won" announcement).
+  const prevRankingIds = useRef<PlayerId[]>([]);
 
   // Narrow deps deliberately: this should reset exactly once per new hint (keyed), not re-fire
   // on unrelated renders while a hint is showing.
@@ -87,7 +101,9 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
   useEffect(() => {
     if (!game || game.rollHistory.length === 0) return;
     const last = game.rollHistory[game.rollHistory.length - 1];
-    announceRoll(game.players[game.currentTurnIndex].name, last.label, last.isBonus);
+    const name = game.players[game.currentTurnIndex].name;
+    announceRoll(name, last.label, last.isBonus);
+    setBanner(last.isBonus ? t('banner.rollBonus', name, last.label) : t('banner.rollResult', name, last.label));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.rollHistory.length]);
 
@@ -97,10 +113,13 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
   // gets its own combined announcement instead — see prevRevertSeq's own comment above.
   useEffect(() => {
     if (!game || game.phase !== 'awaiting-roll') return;
+    const name = game.players[game.currentTurnIndex].name;
     if (game.revertSeq !== prevRevertSeq.current) {
-      announceTurnReverted(game.lastRevertedPlayer, game.players[game.currentTurnIndex].name);
+      announceTurnReverted(game.lastRevertedPlayer, name);
+      setBanner(t('banner.turnReverted', game.lastRevertedPlayer, name));
     } else {
-      announceTurnStart(game.players[game.currentTurnIndex].name, true);
+      announceTurnStart(name);
+      setBanner(t('banner.turnStart', name));
     }
     prevRevertSeq.current = game.revertSeq;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -109,14 +128,22 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
   useEffect(() => {
     if (!game || game.eventSeq === 0) return;
     announceCapture(game.lastCapturePlayer, game.lastCaptureCount);
+    setBanner(t('banner.captured', game.lastCapturePlayer, game.lastCaptureCount));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.eventSeq]);
 
   useEffect(() => {
-    if (!game || game.rankings.length === 0) return;
-    const lastId = game.rankings[game.rankings.length - 1];
-    const finisher = game.players.find((p) => p.id === lastId);
-    if (finisher) announceFinish(finisher.name, game.rankings.length);
+    if (!game) return;
+    const prevIds = prevRankingIds.current;
+    const newIds = game.rankings.filter((id) => !prevIds.includes(id));
+    prevRankingIds.current = game.rankings;
+    for (const id of newIds) {
+      const player = game.players.find((p) => p.id === id);
+      if (!player || player.hasLost) continue; // forfeits/eliminations aren't a "finish"
+      const place = game.rankings.indexOf(id) + 1;
+      announceFinish(player.name, place);
+      setBanner(place === 1 ? t('banner.won', player.name) : t('banner.finished', player.name, place));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.rankings.length]);
 
@@ -148,10 +175,13 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
     setRoster(nextRoster);
     saveRoster(nextRoster);
     const fresh = createGame(players.map((p) => ({ id: p.id, name: p.name, color: COLORS[p.id] })));
+    prevRevertSeq.current = 0;
+    prevRankingIds.current = [];
     if (allowCustomSetup) {
       setEditorState(fresh);
       setResumeAsSeat(fresh.players[0].id);
     } else {
+      setBanner(t('banner.turnStart', fresh.players[0].name));
       setGame(fresh);
     }
     setInSetup(false);
@@ -188,6 +218,9 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
     const idx = editorState.players.findIndex((p) => p.id === resumeAsSeat);
     const finalIdx = idx === -1 ? 0 : idx;
     const snapshot = editorState.players.map((p) => ({ ...p, pieces: p.pieces.map((pc) => ({ ...pc })) }));
+    prevRevertSeq.current = 0;
+    prevRankingIds.current = [];
+    setBanner(t('banner.turnStart', editorState.players[finalIdx].name));
     setGame({
       ...editorState,
       currentTurnIndex: finalIdx,
@@ -220,8 +253,9 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
     if (game) endGameIfOver(selectPiece(game, pieceId));
   }
   function handlePieceClickedBeforeValue() {
-    announceHint('Select a dice value first.');
-    setHint({ text: 'ಮೊದಲು ಗರ ಆಯ್ಕೆಮಾಡಿ.', key: Date.now() });
+    const text = t('hint.selectValueFirst');
+    announceHint(text);
+    setHint({ text, key: Date.now() });
     appendLog('User clicked a piece before selecting a pool value');
   }
   // Resigning is unconditional and always applies to whoever's turn it currently is — no vote
@@ -232,17 +266,24 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
     if (!game) return;
     const resigningPlayer = game.players[game.currentTurnIndex];
     setResignedPlayerName(resigningPlayer.name);
+    setResignedIds((prev) => [...prev, resigningPlayer.id]);
     endGameIfOver(removePlayers(game, [resigningPlayer.id]));
   }
   function handleRematch() {
     if (!game) return;
     setShowResults(false);
-    setGame(rematch(game));
+    setResignedIds([]);
+    prevRevertSeq.current = 0;
+    prevRankingIds.current = [];
+    const next = rematch(game);
+    setBanner(t('banner.turnStart', next.players[next.currentTurnIndex].name));
+    setGame(next);
   }
   function handleNewSession() {
     setShowResults(false);
     setGame(null);
     setEditorState(null);
+    setResignedIds([]);
     setSessionResults([]);
     setInSetup(true);
   }
@@ -275,19 +316,19 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
             />
           </div>
           <div className="play-area">
-            <h2>Board Editor</h2>
-            <p>Drag pieces to any position on the board, then choose who resumes first.</p>
+            <h2>{t('editor.title')}</h2>
+            <p>{t('editor.instructions')}</p>
             <div className="editor-captured-list">
               {editorState.players.map((p) => (
                 <label key={p.id} className="editor-captured-row">
                   <input type="checkbox" checked={p.hasCaptured} onChange={() => handleToggleCaptured(p.id)} />
-                  {p.name} — {p.hasCaptured ? 'Capture Done' : 'Not Captured'}
+                  {p.name} — {p.hasCaptured ? t('status.captureDone') : t('status.notCaptured')}
                 </label>
               ))}
             </div>
             <div className="setup-row">
               <label className="setup-label" htmlFor="resumeAsSeat">
-                Resume as:
+                {t('editor.resumeAs')}
               </label>
               <select id="resumeAsSeat" value={resumeAsSeat} onChange={(e) => setResumeAsSeat(e.target.value as PlayerId)}>
                 {editorState.players.map((p) => (
@@ -298,10 +339,10 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
               </select>
             </div>
             <button className="action-btn btn-start" onClick={handleResumeFromEditor}>
-              Start Game From Here
+              {t('editor.startFromHere')}
             </button>
             <button className="action-btn" onClick={handleResetPositions}>
-              Reset Positions
+              {t('editor.resetPositions')}
             </button>
           </div>
         </div>
@@ -312,8 +353,7 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
           <div className="board-container">
             {game.eventSeq > 0 && (
               <div key={game.eventSeq} className="capture-toast">
-                {game.lastCapturePlayer} captured {game.lastCaptureCount}{' '}
-                piece{game.lastCaptureCount === 1 ? '' : 's'}!
+                {t('game.captureToast', game.lastCapturePlayer, game.lastCaptureCount)}
               </div>
             )}
             <Board
@@ -321,10 +361,11 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
               onSelectPiece={handleSelectPiece}
               onSelectStats={setStatsFor}
               onPieceClickedBeforeValue={handlePieceClickedBeforeValue}
+              resignedIds={resignedIds}
             />
           </div>
           <div className="play-area">
-            <div className={`announcer${hint ? ' announcer-hint' : ''}`}>{hint ? hint.text : game.message}</div>
+            <div className={`announcer${hint ? ' announcer-hint' : ''}`}>{hint ? hint.text : banner}</div>
             <DiceTray
               game={game}
               onRoll={handleRoll}
@@ -335,18 +376,18 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
             <div className="post-dice-actions">
               {resignAllowed && (
                 <button className="action-btn btn-abort" onClick={handleResign}>
-                  Resign Game
+                  {t('resign.gameButton')}
                 </button>
               )}
-              <button className="btn-debug-log" onClick={() => setShowReportBug(true)} title="Report a bug">
-                🐞 Report Bug
+              <button className="btn-debug-log" onClick={() => setShowReportBug(true)} title={t('game.reportBugTitle')}>
+                {t('game.reportBug')}
               </button>
               <button
                 className={`btn-sound in-game-sound ${soundOn ? 'is-on' : 'is-off'}`}
                 onClick={toggleSound}
-                title={soundOn ? 'Mute announcements' : 'Unmute announcements'}
+                title={soundOn ? t('setup.muteTitle') : t('setup.unmuteTitle')}
               >
-                {soundOn ? '🔊 Sound On' : '🔇 Muted'}
+                {soundOn ? t('game.soundOn') : t('game.muted')}
               </button>
             </div>
           </div>

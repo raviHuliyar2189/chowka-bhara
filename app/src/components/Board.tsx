@@ -15,7 +15,9 @@ import {
   type PlayerId,
 } from '../game/paths';
 import type { GameState } from '../game/turnEngine';
-import { canMovePiece } from '../game/rules';
+import { canMovePiece, type Player } from '../game/rules';
+import { computePlacements } from '../game/session';
+import { useT, type T } from '../i18n/strings';
 
 interface Props {
   game: GameState;
@@ -31,6 +33,34 @@ interface Props {
   // and-drop piece placement — every piece becomes draggable, every cell a drop target.
   editable?: boolean;
   onEditMove?: (playerId: PlayerId, pieceId: number, newPos: number) => void;
+  // Hotseat/Develop Test only: ids of players removed via the Resign Game button (as opposed to
+  // a no-capture-chance elimination or an online forfeit) — shown as a "(Resigned)" qualifier on
+  // their status. Tracked client-side (not part of GameState) since resigning is unconditional
+  // and purely a per-device UI action, not a game-core concept.
+  resignedIds?: PlayerId[];
+}
+
+// A placement's exact ordinal (Winner/2nd place/3rd place) is only safe to show once it's stable
+// — true immediately for a genuine finisher (nothing recorded later can ever outrank them, see
+// insertIntoRankings in turnEngine.ts), but not for a forfeited/eliminated player until the game
+// actually ends, since a later forfeit can still push them down a spot. Before that point such a
+// player just shows the generic "Lost" — they know they're out, just not their final rank yet.
+function statusFor(
+  p: Player,
+  game: GameState,
+  placements: ReturnType<typeof computePlacements>,
+  t: T
+): string {
+  if (p.hasDeclined) return t('status.declined');
+  const placement = placements.find((pl) => pl.playerId === p.id);
+  if (placement && (p.isFinished || game.phase === 'game-over')) {
+    if (placement.isLoss) return t('status.lost');
+    if (placement.place === 1) return t('status.winner');
+    if (placement.place === 2) return t('status.second');
+    return t('status.third');
+  }
+  if (p.hasLost) return t('status.lost');
+  return t('status.playing');
 }
 
 // Canonical seating (P1 bottom, P2 right, P3 top, P4 left, matches SetupModal's seat labels) is
@@ -71,11 +101,14 @@ export default function Board({
   viewerSeat,
   editable,
   onEditMove,
+  resignedIds,
 }: Props) {
+  const t = useT();
   const current = game.players[game.currentTurnIndex];
   const selectedVal = game.selectedPoolIndex !== null ? game.pool[game.selectedPoolIndex] : null;
   const colorOf = (id: PlayerId) => game.players.find((p) => p.id === id)?.color;
   const rotationSteps = rotationStepsFor(viewerSeat);
+  const placements = computePlacements(game);
 
   function handleDragStart(e: DragEvent<HTMLDivElement>, playerId: PlayerId, pieceId: number) {
     e.dataTransfer.setData('text/plain', JSON.stringify({ playerId, pieceId }));
@@ -185,23 +218,26 @@ export default function Board({
     }
   }
 
-  const labels = game.players.map((p) => (
-    <button
-      key={p.id}
-      className={`home-label side-${SIDES_CYCLE[(PLAYER_ORDER.indexOf(p.id) + rotationSteps) % 4]}${
-        p.hasDeclined ? ' declined' : p.hasLost ? ' lost' : ''
-      }`}
-      style={{ background: p.color }}
-      onClick={() => onSelectStats(p.name)}
-      title={`${p.name}'s statistics${
-        p.hasDeclined ? ' (declined)' : p.isFinished ? ' (finished)' : p.hasLost ? ' (left)' : ''
-      } — ${p.hasCaptured ? 'Capture Done' : 'Not Captured'}`}
-    >
-      {p.name}
-      {p.hasDeclined ? ' (declined)' : p.isFinished ? ' ✓' : ''}
-      <span className="capture-status">{p.hasCaptured ? 'Capture Done' : 'Not Captured'}</span>
-    </button>
-  ));
+  const labels = game.players.map((p) => {
+    const status = statusFor(p, game, placements, t);
+    const statusLabel = resignedIds?.includes(p.id) ? t('status.resignedSuffix', status) : status;
+    const captureLabel = p.hasCaptured ? t('status.captureDone') : t('status.notCaptured');
+    return (
+      <button
+        key={p.id}
+        className={`home-label side-${SIDES_CYCLE[(PLAYER_ORDER.indexOf(p.id) + rotationSteps) % 4]}${
+          p.hasDeclined ? ' declined' : p.hasLost ? ' lost' : ''
+        }`}
+        style={{ background: p.color }}
+        onClick={() => onSelectStats(p.name)}
+        title={t('board.statsTitle', p.name, statusLabel, captureLabel)}
+      >
+        {p.name}
+        <span className="status-line">{statusLabel}</span>
+        <span className="capture-status">{captureLabel}</span>
+      </button>
+    );
+  });
 
   return (
     <div className="board">

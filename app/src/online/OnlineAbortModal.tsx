@@ -1,3 +1,5 @@
+import { useT } from '../i18n/strings';
+
 export type AbortUIState =
   | { kind: 'prompt' }
   | { kind: 'waiting'; waitingOnNames: string[] }
@@ -15,17 +17,18 @@ interface Props {
 // way a single shared screen can. Each device only ever sees its own step, driven by the
 // abort:pending / abort:forfeit-needed / abort:resolved socket events (see OnlinePlay.tsx).
 export default function OnlineAbortModal({ state, onRespond, onForfeitDecision }: Props) {
+  const t = useT();
   if (state.kind === 'prompt') {
     return (
       <div className="overlay">
         <div className="modal">
-          <h3>Abort Game?</h3>
-          <p>A player wants to abort the game. Do you agree?</p>
+          <h3>{t('onlineAbort.title')}</h3>
+          <p>{t('onlineAbort.prompt')}</p>
           <button className="action-btn" onClick={() => onRespond(true)}>
-            Agree to abort
+            {t('onlineAbort.agree')}
           </button>
           <button className="action-btn btn-abort" style={{ marginTop: 8 }} onClick={() => onRespond(false)}>
-            Decline, keep playing
+            {t('onlineAbort.decline')}
           </button>
         </div>
       </div>
@@ -36,11 +39,12 @@ export default function OnlineAbortModal({ state, onRespond, onForfeitDecision }
     return (
       <div className="overlay">
         <div className="modal">
-          <h3>Abort Game?</h3>
+          <h3>{t('onlineAbort.title')}</h3>
           <p>
-            Waiting for{' '}
-            {state.waitingOnNames.length > 0 ? state.waitingOnNames.join(', ') : 'the other players'} to
-            respond…
+            {t(
+              'onlineAbort.waitingFor',
+              state.waitingOnNames.length > 0 ? state.waitingOnNames.join(', ') : t('onlineAbort.otherPlayers')
+            )}
           </p>
         </div>
       </div>
@@ -51,16 +55,13 @@ export default function OnlineAbortModal({ state, onRespond, onForfeitDecision }
     return (
       <div className="overlay">
         <div className="modal">
-          <h3>{state.declineCount} player(s) declined to abort</h3>
-          <p>
-            Continue the game by removing the pieces of the player(s) who agreed to abort, and
-            treating them as having lost?
-          </p>
+          <h3>{t('onlineAbort.declinedCount', state.declineCount)}</h3>
+          <p>{t('onlineAbort.forfeitQuestion')}</p>
           <button className="action-btn" onClick={() => onForfeitDecision(true)}>
-            Yes, continue without them
+            {t('onlineAbort.yesContinue')}
           </button>
           <button className="action-btn btn-abort" style={{ marginTop: 8 }} onClick={() => onForfeitDecision(false)}>
-            No, resume the game
+            {t('onlineAbort.noResume')}
           </button>
         </div>
       </div>
@@ -70,8 +71,8 @@ export default function OnlineAbortModal({ state, onRespond, onForfeitDecision }
   return (
     <div className="overlay">
       <div className="modal">
-        <h3>Abort Game?</h3>
-        <p>{state.decidedByName} is deciding whether to continue without the players who declined…</p>
+        <h3>{t('onlineAbort.title')}</h3>
+        <p>{t('onlineAbort.decidingBy', state.decidedByName)}</p>
       </div>
     </div>
   );

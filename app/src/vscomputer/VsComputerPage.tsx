@@ -20,6 +20,7 @@ import {
   announceHint,
   setAnnouncerEnabled,
 } from '../audio/announcer';
+import { useT } from '../i18n/strings';
 import Board from '../components/Board';
 import DiceTray from '../components/DiceTray';
 import ReportBugModal from '../components/ReportBugModal';
@@ -39,6 +40,7 @@ const AI_MOVE_DELAY_MS = 2000;
 type SessionEntry = { players: string[]; placements: PlacementEntry[] };
 
 export default function VsComputerPage() {
+  const t = useT();
   const [humanName, setHumanName] = useState('');
   const [game, setGame] = useState<GameState | null>(null);
   const [stats, setStats] = useState<Record<string, PlayerStats>>(() => loadStats());
@@ -48,9 +50,13 @@ export default function VsComputerPage() {
   const [statsFor, setStatsFor] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
   const [hint, setHint] = useState<{ text: string; key: number } | null>(null);
-  // See HotseatPage.tsx's identical field for why this exists — tells a normal turn advance apart
-  // from one caused by a revert without racing two speak() calls against each other.
+  // See HotseatPage.tsx's own copy of these two for why they exist — banner mirrors the same
+  // triggers as the spoken announcements, and prevRankingIds lets the finish effect tell exactly
+  // which id(s) are newly ranked (and skip forfeits/eliminations) since insertIntoRankings can
+  // insert a finish ahead of an earlier removal, not just at the array's end.
+  const [banner, setBanner] = useState('');
   const prevRevertSeq = useRef(0);
+  const prevRankingIds = useRef<PlayerId[]>([]);
 
   useEffect(() => {
     if (!hint) return;
@@ -62,16 +68,21 @@ export default function VsComputerPage() {
   useEffect(() => {
     if (!game || game.rollHistory.length === 0) return;
     const last = game.rollHistory[game.rollHistory.length - 1];
-    announceRoll(game.players[game.currentTurnIndex].name, last.label, last.isBonus);
+    const name = game.players[game.currentTurnIndex].name;
+    announceRoll(name, last.label, last.isBonus);
+    setBanner(last.isBonus ? t('banner.rollBonus', name, last.label) : t('banner.rollResult', name, last.label));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.rollHistory.length]);
 
   useEffect(() => {
     if (!game || game.phase !== 'awaiting-roll') return;
+    const name = game.players[game.currentTurnIndex].name;
     if (game.revertSeq !== prevRevertSeq.current) {
-      announceTurnReverted(game.lastRevertedPlayer, game.players[game.currentTurnIndex].name);
+      announceTurnReverted(game.lastRevertedPlayer, name);
+      setBanner(t('banner.turnReverted', game.lastRevertedPlayer, name));
     } else {
-      announceTurnStart(game.players[game.currentTurnIndex].name, true);
+      announceTurnStart(name);
+      setBanner(t('banner.turnStart', name));
     }
     prevRevertSeq.current = game.revertSeq;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -80,14 +91,22 @@ export default function VsComputerPage() {
   useEffect(() => {
     if (!game || game.eventSeq === 0) return;
     announceCapture(game.lastCapturePlayer, game.lastCaptureCount);
+    setBanner(t('banner.captured', game.lastCapturePlayer, game.lastCaptureCount));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.eventSeq]);
 
   useEffect(() => {
-    if (!game || game.rankings.length === 0) return;
-    const lastId = game.rankings[game.rankings.length - 1];
-    const finisher = game.players.find((p) => p.id === lastId);
-    if (finisher) announceFinish(finisher.name, game.rankings.length);
+    if (!game) return;
+    const prevIds = prevRankingIds.current;
+    const newIds = game.rankings.filter((id) => !prevIds.includes(id));
+    prevRankingIds.current = game.rankings;
+    for (const id of newIds) {
+      const player = game.players.find((p) => p.id === id);
+      if (!player || player.hasLost) continue;
+      const place = game.rankings.indexOf(id) + 1;
+      announceFinish(player.name, place);
+      setBanner(place === 1 ? t('banner.won', player.name) : t('banner.finished', player.name, place));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.rankings.length]);
 
@@ -101,6 +120,9 @@ export default function VsComputerPage() {
     e.preventDefault();
     const name = humanName.trim();
     if (!name) return;
+    prevRevertSeq.current = 0;
+    prevRankingIds.current = [];
+    setBanner(t('banner.turnStart', name));
     setGame(
       createGame([
         { id: HUMAN_SEAT, name, color: COLORS[HUMAN_SEAT] },
@@ -131,8 +153,9 @@ export default function VsComputerPage() {
     if (game) endGameIfOver(selectPiece(game, pieceId));
   }
   function handlePieceClickedBeforeValue() {
-    announceHint('Select a dice value first.');
-    setHint({ text: 'ಮೊದಲು ಗರ ಆಯ್ಕೆಮಾಡಿ.', key: Date.now() });
+    const text = t('hint.selectValueFirst');
+    announceHint(text);
+    setHint({ text, key: Date.now() });
   }
 
   // No AbortModal cycling here — with only one real person to ask, clicking Abort just ends the
@@ -151,7 +174,11 @@ export default function VsComputerPage() {
   function handleRematch() {
     if (!game) return;
     setShowResults(false);
-    setGame(rematch(game));
+    prevRevertSeq.current = 0;
+    prevRankingIds.current = [];
+    const next = rematch(game);
+    setBanner(t('banner.turnStart', next.players[next.currentTurnIndex].name));
+    setGame(next);
   }
   function handleNewSession() {
     setShowResults(false);
@@ -186,23 +213,23 @@ export default function VsComputerPage() {
     return (
       <div className="setup-inline">
         <div className="modal">
-          <h2>Play vs Computer</h2>
+          <h2>{t('vsComputer.title')}</h2>
           <form onSubmit={handleStart}>
             <div className="setup-row">
               <label className="setup-label" htmlFor="humanName">
-                Your Name:
+                {t('vsComputer.yourName')}
               </label>
               <input
                 id="humanName"
                 required
                 value={humanName}
                 onChange={(e) => setHumanName(e.target.value)}
-                placeholder="e.g. Ravi"
+                placeholder={t('vsComputer.namePlaceholder')}
                 maxLength={40}
               />
             </div>
             <button className="action-btn btn-start" type="submit">
-              Start Game
+              {t('setup.startGame')}
             </button>
           </form>
         </div>
@@ -216,8 +243,7 @@ export default function VsComputerPage() {
         <div className="board-container">
           {game.eventSeq > 0 && (
             <div key={game.eventSeq} className="capture-toast">
-              {game.lastCapturePlayer} captured {game.lastCaptureCount}{' '}
-              piece{game.lastCaptureCount === 1 ? '' : 's'}!
+              {t('game.captureToast', game.lastCapturePlayer, game.lastCaptureCount)}
             </div>
           )}
           <Board
@@ -229,7 +255,7 @@ export default function VsComputerPage() {
           />
         </div>
         <div className="play-area">
-          <div className={`announcer${hint ? ' announcer-hint' : ''}`}>{hint ? hint.text : game.message}</div>
+          <div className={`announcer${hint ? ' announcer-hint' : ''}`}>{hint ? hint.text : banner}</div>
           <DiceTray
             game={game}
             onRoll={handleRoll}
@@ -240,17 +266,17 @@ export default function VsComputerPage() {
           />
           <div className="post-dice-actions">
             <button className="action-btn btn-abort" onClick={handleAbort}>
-              Abort Game
+              {t('game.abortButton')}
             </button>
-            <button className="btn-debug-log" onClick={() => setShowReportBug(true)} title="Report a bug">
-              🐞 Report Bug
+            <button className="btn-debug-log" onClick={() => setShowReportBug(true)} title={t('game.reportBugTitle')}>
+              {t('game.reportBug')}
             </button>
             <button
               className={`btn-sound in-game-sound ${soundOn ? 'is-on' : 'is-off'}`}
               onClick={toggleSound}
-              title={soundOn ? 'Mute announcements' : 'Unmute announcements'}
+              title={soundOn ? t('setup.muteTitle') : t('setup.unmuteTitle')}
             >
-              {soundOn ? '🔊 Sound On' : '🔇 Muted'}
+              {soundOn ? t('game.soundOn') : t('game.muted')}
             </button>
           </div>
         </div>

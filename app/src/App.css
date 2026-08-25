@@ -41,6 +41,31 @@ h1 {
   color: var(--text-muted);
 }
 
+.lang-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.lang-btn {
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--text-muted);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.lang-btn.active {
+  background: var(--text-muted);
+  color: var(--page-bg);
+  cursor: default;
+}
+
 /* Full-screen dedication splash shown for the first 10s before setup — fixed wood/parchment
    colors like the board/frame, not theme-reactive, so it reads the same regardless of light/
    dark mode. */
@@ -353,6 +378,7 @@ h1 {
   text-decoration-color: rgba(255, 255, 255, 0.6);
 }
 
+.home-label .status-line,
 .home-label .capture-status {
   display: block;
   font-size: 9px;

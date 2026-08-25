@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { createGame } from './api';
+import { useT } from '../i18n/strings';
 
 interface Props {
   onCreated: (gameId: string) => void;
 }
 
 export default function OnlineSetup({ onCreated }: Props) {
+  const t = useT();
   const [count, setCount] = useState(2);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +19,7 @@ export default function OnlineSetup({ onCreated }: Props) {
       const game = await createGame(count);
       onCreated(game.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create the game.');
+      setError(err instanceof Error ? err.message : t('onlineSetup.createFailed'));
     } finally {
       setCreating(false);
     }
@@ -25,22 +27,22 @@ export default function OnlineSetup({ onCreated }: Props) {
 
   return (
     <div className="modal">
-      <h2>Set Up Online Game</h2>
+      <h2>{t('onlineSetup.title')}</h2>
       <div className="setup-row">
         <label className="setup-label" htmlFor="onlineCount">
-          Number of Players:
+          {t('setup.numberOfPlayers')}
         </label>
         <select id="onlineCount" value={count} onChange={(e) => setCount(Number(e.target.value))}>
-          <option value={2}>2 Players</option>
-          <option value={3}>3 Players</option>
-          <option value={4}>4 Players</option>
+          <option value={2}>{t('setup.nPlayers', 2)}</option>
+          <option value={3}>{t('setup.nPlayers', 3)}</option>
+          <option value={4}>{t('setup.nPlayers', 4)}</option>
         </select>
       </div>
-      <p>You'll get a link to share with the others once the game is created.</p>
+      <p>{t('onlineSetup.linkNote')}</p>
 
       {error && <p className="online-error">{error}</p>}
       <button className="action-btn btn-start" onClick={handleCreate} disabled={creating}>
-        {creating ? 'Creating…' : 'Create Game'}
+        {creating ? t('onlineSetup.creating') : t('onlineSetup.createGame')}
       </button>
     </div>
   );

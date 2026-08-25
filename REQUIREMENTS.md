@@ -161,6 +161,10 @@ because every player's path physically crosses through the other three players' 
   lasted longer in the game. Example (4 players, nobody finishes): P2 aborts first while the other
   3 continue → P2 ends up last (a Loss); P1 aborts next while P3/P4 continue → P1 ranks 3rd; P3
   aborts last, leaving P4 the sole survivor → P3 ranks 2nd and P4 (who never quit) ranks 1st.
+  This applies symmetrically to a genuine finish that happens *after* an earlier forfeit/
+  elimination too — the finisher is inserted ahead of any already-recorded forfeiters, never
+  behind them, so their placement is correct (and permanently stable) the moment they finish,
+  regardless of who had already dropped out before them.
 
 ## 9. Hotseat: Setup, Abort & Session Flow
 
@@ -252,6 +256,19 @@ Every player's home label shows, in addition to their name, whether they've capt
 label's hover tooltip). Reflects the same `hasCaptured` flag that gates inner-ring entry (§7), so it
 doubles as a visible explanation for why a player's pieces can't yet enter the inner ring. Shown in
 every mode, on the shared `Board` component — not mode-specific.
+
+### Player status indicator
+A second line on every player's home label shows their live status, one of: **Playing** (still
+active), **Lost** (forfeited, no-capture-chance-eliminated, or the automatic last-place loss), or —
+once knowable — an exact placement: **Winner**, **2nd place**, **3rd place**. Online-declined
+players show **Declined** instead (§13). A player removed via hotseat's Resign Game (§9) shows a
+"(Resigned)" qualifier appended to their status.
+
+An exact placement (as opposed to the generic "Lost") is only shown once it's actually settled: a
+genuine finisher's placement is stable and shown immediately (§8's ranking-order guarantee makes
+this safe), but a forfeited/eliminated player's *exact* final rank isn't knowable until the game
+ends — a later forfeit can still push an earlier one down a spot — so they show generic "Lost"
+until then, and their precise placement appears once the game reaches `game-over`.
 
 ### Highlighting & attention cues
 - Legal-move piece highlighting per §7.
@@ -448,9 +465,12 @@ Resolved during requirements gathering:
   each later quitter in a progressively worse one, backwards from the intuitive "the earlier you
   quit, the worse you place." Found via a worked 4-player example from the user (sequential aborts
   down to one survivor) that the old code placed in exactly the wrong order. Fixed with a shared
-  `insertRemoved` helper: new removals are inserted right after any already-recorded genuine
+  `insertIntoRankings` helper: new removals are inserted right after any already-recorded genuine
   finishers (a finish can never rank worse than a mere forfeit/elimination) and right before any
-  previously-removed players (so the most recent quitter always outranks earlier ones). Lives in
+  previously-removed players (so the most recent quitter always outranks earlier ones). A follow-up
+  pass completed the guarantee on the *finish* side too — a genuine finish was still just appended
+  to the absolute end of `rankings`, which could rank a finisher worse than an earlier forfeiter;
+  now reuses the same helper (renamed from `insertRemoved` once it served both purposes). Lives in
   `packages/game-core`, so hotseat, online, vs-computer, and Develop Test all picked up the fix
   from the one shared reducer.
 - **Hotseat "Abort Game" replaced by unconditional "Resign Game"** (§9): the old flow (screenshot
@@ -468,6 +488,28 @@ Resolved during requirements gathering:
   available — defaults to **off** (`Not Allowed`), matching the pattern of the sound/roll-back
   toggles already on the setup screen. The Resign Game button is only rendered at all when this is
   turned on for that session.
+- **Player status indicator** (§11): added alongside a specific worked example from the user
+  (Playing/Lost/2nd/3rd/Winner, plus a Resigned qualifier) — implemented as a new status line on
+  the existing home-label, reusing `computePlacements` rather than inventing a parallel ranking
+  concept. Exposed a real bug while implementing it: the finish-ranking fix above only completed
+  the *removal* side of "a finish always outranks an earlier forfeit," not the finish side itself
+  — fixed in the same pass (see above) once it became clear an exact placement had to be reliably
+  knowable to display it. Also exposed a second, adjacent bug in the finish-announcement effects
+  (`HotseatPage.tsx`/`VsComputerPage.tsx`/`OnlinePlay.tsx`): they identified "who just finished" by
+  assuming the newest `rankings` entry was always the *last* array element, true only when
+  insertion was strictly append-only — no longer true once a finish can land ahead of an earlier
+  forfeit — and had no check at all for whether the newly-ranked player had actually finished
+  (vs. forfeited/been eliminated), so a forfeit could have been announced as a "finish." Fixed by
+  diffing against the previous render's `rankings` array to find the actually-new id(s), and only
+  announcing ones where the player isn't `hasLost`.
+- **Language setting** (§16): a global English/Kannada toggle, defaulting to English, reachable
+  from the app header on every screen after the welcome splash. Revisits §12's earlier
+  English-only-speech decision at the user's explicit request — Kannada TTS is now attempted when
+  selected, accepting the same voice-availability risk that decision originally avoided. The
+  welcome splash itself is a deliberate exception: always Kannada, since it's shown before the
+  toggle exists to make a choice with. Implemented entirely as a display-layer concern (an
+  `app/src/i18n/` module plus a sweep of every component) — no `packages/game-core` changes, same
+  principle as board rotation (§2) and the capture/player-status indicators.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
@@ -639,3 +681,43 @@ turn: a **Board Editor**.
 - `/develop-test` (a 4th mode-select button, "🛠️ Develop Test") — the same `HotseatPage` component
   as `/hotseat`, given an `allowCustomSetup` prop that's `false` (and therefore has zero effect) on
   the plain `/hotseat` route.
+
+## 16. Language (English / Kannada)
+
+A global, app-wide setting — not per-game — for which language every user-facing label and every
+spoken announcement uses. Defaults to **English** for a first-time visitor; the choice persists
+(`localStorage`) across visits and switches every already-open screen immediately (no reload
+needed).
+
+### Toggle
+Two small pill buttons, "EN" / "ಕನ್ನಡ", in the shared app header — visible on every screen after
+the welcome splash, including the login/sign-up screens, so it's reachable before a game even
+starts. Each language's own button always shows in that language's own script (not translated by
+the *other* selected language), the standard convention for a language switcher.
+
+### Scope
+Every user-facing string in the app switches with the setting: every mode's screens (mode-select,
+setup, board editor, gameplay, results, stats), the online flow (sign-in, lobby, invites, abort),
+the Report Bug modal (including the copied bug-report template's own section headings), and the
+spoken announcements. The one deliberate exception: the **welcome splash** (§1) always displays in
+Kannada regardless of the saved setting, since it's shown *before* the toggle is reachable — there's
+no live choice to honor yet at that point.
+
+### Spoken announcements
+Kannada text-to-speech is attempted when Kannada is selected (`utter.lang = 'kn-IN'`), reversing
+§12's earlier decision to keep speech English-only — that decision was made because many
+devices/browsers have no Kannada voice installed, which can still cause Kannada speech to fail
+silently or come out mangled through a fallback voice; accepted as a known risk per the user's
+explicit request rather than worked around. English announcements are unaffected and remain
+reliable. The turn banner (the persistent "whose turn / what to do" text in the Play Area panel)
+is no longer read from `game.message` — that field is generated inside the language-agnostic
+game-core reducer and was never one consistent language to begin with (turn-start text was always
+Kannada, every other message was always English) — it's now derived client-side from the same
+state transitions that already drive the spoken announcements, translated the same way.
+
+### Implementation
+Lives entirely in `app/src/i18n/` (`language.ts` — a persisted module-level singleton, same pattern
+`audio/announcer.ts`'s own mute flag already uses; `useLanguage.ts` — a `useSyncExternalStore` hook
+so components re-render on change; `strings.ts` — the full EN/KN dictionary plus a `useT()` hook).
+No `packages/game-core` changes — entirely a display-layer concern, consistent with how board
+rotation (§2) and the capture-status/player-status indicators (above) were also kept UI-only.

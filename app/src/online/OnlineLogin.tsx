@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { login, type PlayerInfo } from './api';
+import { useT } from '../i18n/strings';
 
 interface Props {
   onLoggedIn: (player: PlayerInfo) => void;
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export default function OnlineLogin({ onLoggedIn, onNoAccount }: Props) {
+  const t = useT();
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +26,7 @@ export default function OnlineLogin({ onLoggedIn, onNoAccount }: Props) {
         onLoggedIn(result.player);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not log in.');
+      setError(err instanceof Error ? err.message : t('auth.loginFailed'));
     } finally {
       setSending(false);
     }
@@ -32,12 +34,12 @@ export default function OnlineLogin({ onLoggedIn, onNoAccount }: Props) {
 
   return (
     <div className="modal">
-      <h2>Sign In to Play</h2>
-      <p>Enter your email to log in, or to create a new account.</p>
+      <h2>{t('auth.signInTitle')}</h2>
+      <p>{t('auth.signInPrompt')}</p>
       <form onSubmit={handleSubmit}>
         <div className="setup-row">
           <label className="setup-label" htmlFor="onlineEmail">
-            Email:
+            {t('auth.emailLabel')}
           </label>
           <input
             id="onlineEmail"
@@ -50,7 +52,7 @@ export default function OnlineLogin({ onLoggedIn, onNoAccount }: Props) {
         </div>
         {error && <p className="online-error">{error}</p>}
         <button className="action-btn btn-start" type="submit" disabled={sending}>
-          {sending ? 'Checking…' : 'Continue'}
+          {sending ? t('auth.checking') : t('auth.continue')}
         </button>
       </form>
     </div>

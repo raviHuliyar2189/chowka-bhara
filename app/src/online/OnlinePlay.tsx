@@ -19,6 +19,7 @@ import {
   announceHint,
   setAnnouncerEnabled,
 } from '../audio/announcer';
+import { useT } from '../i18n/strings';
 
 interface Props {
   gameId: string;
@@ -40,6 +41,7 @@ interface AbortPendingPayload {
 // Every action (roll, pick a value, pick a piece, rollback) is sent to the server over the
 // socket and applied there; this component only ever renders whatever comes back.
 export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Props) {
+  const t = useT();
   const [game, setGame] = useState<GameState>(initialState);
   const [hint, setHint] = useState<{ text: string; key: number } | null>(null);
   const [soundOn, setSoundOn] = useState(true);
@@ -48,11 +50,20 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
   const [rematching, setRematching] = useState(false);
   const [rematchError, setRematchError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  // The persistent turn banner (replaces reading game.message directly — see i18n/strings.ts)
+  // initialized from the rejoining state's own current player, same reasoning as prevRevertSeq
+  // below not starting at 0.
+  const [banner, setBanner] = useState(() => t('banner.turnStart', initialState.players[initialState.currentTurnIndex].name));
   // Starts from the rejoining/initial state's own revertSeq (not 0) — a player who rejoins mid-
   // game after several reverts already happened shouldn't get a spurious "reverted" announcement
   // on their very first turn-start effect firing. See HotseatPage.tsx's own copy of this ref for
   // the full reasoning (avoiding a race between two speak() calls on the same state transition).
   const prevRevertSeq = useRef(initialState.revertSeq);
+  // See HotseatPage.tsx's own copy of this ref — lets the finish effect below tell exactly which
+  // id(s) are newly ranked and skip forfeits/eliminations, since insertIntoRankings can insert a
+  // finish ahead of an earlier removal rather than always at the array's end. Initialized from the
+  // rejoining state's own rankings so a mid-game rejoin doesn't replay past finishes.
+  const prevRankingIds = useRef<PlayerId[]>(initialState.rankings);
 
   // The player roster (id/name pairs) never changes once a game starts — removePlayers marks
   // players as having lost, it doesn't remove them from the array — so the initial prop is a
@@ -107,7 +118,9 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
   useEffect(() => {
     if (game.rollHistory.length === 0) return;
     const last = game.rollHistory[game.rollHistory.length - 1];
-    announceRoll(game.players[game.currentTurnIndex].name, last.label, last.isBonus);
+    const name = game.players[game.currentTurnIndex].name;
+    announceRoll(name, last.label, last.isBonus);
+    setBanner(last.isBonus ? t('banner.rollBonus', name, last.label) : t('banner.rollResult', name, last.label));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.rollHistory.length]);
 
@@ -119,10 +132,13 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
   // see prevRevertSeq's own comment above.
   useEffect(() => {
     if (game.phase !== 'awaiting-roll') return;
+    const name = game.players[game.currentTurnIndex].name;
     if (game.revertSeq !== prevRevertSeq.current) {
-      announceTurnReverted(game.lastRevertedPlayer, game.players[game.currentTurnIndex].name);
+      announceTurnReverted(game.lastRevertedPlayer, name);
+      setBanner(t('banner.turnReverted', game.lastRevertedPlayer, name));
     } else {
-      announceTurnStart(game.players[game.currentTurnIndex].name, true);
+      announceTurnStart(name);
+      setBanner(t('banner.turnStart', name));
     }
     prevRevertSeq.current = game.revertSeq;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,14 +147,21 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
   useEffect(() => {
     if (game.eventSeq === 0) return;
     announceCapture(game.lastCapturePlayer, game.lastCaptureCount);
+    setBanner(t('banner.captured', game.lastCapturePlayer, game.lastCaptureCount));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.eventSeq]);
 
   useEffect(() => {
-    if (game.rankings.length === 0) return;
-    const lastId = game.rankings[game.rankings.length - 1];
-    const finisher = game.players.find((p) => p.id === lastId);
-    if (finisher) announceFinish(finisher.name, game.rankings.length);
+    const prevIds = prevRankingIds.current;
+    const newIds = game.rankings.filter((id) => !prevIds.includes(id));
+    prevRankingIds.current = game.rankings;
+    for (const id of newIds) {
+      const player = game.players.find((p) => p.id === id);
+      if (!player || player.hasLost) continue;
+      const place = game.rankings.indexOf(id) + 1;
+      announceFinish(player.name, place);
+      setBanner(place === 1 ? t('banner.won', player.name) : t('banner.finished', player.name, place));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.rankings.length]);
 
@@ -155,8 +178,9 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
     socketRef.current?.emit('game:rollback', { gameId });
   }
   function handlePieceClickedBeforeValue() {
-    announceHint('Select a dice value first.');
-    setHint({ text: 'ಮೊದಲು ಗರ ಆಯ್ಕೆಮಾಡಿ.', key: Date.now() });
+    const text = t('hint.selectValueFirst');
+    announceHint(text);
+    setHint({ text, key: Date.now() });
   }
   function handleAbortRequest() {
     socketRef.current?.emit('abort:request', { gameId });
@@ -176,7 +200,7 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
       // above) carries the fresh state to every participant, the same way for the clicker as for
       // everyone else, so this screen naturally re-renders back into live gameplay.
     } catch (err) {
-      setRematchError(err instanceof Error ? err.message : 'Could not start a rematch.');
+      setRematchError(err instanceof Error ? err.message : t('online.rematchFailed'));
       setRematching(false);
     }
   }
@@ -191,20 +215,20 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
     return (
       <div className="setup-inline">
         <div className="modal">
-          <h2>Game Over!</h2>
+          <h2>{t('online.gameOver')}</h2>
           <ol>
             {placements.map((p) => (
               <li key={p.playerId}>
-                <strong>{p.name}</strong> — {p.isLoss ? 'Loss' : `Place ${p.place}`}
+                <strong>{p.name}</strong> — {p.isLoss ? t('results.loss') : t('results.place', p.place)}
               </li>
             ))}
           </ol>
           {rematchError && <p className="online-error">{rematchError}</p>}
           <button className="action-btn btn-start" onClick={handleRematch} disabled={rematching}>
-            {rematching ? 'Starting…' : 'Rematch'}
+            {rematching ? t('online.starting') : t('online.rematch')}
           </button>
           <button className="action-btn btn-abort" style={{ marginTop: 8 }} onClick={onExit}>
-            Exit
+            {t('online.exit')}
           </button>
         </div>
       </div>
@@ -220,8 +244,7 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
       <div className="board-container">
         {game.eventSeq > 0 && (
           <div key={game.eventSeq} className="capture-toast">
-            {game.lastCapturePlayer} captured {game.lastCaptureCount}{' '}
-            piece{game.lastCaptureCount === 1 ? '' : 's'}!
+            {t('game.captureToast', game.lastCapturePlayer, game.lastCaptureCount)}
           </div>
         )}
         <Board
@@ -233,7 +256,7 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
         />
       </div>
       <div className="play-area">
-        <div className={`announcer${hint ? ' announcer-hint' : ''}`}>{hint ? hint.text : game.message}</div>
+        <div className={`announcer${hint ? ' announcer-hint' : ''}`}>{hint ? hint.text : banner}</div>
         <DiceTray
           game={game}
           onRoll={handleRoll}
@@ -244,17 +267,17 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
         />
         <div className="post-dice-actions">
           <button className="action-btn btn-abort" onClick={handleAbortRequest} disabled={abortUI !== null}>
-            Abort Game
+            {t('game.abortButton')}
           </button>
-          <button className="btn-debug-log" onClick={() => setShowReportBug(true)} title="Report a bug">
-            🐞 Report Bug
+          <button className="btn-debug-log" onClick={() => setShowReportBug(true)} title={t('game.reportBugTitle')}>
+            {t('game.reportBug')}
           </button>
           <button
             className={`btn-sound in-game-sound ${soundOn ? 'is-on' : 'is-off'}`}
             onClick={toggleSound}
-            title={soundOn ? 'Mute announcements' : 'Unmute announcements'}
+            title={soundOn ? t('setup.muteTitle') : t('setup.unmuteTitle')}
           >
-            {soundOn ? '🔊 Sound On' : '🔇 Muted'}
+            {soundOn ? t('game.soundOn') : t('game.muted')}
           </button>
         </div>
       </div>

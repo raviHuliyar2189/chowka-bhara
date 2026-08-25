@@ -1,6 +1,9 @@
 // Spoken readouts (Web Speech API) plus short generated chimes (Web Audio API) for the
 // game's key moments. No audio assets — tones are synthesized on the fly.
 
+import { getLanguage } from '../i18n/language';
+import { translate } from '../i18n/strings';
+
 let enabled = true;
 
 export function setAnnouncerEnabled(v: boolean): void {
@@ -19,11 +22,11 @@ function speak(text: string, rate = 1, pitch = 1): void {
   const synth = window.speechSynthesis;
   synth.cancel();
   const utter = new SpeechSynthesisUtterance(text);
-  // English, not Kannada — many devices/browsers have no Kannada voice installed, which either
-  // fails to speak at all or mangles the text through a fallback voice that can't pronounce it.
-  // An English voice is close to universally available, so the announcement actually gets heard
-  // in full. The on-screen text (game.message, hints) stays Kannada; only what's spoken changed.
-  utter.lang = 'en-US';
+  // Matches the current language setting. Kannada TTS is attempted at the user's explicit
+  // request even though many devices/browsers have no Kannada voice installed (which either
+  // fails to speak at all or mangles the text through a fallback voice) — English remains the
+  // more reliable choice, but Kannada is no longer avoided outright.
+  utter.lang = getLanguage() === 'kn' ? 'kn-IN' : 'en-US';
   utter.rate = rate;
   utter.pitch = pitch;
   // Chrome (and Android WebView) has a known race where speak() called immediately after
@@ -114,20 +117,22 @@ function chime(kind: 'bonus' | 'capture' | 'finish' | 'win'): void {
 }
 
 // Full sentence, not just the bare value — states the result AND what to do next, so the
-// announcement is a complete instruction on its own.
+// announcement is a complete instruction on its own. Phrase templates live in i18n/strings.ts
+// (shared with the on-screen turn banner, so speech and text never drift apart) — this just picks
+// the right key for the current language and speaks it.
 export function announceRoll(playerName: string, label: string, isBonus: boolean): void {
+  const lang = getLanguage();
   if (isBonus) {
     chime('bonus');
-    speak(`${playerName} rolled ${label}! Bonus roll — roll again.`, 1.15, 1.3);
+    speak(translate('banner.rollBonus', lang, playerName, label), 1.15, 1.3);
   } else {
-    speak(`${playerName} rolled ${label}. Move your piece.`);
+    speak(translate('banner.rollResult', lang, playerName, label));
   }
 }
 
 // Spoken the moment a new turn begins.
-export function announceTurnStart(playerName: string, awaitingRoll: boolean): void {
-  const action = awaitingRoll ? 'roll the dice' : 'move your piece';
-  speak(`${playerName}, it's your turn — ${action}.`);
+export function announceTurnStart(playerName: string): void {
+  speak(translate('banner.turnStart', getLanguage(), playerName));
 }
 
 // Spoken whenever a stuck turn (or a finish reached with pool values still unplayed) gets undone
@@ -136,17 +141,14 @@ export function announceTurnStart(playerName: string, awaitingRoll: boolean): vo
 // speak() always cancels-and-replaces (no queueing) — a second call right after this one would
 // just cut it off before it finished.
 export function announceTurnReverted(revertedPlayerName: string, nextPlayerName: string): void {
-  speak(
-    `${revertedPlayerName} couldn't play out all the dice — that turn is undone. ${nextPlayerName}, it's your turn — roll the dice.`
-  );
+  speak(translate('banner.turnReverted', getLanguage(), revertedPlayerName, nextPlayerName));
 }
 
 // Capturing always grants a bonus roll (§5.6) — say so, not just the capture itself, so this
 // announcement is a complete instruction like the others.
 export function announceCapture(playerName: string, count: number): void {
   chime('capture');
-  const what = count > 1 ? `${count} pieces` : 'a piece';
-  speak(`${playerName} captured ${what}! Roll again.`, 1.1, 1.15);
+  speak(translate('banner.captured', getLanguage(), playerName, count), 1.1, 1.15);
 }
 
 // A short spoken nudge for UI-only guidance (e.g. "pick a value first") — no chime, doesn't
@@ -155,19 +157,13 @@ export function announceHint(text: string): void {
   speak(text);
 }
 
-function ordinal(n: number): string {
-  if (n === 1) return '1st';
-  if (n === 2) return '2nd';
-  if (n === 3) return '3rd';
-  return `${n}th`;
-}
-
 export function announceFinish(playerName: string, place: number): void {
+  const lang = getLanguage();
   if (place === 1) {
     chime('win');
-    speak(`${playerName} won the game!`, 1, 1.2);
+    speak(translate('banner.won', lang, playerName), 1, 1.2);
   } else {
     chime('finish');
-    speak(`${playerName} finished in ${ordinal(place)} place.`);
+    speak(translate('banner.finished', lang, playerName, place));
   }
 }

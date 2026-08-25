@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { PlayerId } from '../game/paths';
 import type { SetupPlayer } from '../hotseat/HotseatPage';
+import { useT } from '../i18n/strings';
 
 interface Props {
   roster: string[];
@@ -19,11 +20,11 @@ const SEATS: Record<number, PlayerId[]> = {
   4: ['P1', 'P2', 'P3', 'P4'],
 };
 
-const SEAT_LABELS: Record<PlayerId, string> = {
-  P1: 'P1 (Bottom)',
-  P2: 'P2 (Right)',
-  P3: 'P3 (Top)',
-  P4: 'P4 (Left)',
+const SEAT_SIDE_KEY: Record<PlayerId, string> = {
+  P1: 'side.bottom',
+  P2: 'side.right',
+  P3: 'side.top',
+  P4: 'side.left',
 };
 
 export default function SetupModal({
@@ -36,6 +37,7 @@ export default function SetupModal({
   resignAllowed,
   onToggleResignAllowed,
 }: Props) {
+  const t = useT();
   const [count, setCount] = useState(4);
   const [names, setNames] = useState<string[]>(['', '', '', '']);
   const seats = SEATS[count];
@@ -49,7 +51,7 @@ export default function SetupModal({
   function handleStart() {
     const players: SetupPlayer[] = seats.map((id, i) => ({
       id,
-      name: names[i].trim() || `Player ${i + 1}`,
+      name: names[i].trim() || t('setup.namePlaceholder', i + 1),
     }));
     onStart(players);
   }
@@ -57,25 +59,25 @@ export default function SetupModal({
   return (
     <div className="setup-inline">
       <div className="modal">
-        <h2>Select Players</h2>
+        <h2>{t('setup.title')}</h2>
         <div className="setup-row">
           <label className="setup-label" htmlFor="playerCount">
-            Number of Players:
+            {t('setup.numberOfPlayers')}
           </label>
           <select id="playerCount" value={count} onChange={(e) => setCount(Number(e.target.value))}>
-            <option value={2}>2 Players</option>
-            <option value={3}>3 Players</option>
-            <option value={4}>4 Players</option>
+            <option value={2}>{t('setup.nPlayers', 2)}</option>
+            <option value={3}>{t('setup.nPlayers', 3)}</option>
+            <option value={4}>{t('setup.nPlayers', 4)}</option>
           </select>
         </div>
 
         {seats.map((id, i) => (
           <div key={id} className="setup-row">
-            <label className="setup-label">{SEAT_LABELS[id]} Name:</label>
+            <label className="setup-label">{t('setup.seatName', `${id} (${t(SEAT_SIDE_KEY[id])})`)}</label>
             <input
               list="roster-list"
               value={names[i]}
-              placeholder={`Player ${i + 1}`}
+              placeholder={t('setup.namePlaceholder', i + 1)}
               onChange={(e) => updateName(i, e.target.value)}
             />
           </div>
@@ -87,40 +89,40 @@ export default function SetupModal({
         </datalist>
 
         <div className="sound-prompt">
-          <div className="sound-prompt-question">Announcements</div>
+          <div className="sound-prompt-question">{t('setup.announcements')}</div>
           <button
             className={`btn-sound ${soundOn ? 'is-on' : 'is-off'}`}
             onClick={onToggleSound}
-            title={soundOn ? 'Mute announcements' : 'Unmute announcements'}
+            title={soundOn ? t('setup.muteTitle') : t('setup.unmuteTitle')}
           >
-            {soundOn ? '🔊 Sound: On' : '🔇 Sound: Off'}
+            {soundOn ? t('setup.soundOn') : t('setup.soundOff')}
           </button>
         </div>
 
         <div className="sound-prompt">
-          <div className="sound-prompt-question">Roll back last move</div>
+          <div className="sound-prompt-question">{t('setup.rollbackQuestion')}</div>
           <button
             className={`btn-sound ${rollbackEnabled ? 'is-on' : 'is-off'}`}
             onClick={onToggleRollback}
-            title={rollbackEnabled ? 'Disable roll-back' : 'Enable roll-back'}
+            title={rollbackEnabled ? t('setup.rollbackDisableTitle') : t('setup.rollbackEnableTitle')}
           >
-            {rollbackEnabled ? '⟲ Roll Back: On' : '⟲ Roll Back: Off'}
+            {rollbackEnabled ? t('setup.rollbackOn') : t('setup.rollbackOff')}
           </button>
         </div>
 
         <div className="sound-prompt">
-          <div className="sound-prompt-question">Resignation Allowed?</div>
+          <div className="sound-prompt-question">{t('setup.resignAllowedQuestion')}</div>
           <button
             className={`btn-sound ${resignAllowed ? 'is-on' : 'is-off'}`}
             onClick={onToggleResignAllowed}
-            title={resignAllowed ? 'Disable resigning' : 'Enable resigning'}
+            title={resignAllowed ? t('setup.resignDisableTitle') : t('setup.resignEnableTitle')}
           >
-            {resignAllowed ? '🏳 Resign: Allowed' : '🏳 Resign: Not Allowed'}
+            {resignAllowed ? t('setup.resignOn') : t('setup.resignOff')}
           </button>
         </div>
 
         <button className="action-btn btn-start" onClick={handleStart}>
-          Start Game
+          {t('setup.startGame')}
         </button>
       </div>
     </div>

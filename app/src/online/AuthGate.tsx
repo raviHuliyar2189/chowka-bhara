@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { fetchMe, type PlayerInfo } from './api';
 import OnlineLogin from './OnlineLogin';
 import NeedsProfile from './NeedsProfile';
+import { useT } from '../i18n/strings';
 
 type View = { kind: 'loading' } | { kind: 'login' } | { kind: 'needs-profile'; email: string };
 
@@ -12,6 +13,7 @@ interface Props {
 // Sits in front of the entire app (both hotseat and online) — nothing renders past this until a
 // session exists, whether that's a fresh login/sign-up or a restored cookie from before.
 export default function AuthGate({ onAuthed }: Props) {
+  const t = useT();
   const [view, setView] = useState<View>({ kind: 'loading' });
 
   useEffect(() => {
@@ -26,7 +28,7 @@ export default function AuthGate({ onAuthed }: Props) {
     return (
       <div className="setup-inline">
         <div className="modal">
-          <p>Loading…</p>
+          <p>{t('auth.loading')}</p>
         </div>
       </div>
     );
