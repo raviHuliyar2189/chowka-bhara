@@ -25,8 +25,8 @@ interface Props {
   gameId: string;
   initialState: GameState;
   mySeat: PlayerId;
-  // Called whenever this player leaves the game entirely — a full in-game abort, or clicking
-  // Exit from the game-over screen — always the same destination (back to online setup).
+  // Called when this player actively chooses to leave — clicking Exit on either the game-over or
+  // the (post-full-abort) aborted screen — always the same destination (back to online setup).
   onExit: () => void;
 }
 
@@ -47,6 +47,7 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
   const [soundOn, setSoundOn] = useState(true);
   const [showReportBug, setShowReportBug] = useState(false);
   const [abortUI, setAbortUI] = useState<AbortUIState | null>(null);
+  const [aborted, setAborted] = useState(false);
   const [rematching, setRematching] = useState(false);
   const [rematchError, setRematchError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
@@ -76,7 +77,13 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
     const socket = connectSocket();
     socketRef.current = socket;
     socket.emit('join-lobby-room', { gameId });
-    socket.on('game-updated', (state: GameState) => setGame(state));
+    // A rematch after a full abort (below) arrives as a fresh game-updated broadcast — clearing
+    // `aborted` here (a no-op during ordinary gameplay, where it's already false) is what brings
+    // everyone back into the live board once the rematch actually starts.
+    socket.on('game-updated', (state: GameState) => {
+      setGame(state);
+      setAborted(false);
+    });
 
     socket.on('abort:pending', ({ activeSeats, votes }: AbortPendingPayload) => {
       if (!activeSeats.includes(mySeat)) {
@@ -99,7 +106,9 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
     });
     socket.on('abort:resolved', ({ action }: { action: 'abort' | 'resume' | 'forfeit' }) => {
       setAbortUI(null);
-      if (action === 'abort') onExit();
+      // A full (unanimous) abort now offers the same Rematch/Exit choice a natural finish does
+      // (below), rather than leaving immediately — see the aborted-screen render branch.
+      if (action === 'abort') setAborted(true);
     });
 
     return () => {
@@ -208,6 +217,23 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
     const next = !soundOn;
     setSoundOn(next);
     setAnnouncerEnabled(next);
+  }
+
+  if (aborted) {
+    return (
+      <div className="setup-inline">
+        <div className="modal">
+          <h2>{t('results.gameAborted')}</h2>
+          {rematchError && <p className="online-error">{rematchError}</p>}
+          <button className="action-btn btn-start" onClick={handleRematch} disabled={rematching}>
+            {rematching ? t('online.starting') : t('online.rematch')}
+          </button>
+          <button className="action-btn btn-abort" style={{ marginTop: 8 }} onClick={onExit}>
+            {t('online.exit')}
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (game.phase === 'game-over') {

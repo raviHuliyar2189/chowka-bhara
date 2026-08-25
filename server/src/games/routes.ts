@@ -279,10 +279,14 @@ gamesRouter.post('/games/:id/start', async (req, res) => {
   res.json({ game: state });
 });
 
-// POST /games/:id/rematch — any participant may restart a finished game with the same seats,
-// via @chowka/game-core's own rematch() (the same function hotseat's "play again" uses) so the
-// two never diverge. Not offered for a lobby-cancelled or in-game-aborted game — only a game that
-// actually concluded (status 'finished') can be replayed.
+// POST /games/:id/rematch — any participant may restart a finished OR fully-aborted game with
+// the same seats, via @chowka/game-core's own rematch() (the same function hotseat's "play
+// again"/vs-computer's "Play Again" use) so all three never diverge. A lobby-cancelled game is
+// still never eligible: it's aborted before /start ever runs, so its `state` column is always
+// null (the `!game.state` check below excludes it the same way it always has) — there's no board
+// position to replay from. An in-game abort, by contrast, leaves `state` as the last live
+// position (only `status` changes — see abort.ts), so a rematch from there is exactly as
+// meaningful as one from a normal finish.
 gamesRouter.post('/games/:id/rematch', async (req, res) => {
   const gameId = req.params.id;
   const gameResult = await pool.query('select status, state from games where id = $1', [gameId]);
@@ -299,7 +303,7 @@ gamesRouter.post('/games/:id/rematch', async (req, res) => {
     res.status(403).json({ error: "You're not part of this game." });
     return;
   }
-  if (game.status !== 'finished' || !game.state) {
+  if ((game.status !== 'finished' && game.status !== 'aborted') || !game.state) {
     res.status(400).json({ error: "This game hasn't finished yet." });
     return;
   }

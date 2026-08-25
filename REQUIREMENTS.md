@@ -554,11 +554,16 @@ Resolved during requirements gathering:
   screen with no way to quickly play again. Now reuses `ResultsModal` with a new `aborted` prop
   (skips the placement list, since nobody was actually ranked) rather than inventing a separate
   modal — requested for "abort or natural end of game" generally; implemented for hotseat (already
-  had this via Resign's natural end, §9) and Vs Computer. Not extended to online's own Abort flow:
-  its `/rematch` endpoint explicitly rejects anything but a `'finished'` game, and reopening an
-  aborted online game already deliberately shows "this game was aborted" as terminal (§12) — making
-  rematch-after-abort work there would mean reversing that design decision, not just a UI tweak, so
-  it was left alone pending an explicit ask.
+  had this via Resign's natural end, §9) and Vs Computer. Initially left out of online's own Abort
+  flow (§13) — its `/rematch` endpoint explicitly rejected anything but a `'finished'` game — since
+  extending it meant reversing that restriction, not just a UI tweak. Done as a follow-up, once
+  explicitly asked for (§13): the `/rematch` endpoint now also accepts `'aborted'`, since an
+  in-game abort (unlike a lobby cancellation) already leaves the last live board position intact
+  in the `state` column — only `status` changes (§12's own earlier note on why that's true) — so
+  there was a real position to rematch from all along, the endpoint just hadn't been told it could.
+  Reopening a *stale* aborted link later is unchanged and still shows the terminal message — this
+  only concerns the live "Game Aborted" screen shown right when an abort happens to whoever's still
+  in that session (§13's own Game over section).
 - **"End Session" now returns to mode-select, not just the same mode's own setup screen** (§9):
   previously each mode's "End Session"/"New Game" only reset back into its own setup form
   (`SetupModal` for hotseat, the name-entry form for Vs Computer), so switching modes mid-session
@@ -701,20 +706,31 @@ Adapted from hotseat's consensus flow (§9) for players on separate devices:
 - Every other active player is prompted on their own device to agree or decline; the requester's
   own agreement is implicit.
 - **0 declines** → the game is fully aborted for everyone (see §10/§12 for the stats/invalidation
-  consequences).
+  consequences) — every connected device shows the same "Game Aborted" screen described below
+  (not an immediate exit).
 - **Exactly 1 decline** → resume, nothing changes.
 - **2+ declines** → the *requester's* device (specifically, not anyone else's) is asked the
   forfeit-vs-resume follow-up question hotseat's shared modal would otherwise ask whoever's
-  holding it.
+  holding it. A forfeit-driven end (as opposed to the unanimous 0-decline case) still just
+  continues play among whoever's left — it doesn't end the game outright, so it doesn't reach the
+  "Game Aborted" screen; only a full abort does.
 
 ### Game over (online)
-The game-over screen lists every player's placement (or "Loss" — see §7/§8 for exactly who counts
-as a loss, including a no-capture-chance elimination or a forfeit, both of which are now always
-included here rather than silently omitted) and offers two actions:
+Both a normal finish and a full (unanimous) in-game abort end at a broadcast screen offering the
+same two actions, so a full abort is never a dead end:
+- **Game Finished** (normal finish): lists every player's placement (or "Loss" — see §7/§8 for
+  exactly who counts as a loss, including a no-capture-chance elimination or a forfeit, both of
+  which are now always included here rather than silently omitted).
+- **Game Aborted** (unanimous in-game abort, above): no placement list — nobody was actually
+  ranked — otherwise identical.
 - **Rematch** — any participant can restart with the same seats (`rematch()`, the same function
-  hotseat's "play again" uses), broadcast to everyone the same way Start Game is.
-- **Exit** — leaves this game and returns to online setup; same destination as leaving via an
-  in-game Abort.
+  hotseat's "play again"/vs-computer's "Play Again" use), broadcast to everyone the same way Start
+  Game is. Works from either screen: the game row's last live board position is preserved when an
+  in-game abort happens (only its status changes, not its state — see §12), so rematching from an
+  abort is exactly as meaningful as rematching from a real finish. (A game cancelled *before* it
+  ever started, from the lobby, is different — there's no board position to rematch from, so that
+  one stays a dead end.)
+- **Exit** — leaves this game and returns to online setup; same destination from either screen.
 
 ### Routing
 Each meaningful screen is a real URL with its own browser-history entry, so the browser/phone's
