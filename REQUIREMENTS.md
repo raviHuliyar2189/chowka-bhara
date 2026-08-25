@@ -596,6 +596,24 @@ Resolved during requirements gathering:
   hanging; and added a top-level React error boundary (above) as a general safety net for whatever
   the next unforeseen render exception turns out to be, so "silently blank, no feedback" can't
   happen again regardless of cause.
+- **Non-creator's seat going stale after start, root-caused and fixed** (§13): reported as three
+  seemingly separate symptoms — "roll dice not enabled" for the second player, an abort request
+  from the creator "not showing up" to the second player, and "Start Game" visible to both players
+  instead of just the creator. The first two turned out to share one root cause: seat fairness
+  reassignment at `/start` (above) can change a joined player's seat letter — e.g. a game planned
+  for 4 but only 2 actually joined reassigns the second joiner from their join-time `P2` to the
+  fair-topology `P3` — but `OnlineLobby`'s socket handler for "the game just started" still passed
+  along whichever seat that client was assigned back at *join* time, never re-checking it. Every
+  seat-dependent check downstream (`isMyTurn`, the abort flow's `activeSeats.includes(mySeat)`,
+  board rotation) then silently compared the game's real current seat against a seat that player
+  was no longer actually sitting in. Confirmed via board rotation specifically — a player's own
+  home should always land at the bottom of their own view, and for the affected player it was
+  landing nowhere at all, since neither actual seat in a 2-player game was the stale `P2` the
+  client still believed in. Fixed by having that handler re-fetch the lobby's fresh seat
+  assignment right at the transition instead of trusting the join-time value. The third symptom
+  (Start Game visible to both) was unrelated — the endpoint never actually restricted who could
+  call it — fixed separately by requiring `createdBy` server-side, mirroring abort-lobby's already
+  existing creator-only restriction, plus hiding the button client-side for anyone else.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
@@ -639,13 +657,18 @@ Still open / assumed defaults (flag if any of these are wrong):
   `status: 'declined'` instead of `'joined'` — recorded in that player's statistics immediately
   (§10), not deferred to whether the game ever starts. A player who declines sees a simple
   confirmation and nothing further from that game.
-- **"Start Game" only requires at least 2 joined**, not every originally-planned seat — the room
-  adapts to however many people actually accept. **Seat fairness on start**: the joined players are
+- **Only the creator can click "Start Game"** (mirrors abort-lobby's creator-only restriction) —
+  enforced both server-side (the `/start` endpoint rejects anyone else) and client-side (anyone
+  else sees a passive "Waiting for `<creator>` to start the game…" note instead of a clickable
+  button). Requires at least 2 joined, not every originally-planned seat — the room adapts to
+  however many people actually accept. **Seat fairness on start**: the joined players are
   re-seated onto the fair topology for however many actually joined (`SEATS_BY_COUNT[joinedCount]`
   — opposite bases for 2, etc.), in their original join order; declined players take whatever
   seat(s) are left over from the originally-planned topology, e.g. 4 planned + 1 decline → the 3 who
   joined get P1/P2/P3, the decliner gets P4. This keeps active play balanced regardless of exactly
-  who declined.
+  who declined. Every client re-fetches its own current seat right at this transition rather than
+  trusting whatever seat it was assigned at join time, since this reassignment can change it (see
+  §12's Decisions log for the bug this caused before that re-fetch existed).
 - **The creator alone can cancel the game while it's still in the lobby** (before Start), with no
   vote or confirmation needed from anyone else — different from in-game Abort (below), which does
   require consensus once play has actually started. Not counted in anyone's stats, since the game

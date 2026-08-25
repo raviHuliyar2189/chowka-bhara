@@ -18,6 +18,12 @@
   margin: 8px 0 0;
 }
 
+.lobby-waiting-note {
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 8px 0 0;
+}
+
 h1 {
   margin: 0 0 8px;
   color: var(--text);

@@ -55,8 +55,28 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
     // Fires for whoever clicked "Start Game" AND everyone else watching — a single source of
     // truth for "the game has begun" instead of the clicking button handling its own
     // transition locally (which would leave everyone else stranded in the lobby).
+    //
+    // Deliberately re-fetches the lobby here rather than trusting mySeatRef (set back at join
+    // time): /start re-seats everyone onto the fair topology for however many actually joined
+    // (§13 — e.g. a 4-planned game where only 2 joined moves the second joiner from their
+    // join-time P2 to P3), so a seat claimed at join time can be stale by the time the game
+    // actually starts. Using the stale seat here broke board rotation and turn detection for
+    // exactly the player whose seat changed — their own isMyTurn check compared the game's real
+    // current seat against a seat they were no longer actually sitting in.
     socket.on('game-updated', (state: GameState) => {
-      if (mySeatRef.current) onStart(state, mySeatRef.current);
+      fetchGame(gameId)
+        .then((fresh) => {
+          const seat = fresh.seats.find((s) => s.playerId === me.id)?.seat as PlayerId | undefined;
+          if (seat) {
+            mySeatRef.current = seat;
+            onStart(state, seat);
+          } else if (mySeatRef.current) {
+            onStart(state, mySeatRef.current);
+          }
+        })
+        .catch(() => {
+          if (mySeatRef.current) onStart(state, mySeatRef.current);
+        });
     });
   }
 
@@ -255,9 +275,15 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
           );
         })}
       </ul>
-      <button className="action-btn btn-start" disabled={!lobby.canStart || starting} onClick={handleStart}>
-        {starting ? t('lobby.starting') : lobby.canStart ? t('lobby.startGame') : t('lobby.waitingForTwo')}
-      </button>
+      {isCreator ? (
+        <button className="action-btn btn-start" disabled={!lobby.canStart || starting} onClick={handleStart}>
+          {starting ? t('lobby.starting') : lobby.canStart ? t('lobby.startGame') : t('lobby.waitingForTwo')}
+        </button>
+      ) : (
+        <p className="lobby-waiting-note">
+          {lobby.canStart ? t('lobby.waitingForCreatorToStart', lobby.createdByName) : t('lobby.waitingForTwo')}
+        </p>
+      )}
 
       {isCreator && (
         <button className="action-btn btn-abort" style={{ marginTop: 8 }} onClick={handleCancelGame} disabled={cancelling}>

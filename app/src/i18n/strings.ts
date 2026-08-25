@@ -269,6 +269,10 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'lobby.starting': { en: 'Starting…', kn: 'ಪ್ರಾರಂಭಿಸಲಾಗುತ್ತಿದೆ…' },
   'lobby.startGame': { en: 'Start Game', kn: 'ಆಟ ಪ್ರಾರಂಭಿಸಿ' },
   'lobby.waitingForTwo': { en: 'Waiting for at least 2 players…', kn: 'ಕನಿಷ್ಠ 2 ಆಟಗಾರರಿಗಾಗಿ ಕಾಯಲಾಗುತ್ತಿದೆ…' },
+  'lobby.waitingForCreatorToStart': {
+    en: (name: string) => `Waiting for ${name} to start the game…`,
+    kn: (name: string) => `${name} ಆಟ ಪ್ರಾರಂಭಿಸಲು ಕಾಯಲಾಗುತ್ತಿದೆ…`,
+  },
   'lobby.cancelling': { en: 'Cancelling…', kn: 'ರದ್ದುಮಾಡಲಾಗುತ್ತಿದೆ…' },
   'lobby.cancelGame': { en: 'Cancel Game', kn: 'ಆಟ ರದ್ದುಮಾಡಿ' },
 

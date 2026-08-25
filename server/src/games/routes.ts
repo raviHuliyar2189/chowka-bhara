@@ -198,9 +198,10 @@ gamesRouter.post('/games/:id/abort-lobby', async (req, res) => {
   res.status(204).end();
 });
 
-// POST /games/:id/start — any joined participant may start once at least 2 have joined. Builds
-// the initial GameState via @chowka/game-core's own createGame(), the exact same function the
-// hotseat app uses, so the two never diverge in how a fresh game is set up.
+// POST /games/:id/start — only the player who created this game may start it, once at least 2
+// have joined (mirrors abort-lobby's own creator-only restriction just above). Builds the initial
+// GameState via @chowka/game-core's own createGame(), the exact same function the hotseat app
+// uses, so the two never diverge in how a fresh game is set up.
 //
 // Seat assignment is finalized here, not at join/decline time, since it depends on the final
 // joined count: joined players are re-seated onto the fair topology for that many players
@@ -217,8 +218,8 @@ gamesRouter.post('/games/:id/start', async (req, res) => {
     res.status(404).json({ error: 'Game not found.' });
     return;
   }
-  if (!lobby.seats.some((s) => s.playerId === req.player!.playerId)) {
-    res.status(403).json({ error: "You're not part of this game." });
+  if (lobby.createdBy !== req.player!.playerId) {
+    res.status(403).json({ error: 'Only the player who started this game can start it.' });
     return;
   }
   if (lobby.status !== 'lobby') {
