@@ -9,7 +9,7 @@ import type { PlayerId } from '../game/paths';
 import Board from '../components/Board';
 import DiceTray from '../components/DiceTray';
 import ReportBugModal from '../components/ReportBugModal';
-import OnlineAbortModal, { type AbortUIState } from './OnlineAbortModal';
+import ResignModal from '../components/ResignModal';
 import {
   announceRoll,
   announceTurnStart,
@@ -25,29 +25,26 @@ interface Props {
   gameId: string;
   initialState: GameState;
   mySeat: PlayerId;
-  // Called when this player actively chooses to leave — clicking Exit on either the game-over or
-  // the (post-full-abort) aborted screen — always the same destination (back to online setup).
+  // Per-game "Resignation Allowed?" toggle, set at online game creation (see OnlineSetup.tsx) —
+  // mirrors hotseat's own toggle. Gates whether the Resign Game button appears below.
+  resignAllowed: boolean;
+  // Called when this player actively chooses to leave the game-over screen — back to online setup.
   onExit: () => void;
-}
-
-interface AbortPendingPayload {
-  requestedBy: PlayerId;
-  activeSeats: PlayerId[];
-  votes: Record<string, boolean>;
 }
 
 // Online-mode gameplay screen — reuses the exact same Board/DiceTray components the local
 // hotseat game uses, just driven by the server's broadcast state instead of a local reducer.
-// Every action (roll, pick a value, pick a piece, rollback) is sent to the server over the
-// socket and applied there; this component only ever renders whatever comes back.
-export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Props) {
+// Every action (roll, pick a value, pick a piece, rollback, resign) is sent to the server over
+// the socket and applied there; this component only ever renders whatever comes back.
+export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed, onExit }: Props) {
   const t = useT();
   const [game, setGame] = useState<GameState>(initialState);
   const [hint, setHint] = useState<{ text: string; key: number } | null>(null);
   const [soundOn, setSoundOn] = useState(true);
   const [showReportBug, setShowReportBug] = useState(false);
-  const [abortUI, setAbortUI] = useState<AbortUIState | null>(null);
-  const [aborted, setAborted] = useState(false);
+  // Purely informational — resigning is unconditional (the resigning player is already out by the
+  // time the server's resign:notice broadcast arrives), same as hotseat's own copy of this state.
+  const [resignedPlayerName, setResignedPlayerName] = useState<string | null>(null);
   const [rematching, setRematching] = useState(false);
   const [rematchError, setRematchError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
@@ -66,49 +63,18 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
   // rejoining state's own rankings so a mid-game rejoin doesn't replay past finishes.
   const prevRankingIds = useRef<PlayerId[]>(initialState.rankings);
 
-  // The player roster (id/name pairs) never changes once a game starts — removePlayers marks
-  // players as having lost, it doesn't remove them from the array — so the initial prop is a
-  // stable, always-current source for seat -> name lookups in the abort event handlers below.
-  function nameFor(seat: string): string {
-    return initialState.players.find((p) => p.id === seat)?.name ?? seat;
-  }
-
   useEffect(() => {
     const socket = connectSocket();
     socketRef.current = socket;
     socket.emit('join-lobby-room', { gameId });
-    // A rematch after a full abort (below) arrives as a fresh game-updated broadcast — clearing
-    // `aborted` here (a no-op during ordinary gameplay, where it's already false) is what brings
-    // everyone back into the live board once the rematch actually starts.
     socket.on('game-updated', (state: GameState) => {
       setGame(state);
-      setAborted(false);
     });
 
-    socket.on('abort:pending', ({ activeSeats, votes }: AbortPendingPayload) => {
-      if (!activeSeats.includes(mySeat)) {
-        setAbortUI(null);
-        return;
-      }
-      if (mySeat in votes) {
-        const waitingOnNames = activeSeats.filter((s) => !(s in votes)).map(nameFor);
-        setAbortUI({ kind: 'waiting', waitingOnNames });
-      } else {
-        setAbortUI({ kind: 'prompt' });
-      }
-    });
-    socket.on('abort:forfeit-needed', ({ requestedBy, declineCount }: { requestedBy: PlayerId; declineCount: number }) => {
-      setAbortUI(
-        requestedBy === mySeat
-          ? { kind: 'forfeit-decision', declineCount }
-          : { kind: 'awaiting-decision', decidedByName: nameFor(requestedBy) }
-      );
-    });
-    socket.on('abort:resolved', ({ action }: { action: 'abort' | 'resume' | 'forfeit' }) => {
-      setAbortUI(null);
-      // A full (unanimous) abort now offers the same Rematch/Exit choice a natural finish does
-      // (below), rather than leaving immediately — see the aborted-screen render branch.
-      if (action === 'abort') setAborted(true);
+    // Broadcast by the server alongside its own game-updated (see server/src/realtime/resign.ts)
+    // — purely informational, shows the same acknowledgment modal hotseat shows locally.
+    socket.on('resign:notice', ({ playerName }: { playerName: string }) => {
+      setResignedPlayerName(playerName);
     });
 
     return () => {
@@ -191,14 +157,8 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
     announceHint('hint.selectValueFirst');
     setHint({ text, key: Date.now() });
   }
-  function handleAbortRequest() {
-    socketRef.current?.emit('abort:request', { gameId });
-  }
-  function handleAbortRespond(agree: boolean) {
-    socketRef.current?.emit('abort:respond', { gameId, agree });
-  }
-  function handleForfeitDecision(forfeit: boolean) {
-    socketRef.current?.emit('abort:forfeit-decision', { gameId, forfeit });
+  function handleResign() {
+    socketRef.current?.emit('game:resign', { gameId });
   }
   async function handleRematch() {
     setRematching(true);
@@ -219,24 +179,10 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
     setAnnouncerEnabled(next);
   }
 
-  if (aborted) {
-    return (
-      <div className="setup-inline">
-        <div className="modal">
-          <h2>{t('results.gameAborted')}</h2>
-          {rematchError && <p className="online-error">{rematchError}</p>}
-          <button className="action-btn btn-start" onClick={handleRematch} disabled={rematching}>
-            {rematching ? t('online.starting') : t('online.rematch')}
-          </button>
-          <button className="action-btn btn-abort" style={{ marginTop: 8 }} onClick={onExit}>
-            {t('online.exit')}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (game.phase === 'game-over') {
+  // Held back while a resign acknowledgment is showing (e.g. this resignation was the one that
+  // ended the game) — same ordering as hotseat's own showResults/resignedPlayerName gating, so
+  // the "so-and-so resigned" notice always appears before the placements screen, not skipped.
+  if (game.phase === 'game-over' && !resignedPlayerName) {
     const placements = computePlacements(game);
     return (
       <div className="setup-inline">
@@ -292,9 +238,11 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
           isMyTurn={isMyTurn}
         />
         <div className="post-dice-actions">
-          <button className="action-btn btn-abort" onClick={handleAbortRequest} disabled={abortUI !== null}>
-            {t('game.abortButton')}
-          </button>
+          {resignAllowed && (
+            <button className="action-btn btn-abort" onClick={handleResign}>
+              {t('resign.gameButton')}
+            </button>
+          )}
           <button className="btn-debug-log" onClick={() => setShowReportBug(true)} title={t('game.reportBugTitle')}>
             {t('game.reportBug')}
           </button>
@@ -308,8 +256,8 @@ export default function OnlinePlay({ gameId, initialState, mySeat, onExit }: Pro
         </div>
       </div>
 
-      {abortUI && (
-        <OnlineAbortModal state={abortUI} onRespond={handleAbortRespond} onForfeitDecision={handleForfeitDecision} />
+      {resignedPlayerName && (
+        <ResignModal playerName={resignedPlayerName} onDismiss={() => setResignedPlayerName(null)} />
       )}
       {showReportBug && <ReportBugModal debugLog={game.debugLog} onClose={() => setShowReportBug(false)} />}
     </div>

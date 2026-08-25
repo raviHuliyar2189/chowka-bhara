@@ -19,7 +19,9 @@ interface Props {
 // count and creating a game) lives on its own /online route now, so this only ever toggles
 // between waiting-room and in-progress states for a game that already exists.
 export default function OnlineGamePage({ gameId, me, justCreated, onExit }: Props) {
-  const [playing, setPlaying] = useState<{ state: GameState; mySeat: PlayerId } | null>(null);
+  const [playing, setPlaying] = useState<{ state: GameState; mySeat: PlayerId; resignAllowed: boolean } | null>(
+    null
+  );
 
   if (playing) {
     return (
@@ -27,6 +29,7 @@ export default function OnlineGamePage({ gameId, me, justCreated, onExit }: Prop
         gameId={gameId}
         initialState={playing.state}
         mySeat={playing.mySeat}
+        resignAllowed={playing.resignAllowed}
         onExit={onExit}
       />
     );
@@ -38,7 +41,7 @@ export default function OnlineGamePage({ gameId, me, justCreated, onExit }: Prop
         gameId={gameId}
         me={me}
         justCreated={justCreated}
-        onStart={(state, mySeat) => setPlaying({ state, mySeat })}
+        onStart={(state, mySeat, resignAllowed) => setPlaying({ state, mySeat, resignAllowed })}
       />
     </div>
   );

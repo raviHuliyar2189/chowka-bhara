@@ -111,16 +111,17 @@ export interface LobbyState {
   createdBy: string;
   createdByName: string;
   seatCount: number;
+  resignAllowed: boolean;
   state: GameState | null;
   seats: SeatInfo[];
   joinedCount: number;
   canStart: boolean;
 }
 
-export function createGame(seatCount: number): Promise<LobbyState> {
+export function createGame(seatCount: number, resignAllowed: boolean): Promise<LobbyState> {
   return request<{ game: LobbyState }>('/games', {
     method: 'POST',
-    body: JSON.stringify({ seatCount }),
+    body: JSON.stringify({ seatCount, resignAllowed }),
   }).then((r) => r.game);
 }
 

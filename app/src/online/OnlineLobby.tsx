@@ -10,7 +10,7 @@ interface Props {
   gameId: string;
   me: PlayerInfo;
   justCreated?: boolean;
-  onStart: (state: GameState, mySeat: PlayerId) => void;
+  onStart: (state: GameState, mySeat: PlayerId, resignAllowed: boolean) => void;
 }
 
 type Phase = 'loading' | 'choice' | 'declined' | 'waiting';
@@ -69,13 +69,13 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
           const seat = fresh.seats.find((s) => s.playerId === me.id)?.seat as PlayerId | undefined;
           if (seat) {
             mySeatRef.current = seat;
-            onStart(state, seat);
+            onStart(state, seat, fresh.resignAllowed);
           } else if (mySeatRef.current) {
-            onStart(state, mySeatRef.current);
+            onStart(state, mySeatRef.current, fresh.resignAllowed);
           }
         })
         .catch(() => {
-          if (mySeatRef.current) onStart(state, mySeatRef.current);
+          if (mySeatRef.current) onStart(state, mySeatRef.current, lobby?.resignAllowed ?? false);
         });
     });
   }
@@ -106,7 +106,7 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
           // device) rejoins straight into the live board instead of a waiting room that's
           // already moved on.
           if (current.state) {
-            if (!cancelled) onStart(current.state, mySeatRef.current);
+            if (!cancelled) onStart(current.state, mySeatRef.current, current.resignAllowed);
             return;
           }
           if (cancelled) return;

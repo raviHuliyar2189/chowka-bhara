@@ -217,11 +217,11 @@ Tracked **per player**:
 - "3rd Win" % — finished 3rd.
 - "Loss" % — finished last, was forfeited/removed during a partial abort, or lost via the
   no-capture-chance rule (§7), while other players continued the game.
-- "Aborted" % — the game was called off by unanimous agreement of every active player before any
-  placements were decided. This is distinct from "Loss": a full abort counts as Aborted for every
-  seated player in that game (no one is placed), while a partial abort/forfeit counts as a Loss
-  only for the forfeited player(s) — the players who continued get a normal placement-based result
-  once their game ends.
+- "Aborted" % — the game was called off before any placements were decided. Vs Computer (§14) is
+  the only mode with this outcome any more: hotseat and online both replaced their old in-game
+  abort flows with unconditional self-Resign (§9/§13), which is always just a forfeit/Loss for the
+  resigning player, not a whole-game abort — nobody else's stats are affected by another player's
+  resignation.
 - "Declined" % (**online only**) — the player declined an invite (§13). Recorded the moment they
   decline, independent of whether that game ever actually starts. Distinct from every other
   category, including the pre-start creator cancellation (§13), which isn't recorded anywhere.
@@ -248,10 +248,11 @@ matching the board's height so it never resizes as its content changes) contains
    then the scattered result (black/white ovals) of the latest throw once rolled.
 5. The cumulative list of pool values still to be played this turn, labeled in Kannada
    "ನಡೆಸಬೇಕಾದ ಗರಗಳು" ("moves still to be made").
-6. The Resign Game button (hotseat only, and only when Resignation Allowed was turned on at setup
-   — §9). Online mode keeps its own separate Abort Game button/flow instead (§13); Vs Computer
-   keeps its own unconditional, always-shown Abort Game button (§14) — resigning/aborting mid-game
-   is still spelled differently across modes on purpose, matching each one's own semantics.
+6. The Resign Game button, shown only when Resignation Allowed was turned on at setup — hotseat
+   (§9) and online (§13) both use this same unconditional self-resign flow now, identical in
+   behavior. Vs Computer keeps its own separate, unconditional, always-shown Abort Game button
+   (§14) instead — that mode has no opposing human player to resign to, so it's spelled and behaves
+   differently on purpose.
 7. The sound on/off toggle (mirrors the one on the setup screen — see below).
 
 *(Numbering above follows the original spec as given; item 4 was not specified. Online mode's
@@ -680,9 +681,10 @@ Still open / assumed defaults (flag if any of these are wrong):
   never started.
 - Opening a link to a game that's already in progress rejoins the participant straight into the
   live board (closed tab, refreshed page, or a different device) instead of a stale waiting room.
-- Opening a link to a game that was aborted (whether cancelled pre-start by the creator or fully
-  aborted in-game) shows an explicit "this game was aborted" message instead of any board/lobby
-  state.
+- Opening a link to a game the creator cancelled pre-start shows an explicit "this game was
+  aborted" message instead of any board/lobby state. (There is no equivalent in-game abort any
+  more — leaving mid-game is Resign, below, which ends at the normal Game Finished screen, not
+  this one.)
 - A non-participant opening a link to a game that's already started (and isn't full/available) is
   rejected, not allowed to claim a seat mid-game.
 - A declined player is shown distinctly on the game board itself (dimmed home label, "(declined)")
@@ -697,40 +699,42 @@ Still open / assumed defaults (flag if any of these are wrong):
   value / pick a piece / roll back the last move) and render whatever state comes back.
 
 ### In-game controls (online)
-Mirrors hotseat's Play Area panel (§11) — Abort Game, Report Bug, and a sound toggle — with sound
-being a purely local, per-device setting (each player mutes/unmutes only their own device).
+Mirrors hotseat's Play Area panel (§11) — Resign Game (below), Report Bug, and a sound toggle —
+with sound being a purely local, per-device setting (each player mutes/unmutes only their own
+device).
 
-### Abort (online)
-Adapted from hotseat's consensus flow (§9) for players on separate devices:
-- Any active (not finished/lost) player can request an abort from their own device.
-- Every other active player is prompted on their own device to agree or decline; the requester's
-  own agreement is implicit.
-- **0 declines** → the game is fully aborted for everyone (see §10/§12 for the stats/invalidation
-  consequences) — every connected device shows the same "Game Aborted" screen described below
-  (not an immediate exit).
-- **Exactly 1 decline** → resume, nothing changes.
-- **2+ declines** → the *requester's* device (specifically, not anyone else's) is asked the
-  forfeit-vs-resume follow-up question hotseat's shared modal would otherwise ask whoever's
-  holding it. A forfeit-driven end (as opposed to the unanimous 0-decline case) still just
-  continues play among whoever's left — it doesn't end the game outright, so it doesn't reach the
-  "Game Aborted" screen; only a full abort does.
+### Resign (online)
+Online's in-game leave flow is now **identical in behavior** to hotseat's Resign (§9) — the old
+consensus-based Abort flow (request → agree/decline → forfeit-vs-resume) has been removed
+entirely, not kept alongside it:
+- A per-game **"Resignation Allowed?"** toggle at game creation (`OnlineSetup.tsx`), defaulting to
+  **Not Allowed**, exactly mirroring hotseat's own toggle. Gates whether the Resign Game button
+  appears during that game at all.
+- Not a vote: clicking Resign Game **unconditionally** resigns the clicking player's own seat — no
+  confirmation or agreement is asked of anyone else. This is the one deliberate difference from
+  hotseat's semantics, adapted for the fact that online players are on separate devices rather
+  than sharing one: hotseat resigns "whoever's turn it currently is" (the person physically holding
+  the shared device), while online resigns "whoever clicked," since each player has their own
+  device and might want to bow out on someone else's turn.
+- Equivalent to a forfeit (§8): the resigning player's pieces are removed from the board and they're
+  ranked out immediately (see §8's ranking-order rule for where they land relative to other
+  forfeits/eliminations). Enforced server-side (`server/src/realtime/resign.ts`) — the same
+  `removePlayers()` reducer hotseat's local `handleResign` calls, applied and persisted the same
+  way every other in-game action is (§13's Real-time sync).
+- After resigning, every connected device (the resigning player's own and everyone else's) shows the
+  same **Resign Information** notice as hotseat's (§9) — purely informational, one acknowledgment
+  button, not a decision point. The remaining players continue automatically once dismissed, or the
+  game-over screen shows immediately if that resignation ended the game.
 
 ### Game over (online)
-Both a normal finish and a full (unanimous) in-game abort end at a broadcast screen offering the
-same two actions, so a full abort is never a dead end:
-- **Game Finished** (normal finish): lists every player's placement (or "Loss" — see §7/§8 for
-  exactly who counts as a loss, including a no-capture-chance elimination or a forfeit, both of
-  which are now always included here rather than silently omitted).
-- **Game Aborted** (unanimous in-game abort, above): no placement list — nobody was actually
-  ranked — otherwise identical.
+A normal finish (including a resignation that ends the game — resigning is just another forfeit,
+§8) ends at a broadcast **Game Finished** screen listing every player's placement (or "Loss" — see
+§7/§8 for exactly who counts as a loss, including a no-capture-chance elimination or a
+resignation). Offers:
 - **Rematch** — any participant can restart with the same seats (`rematch()`, the same function
   hotseat's "play again"/vs-computer's "Play Again" use), broadcast to everyone the same way Start
-  Game is. Works from either screen: the game row's last live board position is preserved when an
-  in-game abort happens (only its status changes, not its state — see §12), so rematching from an
-  abort is exactly as meaningful as rematching from a real finish. (A game cancelled *before* it
-  ever started, from the lobby, is different — there's no board position to rematch from, so that
-  one stays a dead end.)
-- **Exit** — leaves this game and returns to online setup; same destination from either screen.
+  Game is.
+- **Exit** — leaves this game and returns to online setup.
 
 ### Routing
 Each meaningful screen is a real URL with its own browser-history entry, so the browser/phone's

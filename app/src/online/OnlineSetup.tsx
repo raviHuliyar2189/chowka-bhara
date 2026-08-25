@@ -9,6 +9,7 @@ interface Props {
 export default function OnlineSetup({ onCreated }: Props) {
   const t = useT();
   const [count, setCount] = useState(2);
+  const [resignAllowed, setResignAllowed] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,7 +17,7 @@ export default function OnlineSetup({ onCreated }: Props) {
     setCreating(true);
     setError(null);
     try {
-      const game = await createGame(count);
+      const game = await createGame(count, resignAllowed);
       onCreated(game.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('onlineSetup.createFailed'));
@@ -39,6 +40,17 @@ export default function OnlineSetup({ onCreated }: Props) {
         </select>
       </div>
       <p>{t('onlineSetup.linkNote')}</p>
+
+      <div className="sound-prompt">
+        <div className="sound-prompt-question">{t('setup.resignAllowedQuestion')}</div>
+        <button
+          className={`btn-sound ${resignAllowed ? 'is-on' : 'is-off'}`}
+          onClick={() => setResignAllowed((v) => !v)}
+          title={resignAllowed ? t('setup.resignDisableTitle') : t('setup.resignEnableTitle')}
+        >
+          {resignAllowed ? t('setup.resignOn') : t('setup.resignOff')}
+        </button>
+      </div>
 
       {error && <p className="online-error">{error}</p>}
       <button className="action-btn btn-start" onClick={handleCreate} disabled={creating}>

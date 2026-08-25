@@ -3,7 +3,7 @@ import { verifySession, type SessionPayload } from '../auth/tokens';
 import { pool } from '../db/pool';
 import { lobbyRoom } from './io';
 import { registerGameplayHandlers } from './gameplay';
-import { registerAbortHandlers } from './abort';
+import { registerResignHandlers } from './resign';
 
 async function isParticipant(gameId: string, playerId: string): Promise<boolean> {
   const { rows } = await pool.query('select 1 from game_seats where game_id = $1 and player_id = $2', [
@@ -37,6 +37,6 @@ export function registerConnectionHandlers(io: Server): void {
     });
 
     registerGameplayHandlers(io, socket, session);
-    registerAbortHandlers(io, socket, session);
+    registerResignHandlers(io, socket, session);
   });
 }

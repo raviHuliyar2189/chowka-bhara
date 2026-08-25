@@ -20,7 +20,8 @@ interface SeatRow {
 
 async function loadLobby(gameId: string) {
   const gameResult = await pool.query(
-    `select g.id, g.status, g.created_by, g.seat_count, g.state, p.display_name as created_by_name
+    `select g.id, g.status, g.created_by, g.seat_count, g.resign_allowed, g.state,
+            p.display_name as created_by_name
      from games g join players p on p.id = g.created_by
      where g.id = $1`,
     [gameId]
@@ -32,6 +33,7 @@ async function loadLobby(gameId: string) {
         created_by: string;
         created_by_name: string;
         seat_count: number;
+        resign_allowed: boolean;
         state: unknown;
       }
     | undefined;
@@ -53,6 +55,7 @@ async function loadLobby(gameId: string) {
     createdBy: game.created_by,
     createdByName: game.created_by_name,
     seatCount: game.seat_count,
+    resignAllowed: game.resign_allowed,
     // Present once the game has actually started — lets a participant who reopens the link
     // (closed tab, refreshed, switched devices) rejoin straight into the live board instead of
     // a waiting room that's already moved on.
@@ -89,10 +92,11 @@ gamesRouter.post('/games', async (req, res) => {
     res.status(400).json({ error: 'seatCount must be 2, 3, or 4.' });
     return;
   }
+  const resignAllowed = Boolean(req.body?.resignAllowed);
 
   const gameResult = await pool.query(
-    'insert into games (created_by, seat_count) values ($1, $2) returning id',
-    [req.player!.playerId, seatCount]
+    'insert into games (created_by, seat_count, resign_allowed) values ($1, $2, $3) returning id',
+    [req.player!.playerId, seatCount, resignAllowed]
   );
   const gameId = gameResult.rows[0].id as string;
 
