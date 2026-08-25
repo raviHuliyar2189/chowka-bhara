@@ -8,6 +8,7 @@ import { gamesRouter } from './games/routes';
 import { setIo } from './realtime/io';
 import { registerConnectionHandlers } from './realtime/connection';
 
+// (redeploy trigger — no functional change)
 const app = express();
 
 app.use(cors({ origin: env.appUrl }));
