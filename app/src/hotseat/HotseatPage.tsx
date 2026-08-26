@@ -14,6 +14,8 @@ import {
 } from '../game/turnEngine';
 import { computePlacements, applyPlacementsToStats, type PlacementEntry } from '../game/session';
 import { loadRoster, saveRoster, loadStats, saveStats, type PlayerStats } from '../game/storage';
+import { chooseAiMove } from '../game/ai';
+import { AI_SEAT, AI_NAME } from '../game/aiOpponent';
 import {
   announceRoll,
   announceTurnStart,
@@ -23,6 +25,7 @@ import {
   announceGattiFormed,
   announceHint,
   setAnnouncerEnabled,
+  waitForAnnouncer,
 } from '../audio/announcer';
 import { useT } from '../i18n/strings';
 import Board from '../components/Board';
@@ -39,6 +42,10 @@ const COLORS: Record<PlayerId, string> = {
   P3: '#3f7d4f',
   P4: '#c07a12',
 };
+
+// Same pacing as VsComputerPage.tsx's own AI turn — see that file's comment for why it's "whichever
+// is longer of this and the announcement actually finishing," not just a fixed delay.
+const AI_MOVE_DELAY_MS = 2000;
 
 export interface SetupPlayer {
   id: PlayerId;
@@ -72,6 +79,14 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
   const [soundOn, setSoundOn] = useState(true);
   const [rollbackEnabled, setRollbackEnabled] = useState(false);
   const [resignAllowed, setResignAllowed] = useState(false);
+  // Set only when setup was given exactly 1 human player — that seat (see handleStart) is then
+  // secretly played by the same AI Vs Computer uses, reusing its exact decision logic. null for
+  // every other player count, where every seat is a real human sharing this device as normal.
+  const [aiSeat, setAiSeat] = useState<PlayerId | null>(null);
+  // The originally-selected player count (1-4, "1" for the solo-vs-AI option) — used only for the
+  // games1p/2p/3p/4p stats bucket (§10), tracked separately from `game.players.length` since that
+  // would be 2 for a solo-vs-AI game (the AI's own seat included).
+  const [seatCount, setSeatCount] = useState(4);
   const [hint, setHint] = useState<{ text: string; key: number } | null>(null);
   // The persistent turn banner's current text — replaces reading game.message directly (see
   // i18n/strings.ts: that field is generated inside the language-agnostic game-core reducer and
@@ -185,7 +200,16 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
     const nextRoster = Array.from(new Set([...roster, ...players.map((p) => p.name)]));
     setRoster(nextRoster);
     saveRoster(nextRoster);
-    const fresh = createGame(players.map((p) => ({ id: p.id, name: p.name, color: COLORS[p.id] })));
+    // "1 player" secretly plays against the same AI Vs Computer uses — added here (after the
+    // roster update above, which intentionally only ever sees the real human names entered) so
+    // AI_NAME never pollutes the saved roster or the room name picker.
+    const isSoloVsAi = players.length === 1;
+    setAiSeat(isSoloVsAi ? AI_SEAT : null);
+    setSeatCount(players.length);
+    const playerDefs = isSoloVsAi
+      ? [...players, { id: AI_SEAT, name: AI_NAME }]
+      : players;
+    const fresh = createGame(playerDefs.map((p) => ({ id: p.id, name: p.name, color: COLORS[p.id] })));
     prevRevertSeq.current = 0;
     prevRankingIds.current = [];
     if (allowCustomSetup) {
@@ -242,11 +266,11 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
     setEditorState(null);
   }
 
-  function endGameIfOver(next: GameState) {
+  function endGameIfOver(next: GameState, resignedNames: string[] = []) {
     setGame(next);
     if (next.phase === 'game-over') {
       const placements = computePlacements(next);
-      const updatedStats = applyPlacementsToStats(stats, placements);
+      const updatedStats = applyPlacementsToStats(stats, placements, seatCount, resignedNames);
       setStats(updatedStats);
       saveStats(updatedStats);
       setSessionResults((prev) => [...prev, { players: next.players.map((p) => p.name), placements }]);
@@ -266,6 +290,39 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
   function handleFormGatti(pos: number) {
     if (game) endGameIfOver(formGattiMove(game, pos));
   }
+
+  // "1 player" mode only (aiSeat set — see handleStart) — drives that seat's turn automatically,
+  // reusing the exact same reducer calls the human's own buttons use. Mirrors
+  // VsComputerPage.tsx's own copy of this effect exactly (including its pacing rationale);
+  // duplicated rather than shared since the two pages otherwise have little in common structurally
+  // (this one also has to coexist with rollback/resign/the Board Editor).
+  useEffect(() => {
+    if (!aiSeat || !game || game.phase === 'game-over') return;
+    if (game.players[game.currentTurnIndex].id !== aiSeat) return;
+
+    let cancelled = false;
+    Promise.all([new Promise((resolve) => setTimeout(resolve, AI_MOVE_DELAY_MS)), waitForAnnouncer()]).then(() => {
+      if (cancelled) return;
+      if (game.phase === 'awaiting-roll') {
+        handleRoll();
+      } else if (game.phase === 'awaiting-selection') {
+        const move = chooseAiMove(game, aiSeat);
+        if (move) {
+          const afterValue = selectPoolValue(game, move.poolIndex);
+          if (move.kind === 'move') {
+            endGameIfOver(selectPiece(afterValue, move.pieceId));
+          } else {
+            endGameIfOver(formGattiMove(afterValue, move.pos));
+          }
+        }
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiSeat, game?.currentTurnIndex, game?.phase, game?.pool.length, game?.rollHistory.length]);
+
   function handlePieceClickedBeforeValue() {
     const text = t('hint.selectValueFirst');
     announceHint('hint.selectValueFirst');
@@ -280,8 +337,13 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
     if (!game) return;
     const resigningPlayer = game.players[game.currentTurnIndex];
     setResignedPlayerName(resigningPlayer.name);
-    setResignedIds((prev) => [...prev, resigningPlayer.id]);
-    endGameIfOver(removePlayers(game, [resigningPlayer.id]));
+    // Computed synchronously (not read back from the `resignedIds` state var, which wouldn't yet
+    // reflect this resignation — setState is async) since endGameIfOver needs the complete,
+    // up-to-date list of names right now if this resignation happens to end the game.
+    const updatedResignedIds = [...resignedIds, resigningPlayer.id];
+    setResignedIds(updatedResignedIds);
+    const resignedNames = game.players.filter((p) => updatedResignedIds.includes(p.id)).map((p) => p.name);
+    endGameIfOver(removePlayers(game, [resigningPlayer.id]), resignedNames);
   }
   function handleRematch() {
     if (!game) return;

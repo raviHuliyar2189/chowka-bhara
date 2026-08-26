@@ -13,11 +13,22 @@ export const PLAYER_COLORS: Record<PlayerId, string> = {
 // Same reasoning as PLAYER_COLORS above — the ordered seat list for a given player count, shared
 // between the online server (seat assignment) and client (lobby placeholder rendering) so they
 // can't drift apart. 2-player games sit at opposite bases (P1/P3), not any arbitrary pair.
+// 1 is a real, valid seat count — see AI_SEAT below: "1 player" always secretly becomes a 2-seat
+// game against the AI, so P1 is the only seat any of this ever assigns to a real (human) player.
 export const SEATS_BY_COUNT: Record<number, PlayerId[]> = {
+  1: ['P1'],
   2: ['P1', 'P3'],
   3: ['P1', 'P2', 'P3'],
   4: ['P1', 'P2', 'P3', 'P4'],
 };
+
+// The AI opponent's seat and display name, whenever a mode's "1 player" option is used (hotseat,
+// Develop Test, and online all secretly play the same 2-seat game against this same AI — see each
+// mode's own AI-driving code). Shared here so hotseat/Vs Computer (client-driven) and the online
+// server (server-driven, no client ever sitting at this seat) can never drift apart on which seat
+// or name means "this is the computer, not a real player."
+export const AI_SEAT: PlayerId = 'P3';
+export const AI_NAME = 'Indramma';
 
 // P1's 25-step path: index 0 = home, 1-15 = outer ring, 16-23 = inner ring, 24 = center.
 const P1_PATH: Coord[] = [

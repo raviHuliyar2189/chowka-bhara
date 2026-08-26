@@ -165,19 +165,37 @@ center behavior, which stay exactly as described above.
 - **Gatti movement**: a bonded gatti advances only on pool values **2, 4, or 8**, moving by
   (respectively) **1, 2, or 4** squares — half the normal per-value distance. Every other value
   (1, 3) is simply not a legal move for that gatti; the player can still use it on another piece.
-- **Gatti capture (by a gatti)**: a gatti landing on any occupied opponent cell captures
-  **everything** there — a lone piece, an entire tollu (both pieces), or an opposing gatti (both
-  pieces) — all sent home. A gatti capture grants the normal capture bonus roll (§5.6), same as
-  any other capture.
+- **Gatti capture (by a gatti)**: for **each opponent** present on the landing cell, independently,
+  a gatti captures only that opponent's single highest-priority group — their **gatti** pair, if
+  they have one there; else their **tollu**; else a lone **single** — never more than one group
+  from the same opponent, so at most 2 of their pieces are ever sent home this move even if they
+  happened to have several groups coexisting on that cell (e.g. their own gatti pair *and* a
+  separate tollu both sharing it — only the gatti is taken, the tollu is left completely alone). If
+  that opponent has two entirely separate gatti pairs there, only one pair is captured — the other
+  survives untouched. Different opponents sharing the same cell are each resolved this way
+  independently, so a single gatti move can still capture from more than one opponent at once (e.g.
+  one opponent's gatti *and* a different opponent's lone single, in the same move) — the "only one
+  group" limit is per-opponent, not a hard cap on the whole move. A gatti capture grants the normal
+  capture bonus roll (§5.6), same as any other capture.
 - **A single piece can never capture a gatti** — landing exactly on an opponent's gatti's cell is
   legal but captures nothing; the two simply coexist on that cell.
 - **A single piece can never cross (jump over) a cell occupied by an opponent's gatti** — a move
   whose path would pass over such a cell is illegal outright, even if the final landing square
   itself is empty. Landing *exactly* on the gatti's cell is fine (see above); continuing further
   past it is only possible on some later turn, once actually starting from that cell.
+- **The rest is at least a full turn, not just one move**: a piece that just landed on an
+  opponent's gatti cell can't be moved again *at all* — with any pool value, including a further
+  value from the same bonus-roll chain — until it survives all the way to its own owner's next
+  turn. Only then (assuming the gatti hasn't moved away and captured it first — below) is it free
+  to continue.
 - **A gatti moving away exposes whoever it left behind**: any single opposing piece that had been
   resting on a gatti's cell (having stopped there instead of crossing it) is captured the instant
   that gatti moves off the cell, whichever direction/turn that happens.
+- **A cell can hold any combination** of a player's own gatti pair(s), an incidental tollu, and
+  lone singles at once — including two entirely separate gatti pairs of the *same* player (e.g.
+  pieces 1+2 bonded one way, 3+4 bonded separately) coinciding on one cell. Each pair only ever
+  moves with its own actual bonded partner, never "whichever other gatti piece happens to be
+  here" — tracked via an explicit bond between the two piece ids, not just shared position.
 
 ## 8. Winning & Rankings
 
@@ -202,18 +220,25 @@ center behavior, which stay exactly as described above.
   behind them, so their placement is correct (and permanently stable) the moment they finish,
   regardless of who had already dropped out before them.
 
-## 9. Hotseat: Setup, Abort & Session Flow
+## 9. Hotseat: Setup, Resign & Session Flow
 
 *(This section is hotseat-specific — see §13 for how setup/abort/session work in online mode,
 which differ meaningfully since players aren't sharing one device.)*
 
 ### Setup
-- At the start of a session, let the host pick 2–4 players.
-- For each seat, allow either selecting an existing/previously-played player (from stored roster) or
-  entering a new player name. The roster picker is a plain `<select>` next to the free-text name
-  input (not an `<input list>`/`<datalist>` combobox — see §12's Decisions log for why: several
-  browsers stop reopening a datalist's suggestions once the field's value exactly matches one of
-  them, so switching to a different roster name required clearing the field first).
+- At the start of a session, let the host pick 1–4 players.
+- **1 player** is a real option, not a placeholder — it secretly plays the same 2-seat game against
+  the same AI opponent Vs Computer uses (§14): the setup screen only asks for the one human's name
+  (no seat rows for the AI at all), and once the game starts, a second seat named **"Indramma"**
+  plays itself out automatically using the exact same decision logic Vs Computer's AI turn does.
+  The "Indramma" name never pollutes the saved roster, and it doesn't need Resignation Allowed
+  special-cased — resigning still just means the human forfeiting, which (with only the AI left)
+  ends the game the same way any single-survivor forfeit does.
+- For each *human* seat, allow either selecting an existing/previously-played player (from stored
+  roster) or entering a new player name. The roster picker is a plain `<select>` next to the
+  free-text name input (not an `<input list>`/`<datalist>` combobox — see §12's Decisions log for
+  why: several browsers stop reopening a datalist's suggestions once the field's value exactly
+  matches one of them, so switching to a different roster name required clearing the field first).
 - Assign colors/base positions per §3 and display them on the board and player list.
 - A **"Resignation Allowed?"** toggle, alongside the sound and roll-back toggles, defaulting to
   **Not Allowed**. Controls whether the Resign Game button (below) appears during the game at all.
@@ -247,28 +272,36 @@ which differ meaningfully since players aren't sharing one device.)*
 ## 10. Statistics
 
 Tracked **per player**:
-- Total games played — includes games that were fully aborted (see below).
+- Total games played.
 - "1st Win" % — finished 1st.
 - "2nd Win" % — finished 2nd.
 - "3rd Win" % — finished 3rd.
-- "Loss" % — finished last, was forfeited/removed during a partial abort, or lost via the
-  no-capture-chance rule (§7), while other players continued the game.
-- "Aborted" % — the game was called off before any placements were decided. Vs Computer (§14) is
-  the only mode with this outcome any more: hotseat and online both replaced their old in-game
-  abort flows with unconditional self-Resign (§9/§13), which is always just a forfeit/Loss for the
-  resigning player, not a whole-game abort — nobody else's stats are affected by another player's
-  resignation.
+- "Loss" % — finished last, resigned, or lost via the no-capture-chance rule (§7), while other
+  players continued the game.
+- "Resigned" % — an **informational sub-count, not exclusive with Loss**: a resignation is still
+  always counted as a Loss too (§8) — this just additionally tracks what fraction of a player's
+  games ended via Resign specifically, rather than a natural last-place finish or a no-capture-
+  chance elimination.
 - "Declined" % (**online only**) — the player declined an invite (§13). Recorded the moment they
   decline, independent of whether that game ever actually starts. Distinct from every other
   category, including the pre-start creator cancellation (§13), which isn't recorded anywhere.
+
+**Next level: games by player count** — a second, deeper breakdown (shown in the per-player Stats
+modal, reached by clicking a player's name) of how many games that player has played at each
+originally-selected player count: **1 Player**, **2 Player**, **3 Player**, **4 Player** — raw
+counts, not percentages. "1 Player" always means the solo-vs-AI option (hotseat/online's own
+"1 player" choice, §9/§13, or Vs Computer, which is this experience by construction, §14) even
+though it's a real 2-seat game underneath — bucketed by what the human actually chose at setup, not
+by how many `GameState.players` entries the engine ends up with. Online's own bucket uses the
+game's originally-planned seat count (however many actually joined vs. declined doesn't change it).
 
 **Hotseat**: stats are per-player-name, stored in the browser (`localStorage`) — see §12's "still
 open" note; not synced across devices or browsers.
 
 **Online**: stats are per-account, stored server-side (Postgres `player_stats` table, one row per
-registered player, bumped by the server whenever a game finishes or is aborted) — persistent
-across every device that account logs into. There is currently no UI to view online stats (the
-data is recorded but not yet surfaced in the online screens).
+registered player, bumped by the server whenever a game finishes) — persistent across every device
+that account logs into. There is currently no UI to view online stats (the data is recorded but not
+yet surfaced in the online screens).
 
 All stats are shown as a percentage of total games played. Clicking a player's name (on the board,
 or in the session summary table) opens their full lifetime statistics (**hotseat only**, currently).
@@ -285,10 +318,10 @@ matching the board's height so it never resizes as its content changes) contains
 5. The cumulative list of pool values still to be played this turn, labeled in Kannada
    "ನಡೆಸಬೇಕಾದ ಗರಗಳು" ("moves still to be made").
 6. The Resign Game button, shown only when Resignation Allowed was turned on at setup — hotseat
-   (§9) and online (§13) both use this same unconditional self-resign flow now, identical in
-   behavior. Vs Computer keeps its own separate, unconditional, always-shown Abort Game button
-   (§14) instead — that mode has no opposing human player to resign to, so it's spelled and behaves
-   differently on purpose.
+   (§9), online (§13), and Vs Computer (§14) all use this same unconditional self-resign flow,
+   identical in behavior everywhere; Vs Computer's one necessary adaptation is *who* it resigns
+   (always the human, since there's no "whoever's turn it is" to pick between when only one seat is
+   ever human — see §14).
 7. The sound on/off toggle (mirrors the one on the setup screen — see below).
 
 *(Numbering above follows the original spec as given; item 4 was not specified. Online mode's
@@ -301,14 +334,25 @@ label's hover tooltip). Reflects the same `hasCaptured` flag that gates inner-ri
 doubles as a visible explanation for why a player's pieces can't yet enter the inner ring. Shown in
 every mode, on the shared `Board` component — not mode-specific.
 
-### Gatti formation control
-When an inner-ring cell holds an eligible tollu of the current player's own pieces (§7) and a pool
-value of exactly 2 is selected, a small "Form Gatti" badge appears pinned to that cell — a
-distinct affordance from clicking a piece, since bonding moves both pieces together by a
-different distance than selecting either one alone would. A bonded gatti's two pieces render with
-a distinct ring/outline so their state is visible at a glance, separate from the ordinary
-legal/illegal/active-turn piece highlighting. Shown in every mode (hotseat, Vs Computer, online),
-on the shared `Board` component.
+### Gatti & Tollu visuals
+- **Forming a gatti**: when an inner-ring cell holds an eligible tollu of the current player's own
+  pieces (§7) and a pool value of exactly 2 is selected, a small "Form Gatti" badge appears pinned
+  to that cell — a distinct affordance from clicking a piece, since bonding moves both pieces
+  together by a different distance than selecting either one alone would.
+- **A gatti renders as one capsule**, not two separate piece beads: both bonded pieces sit inside a
+  single translucent pill shape that moves as a unit (one animated element, not two coincidentally
+  matching ones) — clicking anywhere on the capsule selects the pair, exactly as clicking either
+  underlying piece would.
+- **A tollu renders with a shared grouping cue** (a dashed outline around the two pieces) so it
+  reads as a meaningful pairing at a glance — but the two pieces underneath stay fully independent:
+  either can still be clicked and moved on its own, same as any lone piece (the player's other
+  choice besides forming a gatti — see §7).
+- This grouping (gatti capsule / tollu outline / plain lone piece) only ever applies inside the
+  inner ring, matching where the gatti-tollu rules themselves apply — pieces sharing home or the
+  center (every player starts with all 4 stacked at home) always render as plain individual pieces,
+  never as a "tollu," since stacking there is just ordinary safe-cell behavior with nothing
+  gatti-related about it.
+- Shown in every mode (hotseat, Vs Computer, online, Develop Test) on the shared `Board` component.
 
 ### Player status indicator
 A second line on every player's home label shows their live status, one of: **Playing** (still
@@ -392,8 +436,9 @@ opened in) restrict storage access and throw rather than just returning empty �
 here was a real, reproduced cause of the app getting stuck (see §12).
 
 ### Setup screen
-- Player count (2–4) selectable, with per-seat name entry; existing roster names can be reused,
-  new names typed freely.
+- Player count (1–4) selectable, with per-seat name entry for however many human seats that
+  implies (just one for the "1 player" option — see §9); existing roster names can be reused, new
+  names typed freely.
 - The sound on/off prompt is shown after player selection, phrased as a yes/no-style question
   ("Do you want announcements or instructions?").
 
@@ -698,6 +743,108 @@ Resolved during requirements gathering:
   a live browser pass (Develop Test's Board Editor, dragging a tollu into place) confirming the
   on-board "Form Gatti" button and gatti styling actually appear and work end-to-end, not just the
   underlying reducer logic.
+- **Gatti & Tollu follow-up — 2 correctness fixes plus the real visuals** (§7/§11): a closer re-read
+  of the source requirement against the first pass above surfaced two gaps, both fixed in
+  `packages/game-core/src/rules.ts`:
+  - The "rest for at least one turn" wording wasn't actually enforced as a full turn — a piece that
+    landed on an opponent's gatti could still be moved again later the *same* turn (e.g. off a
+    second pool value from a bonus-roll chain), since legality was only ever checked against the
+    piece's current position, with nothing remembering it had just arrived there. Fixed with a new
+    `Piece.restingOnGatti` flag, set on landing and cleared only when `turnEngine.ts`'s
+    `advanceTurn` next hands the turn back to that piece's own owner.
+  - Two of a player's own separate gatti pairs (e.g. pieces 1+2 bonded one way, 3+4 bonded
+    separately) could end up sharing one cell — explicitly called out as a valid combination in the
+    follow-up ask — but `movePiece` found a moving gatti's "partner" by scanning for *any* other
+    gatti piece at the same position, which would grab the wrong sibling once two pairs coincided.
+    Fixed with an explicit `Piece.gattiPartnerId` link, set when the pair bonds, instead of
+    inferring it from shared position.
+  Also replaced the placeholder visuals from the first pass: a gatti now renders as one translucent
+  capsule containing both pieces (a single animated element, so it visibly moves as one unit rather
+  than two pieces that happen to always land together), and a tollu gets a dashed-outline grouping
+  cue around its two still-independently-movable pieces — both gated to the inner ring only, so the
+  4 pieces every player starts stacked at home never render as a "tollu." Verified with an expanded
+  scripted suite (40 assertions total: the original 9 mechanics plus explicit coverage of the two
+  fixes — two separate pairs correctly finding their real partners, and a resting piece provably
+  blocked mid-turn then provably freed once its own next turn genuinely arrives) and a second live
+  browser pass confirming the capsule and dashed-tollu grouping actually render as designed, not
+  just that the underlying state is correct.
+- **"Resign Game" everywhere, no more "Abort Game"** (§14): Vs Computer was the last mode still
+  using its own separate, always-shown, unconditional "Abort Game" button — hotseat and online had
+  already moved to the toggle-gated self-Resign concept in earlier rounds (§9/§13). Replaced for
+  consistency, at the user's explicit request that behavior be identical across every mode: Vs
+  Computer now has the same "Resignation Allowed?" setup toggle and Resign Information notice,
+  resigning the human specifically (the one adaptation necessary — there's no "whoever's turn it
+  is" to resign to when only one seat is ever human). This made the "Aborted" stats category (§10)
+  fully dead across the whole app — the last mode that could ever produce it stopped — so it was
+  removed outright (`applyAbortToStats`, the `aborted` field on `PlayerStats`, the Stats/Results
+  modals' Aborted columns) rather than left showing a permanently-zero column. The server's
+  `player_stats.aborted` database column is left in place, unused, matching how online's own
+  earlier abort-to-resign migration (§13's own history) already handled the same situation.
+- **"1 player" option, secretly playing the AI** (§9/§13/§15): added to hotseat, online, and
+  Develop Test's player-count choices (Vs Computer already *is* this experience by construction, so
+  it needed no new option) at the user's explicit request that it "behave the same as the single
+  player game" — confirmed via clarifying question to mean a real AI opponent, not a solo sandbox
+  with no one to play against. Hotseat/Develop Test reuse Vs Computer's own client-driven AI-turn
+  effect verbatim (same `chooseAiMove`, same pacing) once `handleStart` detects only one human name
+  was entered. Online required genuinely new infrastructure, since no client is ever connected for
+  an AI-controlled seat: the server now schedules and plays that seat's turns itself
+  (`maybeScheduleAiTurn`/`runAiTurn` in `gameplay.ts`, called after every state-changing action —
+  roll, move, resign, rematch — so a bonus-roll chain keeps the AI playing itself out exactly like
+  the client-driven version's effect re-firing does), broadcasting each move over the same
+  `game-updated` event a real opponent's move would use. AI-controlled is determined by the
+  *absence* of a `game_seats` row for the AI's seat, not by name or seat id alone, so it can never
+  misfire against a real player who happens to be seated there in an ordinary 2+ player game.
+  `AI_SEAT`/`AI_NAME` were promoted from Vs Computer's own local constants into
+  `packages/game-core/paths.ts` (alongside the already-shared `PLAYER_COLORS`/`SEATS_BY_COUNT`) so
+  all three drivers — Vs Computer, hotseat/Develop Test, and the online server — can never disagree
+  on what "the computer" means. Verified live: a 1-player online game skips the waiting room
+  entirely (creator alone is already enough to start) and the AI's turns visibly play out with zero
+  second browser/account involved; the equivalent hotseat flow was verified the same way.
+- **Gatti capture corrected to a per-opponent priority, not "capture everything"** (§7): the first
+  gatti-tollu pass had a gatti capture *every* piece occupying its landing cell in one move. The
+  user corrected this: a gatti captures only **one** group per opposing player present — their
+  gatti pair if they have one there, else their tollu, else a lone single (in that priority order)
+  — leaving any lower-priority group of that *same* opponent completely untouched, even if they
+  happen to have several coexisting on the cell at once (a real, already-supported combination —
+  e.g. their own gatti pair *and* a separate tollu both sharing it). At most 2 of that one
+  opponent's pieces are ever taken; a *different* opponent also present is resolved independently
+  and can still lose their own top-priority group in the same move. If an opponent has two entirely
+  separate gatti pairs on the cell, only one pair is taken (the one containing the lower piece id,
+  an arbitrary but deterministic tie-break) — the other survives. Verified with a dedicated 8-
+  assertion script covering: a gatti-and-tollu of the same opponent (only the gatti taken), a
+  tollu-only opponent (unchanged, whole tollu taken), two separate gatti pairs of one opponent
+  (exactly one taken, the other intact and still validly bonded), and two different opponents
+  present at once (each independently loses their own top-priority group in the same move).
+- **"Resigned" stat replaces "Aborted"** (§10): now that no mode has an "Aborted" outcome left to
+  track (§12's earlier Vs-Computer-Resign entry made it fully dead), the freed-up slot in both the
+  per-player Stats modal and the session-summary table now shows "Resigned %" instead — an
+  *informational* sub-count of Loss (§8), not a replacement for it: a resignation is still counted
+  as a Loss the same as any other, this just additionally tracks what fraction of those losses were
+  via Resign specifically. Threaded through as an explicit `resignedNames: string[]` parameter
+  (client: `applyPlacementsToStats`; server: `applyAndBroadcast`'s new `getResignedNames` thunk,
+  called only after resign.ts's own mutator has run and actually knows who resigned, then on into
+  `recordGameFinished`) rather than inferred after the fact, since a resignation is otherwise
+  indistinguishable from any other Loss once the game has already ended.
+- **"Games by player count" — a second, deeper stats breakdown** (§10): added at the user's
+  request as the "next level" of the existing per-player Stats modal — four new counters
+  (`games1p`/`2p`/`3p`/`4p`) bucketed by whatever seat count was *originally selected* at setup, not
+  however many `GameState.players` the engine ends up with (which would always read 2 for a
+  solo-vs-AI game). Hotseat/Vs Computer track the selected count directly in local component state;
+  online's server-side equivalent (`server/src/games/stats.ts`) reads the game's own stored
+  `seat_count` column instead, so a "4 planned, 1 declined" game still correctly counts as 4-player
+  for everyone who actually played, not 3. Required a new migration
+  (`007_resigned_and_seatcount_stats.sql`) adding `resigned`/`games_1p..4p` columns to the server's
+  `player_stats` table, applied locally and verified by directly querying Postgres after a live
+  online resignation: the resigning player's row showed `resigned: 1, losses: 1, games_2p: 1`, the
+  survivor's showed `first: 1, games_2p: 1` — both exactly as expected. Also added defensive
+  normalization (`{ ...EMPTY_STATS, ...existing }`) everywhere a stored stats entry is read or
+  updated, both client-side and in the two stats-displaying modals, so a player's older-shaped
+  saved data (from before these fields existed) backfills to 0 instead of showing `NaN%` until
+  their next game happens to touch it.
+- **AI opponent renamed "Computer" → "Indramma"** (§9/§13/§14): a single shared constant
+  (`AI_NAME` in `packages/game-core/paths.ts`), so hotseat/Develop Test's "1 player" option, Vs
+  Computer, and the online server's AI-driving code all picked up the new name automatically with
+  one change, no risk of the three drifting to different names.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
@@ -720,7 +867,17 @@ Still open / assumed defaults (flag if any of these are wrong):
   "Welcome, {name}!" acknowledgment screen in between.
 
 ### Creating, inviting & joining a game
-- The creator picks a player count (2–4) and creates the game; they're automatically seated as P1.
+- The creator picks a player count (1–4) and creates the game; they're automatically seated as P1.
+- **1 player** secretly plays against the AI, same as hotseat/Develop Test's own "1 player" option
+  (§9) — the only difference here is *where* that AI's turns are driven from: since no client is
+  ever connected for that seat, the server itself schedules and plays them (same pacing, same
+  `chooseAiMove` decision logic as the client-driven versions), broadcasting each move over the
+  normal `game-updated` socket event exactly like a real opponent's move would be. There's no
+  waiting room to speak of — the creator alone is already enough to start (`canStart` needs just 1
+  joined player, not 2), no invite link is generated or auto-opened, and Resignation Allowed works
+  unchanged (the human resigning just ends the game, the AI seat was never a real participant to
+  ask). A 1-player game's AI seat deliberately gets no `game_seats` row at all — that absence
+  *is* how the server tells a real 2nd player apart from "this is the computer."
 - The game gets a shareable URL (`/games/:id`). **Who specifically gets invited is decided entirely
   inside WhatsApp**, not this app — a "Share on WhatsApp" link opens `wa.me` with the invite text
   pre-filled (who started the game, the planned player count, who's joined so far, the link), where
@@ -754,9 +911,10 @@ Still open / assumed defaults (flag if any of these are wrong):
   trusting whatever seat it was assigned at join time, since this reassignment can change it (see
   §12's Decisions log for the bug this caused before that re-fetch existed).
 - **The creator alone can cancel the game while it's still in the lobby** (before Start), with no
-  vote or confirmation needed from anyone else — different from in-game Abort (below), which does
-  require consensus once play has actually started. Not counted in anyone's stats, since the game
-  never started.
+  vote or confirmation needed from anyone else — a genuinely different action from in-game Resign
+  (below), which is a single player's own unconditional call, not something anyone else needs to
+  agree to either, but only available once play has actually started. Not counted in anyone's
+  stats, since the game never started.
 - Opening a link to a game that's already in progress rejoins the participant straight into the
   live board (closed tab, refreshed page, or a different device) instead of a stale waiting room.
 - Opening a link to a game the creator cancelled pre-start shows an explicit "this game was
@@ -829,7 +987,7 @@ removed — see §12); an unused `resend` dependency remains installed but uncal
 ## 14. Vs Computer
 
 A single-device mode like hotseat, but always exactly 2 players: the human (P1) and a
-computer-controlled opponent (P3, "Computer") — opposite bases, per the existing 2-player
+computer-controlled opponent (P3, **"Indramma"**) — opposite bases, per the existing 2-player
 convention. No account or roster picker — just enter a name and start.
 
 ### AI opponent
@@ -856,24 +1014,29 @@ naturally continues the computer's turn the same way it would for a human, no sp
 needed.
 
 ### Differences from hotseat
-- **Setup**: just the human's name — no player-count or roster picker.
-- **Abort**: hotseat's multi-player consensus flow (§9) doesn't apply with only one real person to
-  ask — clicking Abort Game ends the game immediately, no confirmation cycling, but (like a normal
-  finish) offers the same **Rematch / End Session** choice afterward rather than dropping straight
-  back to the name-entry screen — just with no placement list shown, since nobody was actually
-  ranked.
+- **Setup**: just the human's name and the same **"Resignation Allowed?"** toggle hotseat has (§9)
+  — no player-count or roster picker (always exactly the 2 seats above).
+- **Resign**: identical behavior to hotseat's own Resign (§9) — same toggle-gated button, same
+  unconditional forfeit, same Resign Information notice — with one necessary adaptation: it always
+  resigns the human specifically (`HUMAN_SEAT`), not "whoever's turn it currently is" (hotseat's
+  rule, which only makes sense when multiple humans share one device). With just one real
+  decision-maker here, resigning the human is the only meaningful interpretation, and — since only
+  the AI is left afterward — it ends the game the same way any single-survivor forfeit does,
+  landing on the normal placements screen once the notice is dismissed. (Vs Computer used to have
+  its own separate, unconditional, always-shown "Abort Game" instead; replaced for consistency —
+  every mode now uses the same self-Resign concept, see §12.)
 - **Announcements, stats, rematch/new-session**: identical to hotseat — every announcement (turn
   start, roll, capture, finish) is heard regardless of whose turn it is, same as hotseat/online
   (§11), including the computer's own turn; results/stats use the same `localStorage`
-  roster-keyed persistence (§10), always including "Computer" as one of the two players; "End
+  roster-keyed persistence (§10), always including "Indramma" as one of the two players; "End
   Session" returns to mode-select the same way hotseat's does (§9).
 
 ## 15. Develop Test
 
 A testing/debugging mode for reaching a specific board position without playing through many
-random dice rolls first — identical to hotseat (§9) in every respect (setup, gameplay, abort,
-session/rematch, stats) except for one extra screen inserted between player setup and the first
-turn: a **Board Editor**.
+random dice rolls first — identical to hotseat (§9) in every respect (setup — including the
+1-player-vs-AI option, gameplay, resign, session/rematch, stats) except for one extra screen
+inserted between player setup and the first turn: a **Board Editor**.
 
 ### Board Editor screen
 - Shown immediately after picking player count/names, before any dice are rolled.

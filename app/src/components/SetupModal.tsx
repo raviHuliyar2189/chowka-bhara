@@ -15,6 +15,7 @@ interface Props {
 }
 
 const SEATS: Record<number, PlayerId[]> = {
+  1: ['P1'],
   2: ['P1', 'P3'],
   3: ['P1', 'P2', 'P3'],
   4: ['P1', 'P2', 'P3', 'P4'],
@@ -65,6 +66,7 @@ export default function SetupModal({
             {t('setup.numberOfPlayers')}
           </label>
           <select id="playerCount" value={count} onChange={(e) => setCount(Number(e.target.value))}>
+            <option value={1}>{t('setup.nPlayers', 1)}</option>
             <option value={2}>{t('setup.nPlayers', 2)}</option>
             <option value={3}>{t('setup.nPlayers', 3)}</option>
             <option value={4}>{t('setup.nPlayers', 4)}</option>

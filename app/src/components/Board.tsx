@@ -15,7 +15,7 @@ import {
   type PlayerId,
 } from '../game/paths';
 import type { GameState } from '../game/turnEngine';
-import { canMovePiece, tolluAt, type Player } from '../game/rules';
+import { canMovePiece, tolluAt, type Player, type Piece } from '../game/rules';
 import { computePlacements } from '../game/session';
 import { useT, type T } from '../i18n/strings';
 
@@ -97,6 +97,57 @@ const STILL_TRANSITION = { layout: LAYOUT_SPRING, scale: LAYOUT_SPRING } as cons
 const HOVER_LEGAL = { scale: 1.35 };
 const TAP_LEGAL = { scale: 0.9 };
 
+// Gatti-tollu requirement: what one cell's worth of pieces actually renders as. A player's own
+// pieces sharing a cell can be any mix of separate bonded gatti pairs (each rendered as one
+// capsule), an incidental (not yet bonded) tollu pair, and lone singles — grouping this once per
+// cell, rather than rendering every piece independently, is what makes a gatti move as one visual
+// unit and a tollu read as a distinct pairing without actually merging its two still-independently
+// movable pieces.
+type RenderUnit =
+  | { kind: 'single'; player: Player; piece: Piece }
+  | { kind: 'tollu'; player: Player; a: Piece; b: Piece }
+  | { kind: 'gatti'; player: Player; a: Piece; b: Piece };
+
+function groupPieces(piecesHere: { player: Player; piece: Piece }[]): RenderUnit[] {
+  const units: RenderUnit[] = [];
+  const byPlayer = new Map<string, { player: Player; pieces: Piece[] }>();
+  for (const { player, piece } of piecesHere) {
+    const entry = byPlayer.get(player.id) ?? { player, pieces: [] };
+    entry.pieces.push(piece);
+    byPlayer.set(player.id, entry);
+  }
+  for (const { player, pieces } of byPlayer.values()) {
+    const gattiPieces = pieces.filter((p) => p.isGatti);
+    const seen = new Set<number>();
+    for (const p of gattiPieces) {
+      if (seen.has(p.id)) continue;
+      seen.add(p.id);
+      const partner = gattiPieces.find((q) => q.id === p.gattiPartnerId);
+      if (partner) {
+        seen.add(partner.id);
+        units.push({ kind: 'gatti', player, a: p, b: partner });
+      } else {
+        // Bonded pieces always share a position, so this shouldn't normally happen — but render
+        // it as a lone piece rather than crash if the partner is ever missing from this cell.
+        units.push({ kind: 'single', player, piece: p });
+      }
+    }
+    const singles = pieces.filter((p) => !p.isGatti);
+    // Tollu is only a meaningful pairing inside the inner ring (matches tolluAt in rules.ts) —
+    // everywhere else (home, center, the outer ring) sharing a cell is just ordinary stacking with
+    // nothing gatti-related about it, so those always render as plain independent singles even
+    // when 2+ of a player's own pieces happen to coincide (e.g. every piece starts stacked at home).
+    const inInnerRing = (p: Piece) => p.pos >= INNER_RING_START && p.pos <= INNER_RING_END;
+    if (singles.length >= 2 && singles.every(inInnerRing)) {
+      units.push({ kind: 'tollu', player, a: singles[0], b: singles[1] });
+      for (let i = 2; i < singles.length; i++) units.push({ kind: 'single', player, piece: singles[i] });
+    } else {
+      singles.forEach((piece) => units.push({ kind: 'single', player, piece }));
+    }
+  }
+  return units;
+}
+
 export default function Board({
   game,
   onSelectPiece,
@@ -114,6 +165,24 @@ export default function Board({
   const colorOf = (id: PlayerId) => game.players.find((p) => p.id === id)?.color;
   const rotationSteps = rotationStepsFor(viewerSeat);
   const placements = computePlacements(game);
+
+  // Shared by every non-editable render unit below (a lone piece, either half of a tollu, or a
+  // gatti capsule as a whole) — the same selectability/legality/active-pulse logic that used to
+  // live inline in one flat piece loop, now reusable since a gatti capsule computes it once for
+  // the pair rather than per individual piece.
+  function pieceState(player: Player, piece: Piece) {
+    const isCurrentPlayer = player.id === current.id && game.phase !== 'game-over';
+    const isSelectable =
+      isCurrentPlayer && game.phase === 'awaiting-selection' && (viewerSeat === undefined || viewerSeat === current.id);
+    const isLegal = isSelectable && selectedVal !== null && canMovePiece(game.players, player, piece, selectedVal);
+    const isIllegal = isSelectable && selectedVal !== null && !isLegal;
+    const isFinished = piece.pos === FINISH_POS;
+    const relevantVals = selectedVal !== null ? [selectedVal] : game.pool;
+    const hasValidMove =
+      relevantVals.length === 0 || relevantVals.some((v) => canMovePiece(game.players, player, piece, v));
+    const isActive = isCurrentPlayer && !isFinished && hasValidMove;
+    return { isSelectable, isLegal, isIllegal, isActive };
+  }
 
   function handleDragStart(e: DragEvent<HTMLDivElement>, playerId: PlayerId, pieceId: number) {
     e.dataTransfer.setData('text/plain', JSON.stringify({ playerId, pieceId }));
@@ -198,9 +267,8 @@ export default function Board({
               {t('gatti.formButton')}
             </button>
           )}
-          {piecesHere.map(({ player, piece }) => {
-            if (editable) {
-              return (
+          {editable
+            ? piecesHere.map(({ player, piece }) => (
                 <div
                   key={`${player.id}-${piece.id}`}
                   className="piece"
@@ -210,45 +278,94 @@ export default function Board({
                 >
                   {piece.id}
                 </div>
-              );
-            }
-            const isCurrentPlayer = player.id === current.id && game.phase !== 'game-over';
-            const isSelectable =
-              isCurrentPlayer && game.phase === 'awaiting-selection' && (viewerSeat === undefined || viewerSeat === current.id);
-            const isLegal =
-              isSelectable && selectedVal !== null && canMovePiece(game.players, player, piece, selectedVal);
-            const isIllegal = isSelectable && selectedVal !== null && !isLegal;
-            // Pulse (the "active-turn" cue) only pieces that can actually be played: a finished
-            // piece (reached the center) never has a legal move, and once a value is picked only
-            // pieces legal for that specific value should keep pulsing — otherwise, any piece
-            // legal for at least one pending pool value stays highlighted.
-            const isFinished = piece.pos === FINISH_POS;
-            const relevantVals = selectedVal !== null ? [selectedVal] : game.pool;
-            const hasValidMove =
-              relevantVals.length === 0 || relevantVals.some((v) => canMovePiece(game.players, player, piece, v));
-            const isActive = isCurrentPlayer && !isFinished && hasValidMove;
-            return (
-              <motion.div
-                key={`${player.id}-${piece.id}`}
-                layoutId={`${player.id}-${piece.id}`}
-                animate={isActive ? PULSE_ANIMATE : STILL_ANIMATE}
-                transition={isActive ? PULSE_TRANSITION : STILL_TRANSITION}
-                className={`piece${isActive ? ' active-turn' : ''}${isLegal ? ' legal' : ''}${isIllegal ? ' illegal' : ''}${piece.isGatti ? ' gatti' : ''}`}
-                style={{ background: player.color }}
-                whileHover={isLegal ? HOVER_LEGAL : undefined}
-                whileTap={isLegal ? TAP_LEGAL : undefined}
-                onClick={() => {
-                  if (isLegal) {
-                    onSelectPiece(piece.id);
-                  } else if (isSelectable && selectedVal === null) {
-                    onPieceClickedBeforeValue();
-                  }
-                }}
-              >
-                {piece.id}
-              </motion.div>
-            );
-          })}
+              ))
+            : groupPieces(piecesHere).map((unit) => {
+                if (unit.kind === 'single') {
+                  const { player, piece } = unit;
+                  const st = pieceState(player, piece);
+                  return (
+                    <motion.div
+                      key={`${player.id}-${piece.id}`}
+                      layoutId={`${player.id}-${piece.id}`}
+                      animate={st.isActive ? PULSE_ANIMATE : STILL_ANIMATE}
+                      transition={st.isActive ? PULSE_TRANSITION : STILL_TRANSITION}
+                      className={`piece${st.isActive ? ' active-turn' : ''}${st.isLegal ? ' legal' : ''}${st.isIllegal ? ' illegal' : ''}`}
+                      style={{ background: player.color }}
+                      whileHover={st.isLegal ? HOVER_LEGAL : undefined}
+                      whileTap={st.isLegal ? TAP_LEGAL : undefined}
+                      onClick={() => {
+                        if (st.isLegal) onSelectPiece(piece.id);
+                        else if (st.isSelectable && selectedVal === null) onPieceClickedBeforeValue();
+                      }}
+                    >
+                      {piece.id}
+                    </motion.div>
+                  );
+                }
+
+                if (unit.kind === 'tollu') {
+                  const { player, a, b } = unit;
+                  return (
+                    // Purely a visual grouping — each piece underneath keeps its own independent
+                    // click/legal/motion identity, since a tollu's two pieces can still be moved
+                    // individually (the player's other choice besides forming a gatti — see
+                    // canFormGattiHere's own comment).
+                    <div key={`${player.id}-tollu-${a.id}-${b.id}`} className="tollu-group">
+                      {[a, b].map((piece) => {
+                        const st = pieceState(player, piece);
+                        return (
+                          <motion.div
+                            key={`${player.id}-${piece.id}`}
+                            layoutId={`${player.id}-${piece.id}`}
+                            animate={st.isActive ? PULSE_ANIMATE : STILL_ANIMATE}
+                            transition={st.isActive ? PULSE_TRANSITION : STILL_TRANSITION}
+                            className={`piece${st.isActive ? ' active-turn' : ''}${st.isLegal ? ' legal' : ''}${st.isIllegal ? ' illegal' : ''}`}
+                            style={{ background: player.color }}
+                            whileHover={st.isLegal ? HOVER_LEGAL : undefined}
+                            whileTap={st.isLegal ? TAP_LEGAL : undefined}
+                            onClick={() => {
+                              if (st.isLegal) onSelectPiece(piece.id);
+                              else if (st.isSelectable && selectedVal === null) onPieceClickedBeforeValue();
+                            }}
+                          >
+                            {piece.id}
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  );
+                }
+
+                // 'gatti' — a single capsule for the bonded pair, one motion element/layoutId so
+                // it visibly moves as one unit rather than two pieces that just happen to always
+                // land in the same place. Legality/activity is computed once off either piece
+                // (symmetric for a bonded pair — they always share a position and move together).
+                const { player, a, b } = unit;
+                const st = pieceState(player, a);
+                const capsuleKey = `${player.id}-gatti-${Math.min(a.id, b.id)}-${Math.max(a.id, b.id)}`;
+                return (
+                  <motion.div
+                    key={capsuleKey}
+                    layoutId={capsuleKey}
+                    animate={st.isActive ? PULSE_ANIMATE : STILL_ANIMATE}
+                    transition={st.isActive ? PULSE_TRANSITION : STILL_TRANSITION}
+                    className={`gatti-capsule${st.isActive ? ' active-turn' : ''}${st.isLegal ? ' legal' : ''}${st.isIllegal ? ' illegal' : ''}`}
+                    whileHover={st.isLegal ? HOVER_LEGAL : undefined}
+                    whileTap={st.isLegal ? TAP_LEGAL : undefined}
+                    onClick={() => {
+                      if (st.isLegal) onSelectPiece(a.id);
+                      else if (st.isSelectable && selectedVal === null) onPieceClickedBeforeValue();
+                    }}
+                  >
+                    <span className="gatti-pip" style={{ background: player.color }}>
+                      {a.id}
+                    </span>
+                    <span className="gatti-pip" style={{ background: player.color }}>
+                      {b.id}
+                    </span>
+                  </motion.div>
+                );
+              })}
         </div>
       );
     }

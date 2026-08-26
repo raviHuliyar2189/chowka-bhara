@@ -64,7 +64,10 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   // --- Setup (hotseat / develop test) ---
   'setup.title': { en: 'Select Players', kn: 'ಆಟಗಾರರನ್ನು ಆಯ್ಕೆಮಾಡಿ' },
   'setup.numberOfPlayers': { en: 'Number of Players:', kn: 'ಆಟಗಾರರ ಸಂಖ್ಯೆ:' },
-  'setup.nPlayers': { en: (n: number) => `${n} Players`, kn: (n: number) => `${n} ಆಟಗಾರರು` },
+  'setup.nPlayers': {
+    en: (n: number) => `${n} Player${n === 1 ? '' : 's'}`,
+    kn: (n: number) => `${n} ಆಟಗಾರ${n === 1 ? '' : 'ರು'}`,
+  },
   'setup.seatName': { en: (seat: string) => `${seat} Name:`, kn: (seat: string) => `${seat} ಹೆಸರು:` },
   'setup.namePlaceholder': { en: (n: number) => `Player ${n}`, kn: (n: number) => `ಆಟಗಾರ ${n}` },
   'setup.pickFromRoster': { en: '— choose from roster —', kn: '— ಪಟ್ಟಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ —' },
@@ -140,7 +143,6 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'resign.gameButton': { en: 'Resign Game', kn: 'ಆಟದಿಂದ ರಾಜೀನಾಮೆ' },
 
   // --- Shared in-game controls (hotseat / vs-computer / online) ---
-  'game.abortButton': { en: 'Abort Game', kn: 'ಆಟ ರದ್ದುಗೊಳಿಸಿ' },
   'game.reportBug': { en: '🐞 Report Bug', kn: '🐞 ದೋಷ ವರದಿ ಮಾಡಿ' },
   'game.reportBugTitle': { en: 'Report a bug', kn: 'ದೋಷವನ್ನು ವರದಿ ಮಾಡಿ' },
   'game.soundOn': { en: '🔊 Sound On', kn: '🔊 ಧ್ವನಿ ಆನ್' },
@@ -170,7 +172,6 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
 
   // --- Results / session ---
   'results.gameFinished': { en: 'Game Finished!', kn: 'ಆಟ ಮುಗಿದಿದೆ!' },
-  'results.gameAborted': { en: 'Game Aborted', kn: 'ಆಟ ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ' },
   'results.place': { en: (place: number) => `Place ${place}`, kn: (place: number) => `${place}ನೇ ಸ್ಥಾನ` },
   'results.loss': { en: 'Loss', kn: 'ಸೋಲು' },
   'results.sessionSummary': {
@@ -183,7 +184,7 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'results.secondWinPct': { en: '2nd Win %', kn: '2ನೇ ಗೆಲುವು %' },
   'results.thirdWinPct': { en: '3rd Win %', kn: '3ನೇ ಗೆಲುವು %' },
   'results.lossPct': { en: 'Loss %', kn: 'ಸೋಲು %' },
-  'results.abortedPct': { en: 'Aborted %', kn: 'ರದ್ದಾದ %' },
+  'results.resignedPct': { en: 'Resigned %', kn: 'ರಾಜೀನಾಮೆ %' },
   'results.playAgain': { en: 'Play Again (Same Players)', kn: 'ಮತ್ತೆ ಆಡಿ (ಅದೇ ಆಟಗಾರರು)' },
   'results.endSession': { en: 'End Session', kn: 'ಸೆಷನ್ ಮುಗಿಸಿ' },
 
@@ -194,7 +195,12 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'stats.secondWin': { en: '2nd Win', kn: '2ನೇ ಗೆಲುವು' },
   'stats.thirdWin': { en: '3rd Win', kn: '3ನೇ ಗೆಲುವು' },
   'stats.loss': { en: 'Loss', kn: 'ಸೋಲು' },
-  'stats.aborted': { en: 'Aborted', kn: 'ರದ್ದಾಗಿದೆ' },
+  'stats.resigned': { en: 'Resigned', kn: 'ರಾಜೀನಾಮೆ' },
+  'stats.breakdownTitle': { en: 'Games by Player Count', kn: 'ಆಟಗಾರರ ಸಂಖ್ಯೆಯ ಪ್ರಕಾರ ಆಟಗಳು' },
+  'stats.games1p': { en: '1 Player Games', kn: '1 ಆಟಗಾರ ಆಟಗಳು' },
+  'stats.games2p': { en: '2 Player Games', kn: '2 ಆಟಗಾರರ ಆಟಗಳು' },
+  'stats.games3p': { en: '3 Player Games', kn: '3 ಆಟಗಾರರ ಆಟಗಳು' },
+  'stats.games4p': { en: '4 Player Games', kn: '4 ಆಟಗಾರರ ಆಟಗಳು' },
   'common.close': { en: 'Close', kn: 'ಮುಚ್ಚಿ' },
 
   // --- Report Bug modal ---

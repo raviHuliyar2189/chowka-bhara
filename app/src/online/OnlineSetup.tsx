@@ -34,12 +34,15 @@ export default function OnlineSetup({ onCreated }: Props) {
           {t('setup.numberOfPlayers')}
         </label>
         <select id="onlineCount" value={count} onChange={(e) => setCount(Number(e.target.value))}>
+          <option value={1}>{t('setup.nPlayers', 1)}</option>
           <option value={2}>{t('setup.nPlayers', 2)}</option>
           <option value={3}>{t('setup.nPlayers', 3)}</option>
           <option value={4}>{t('setup.nPlayers', 4)}</option>
         </select>
       </div>
-      <p>{t('onlineSetup.linkNote')}</p>
+      {/* 1 player secretly plays against the same AI Vs Computer/hotseat's "1 player" use — no
+          invite link needed since there's no one else to send it to. */}
+      {count > 1 && <p>{t('onlineSetup.linkNote')}</p>}
 
       <div className="sound-prompt">
         <div className="sound-prompt-question">{t('setup.resignAllowedQuestion')}</div>

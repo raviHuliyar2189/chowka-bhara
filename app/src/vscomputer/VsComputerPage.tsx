@@ -8,10 +8,12 @@ import {
   selectPoolValue,
   selectPiece,
   formGattiMove,
+  removePlayers,
   rematch,
 } from '../game/turnEngine';
-import { computePlacements, applyPlacementsToStats, applyAbortToStats, type PlacementEntry } from '../game/session';
+import { computePlacements, applyPlacementsToStats, type PlacementEntry } from '../game/session';
 import { loadStats, saveStats, type PlayerStats } from '../game/storage';
+import { AI_SEAT, AI_NAME } from '../game/aiOpponent';
 import { chooseAiMove } from '../game/ai';
 import {
   announceRoll,
@@ -27,14 +29,16 @@ import {
 import { useT } from '../i18n/strings';
 import Board from '../components/Board';
 import DiceTray from '../components/DiceTray';
+import ResignModal from '../components/ResignModal';
 import ReportBugModal from '../components/ReportBugModal';
 import StatsModal from '../components/StatsModal';
 import ResultsModal from '../components/ResultsModal';
 
-// Always exactly 2 seats, opposite bases, matching the existing 2-player convention.
+// Always exactly 2 seats, opposite bases, matching the existing 2-player convention. AI_SEAT/
+// AI_NAME are shared with hotseat/Develop Test's own "1 player" option and the online server's
+// AI-driving code (see aiOpponent.ts) so none of them can ever drift apart on what "the computer"
+// means.
 const HUMAN_SEAT: PlayerId = 'P1';
-const AI_SEAT: PlayerId = 'P3';
-const AI_NAME = 'Computer';
 const COLORS: Record<PlayerId, string> = { P1: '#b03a2e', P2: '#2e5f8a', P3: '#3f7d4f', P4: '#c07a12' };
 // A floor on the pause before every step of the computer's turn (roll, then move) — the actual
 // wait is whichever is longer of this and the previous step's announcement actually finishing
@@ -54,12 +58,13 @@ export default function VsComputerPage() {
   const [sessionResults, setSessionResults] = useState<SessionEntry[]>([]);
   const [showReportBug, setShowReportBug] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  // Distinguishes an abort from a natural finish while showResults is true — both now offer the
-  // same Rematch/New Game choice (see ResultsModal's aborted prop), rather than abort silently
-  // dropping straight back to the name-entry screen with no way to quickly play again.
-  const [resultsAborted, setResultsAborted] = useState(false);
   const [statsFor, setStatsFor] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
+  const [resignAllowed, setResignAllowed] = useState(false);
+  // Purely informational — resigning is unconditional, same as hotseat/online's own copy of this
+  // state. Gates the results screen the same way OnlinePlay.tsx does, so the notice always shows
+  // before the placements (relevant here since resigning the sole human always ends the game).
+  const [resignedPlayerName, setResignedPlayerName] = useState<string | null>(null);
   const [hint, setHint] = useState<{ text: string; key: number } | null>(null);
   // See HotseatPage.tsx's own copy of these two for why they exist — banner mirrors the same
   // triggers as the spoken announcements, and prevRankingIds lets the finish effect tell exactly
@@ -149,11 +154,13 @@ export default function VsComputerPage() {
     );
   }
 
-  function endGameIfOver(next: GameState) {
+  function endGameIfOver(next: GameState, resignedNames: string[] = []) {
     setGame(next);
     if (next.phase === 'game-over') {
       const placements = computePlacements(next);
-      const updatedStats = applyPlacementsToStats(stats, placements);
+      // Always seatCount 1 — Vs Computer is the single-player experience by construction (§10's
+      // games1p bucket), regardless of the real 2-seat engine state underneath.
+      const updatedStats = applyPlacementsToStats(stats, placements, 1, resignedNames);
       setStats(updatedStats);
       saveStats(updatedStats);
       setSessionResults((prev) => [...prev, { players: next.players.map((p) => p.name), placements }]);
@@ -179,27 +186,22 @@ export default function VsComputerPage() {
     setHint({ text, key: Date.now() });
   }
 
-  // No AbortModal cycling here — with only one real person to ask, clicking Abort just ends the
-  // game immediately, unlike hotseat's multi-player consensus flow. Keeps `game` around (rather
-  // than nulling it) and shows the same Rematch/New Game choice a natural finish does, instead of
-  // dropping straight back to the name-entry screen.
-  function handleAbort() {
+  // Same unconditional semantics as hotseat's own Resign (§9) — the only real decision-maker here
+  // is the human, so this always resigns HUMAN_SEAT specifically rather than "whoever's turn it
+  // currently is" (hotseat's rule, meaningful there since multiple humans share one device).
+  // Reuses the exact same removePlayers forfeit path — since only the AI remains active afterward,
+  // it ends the game the same way any single-survivor forfeit does, landing on the normal
+  // placements screen (no separate "aborted" outcome) once the resign notice is dismissed.
+  function handleResign() {
     if (!game) return;
-    const updatedStats = applyAbortToStats(
-      stats,
-      game.players.map((p) => p.name)
-    );
-    setStats(updatedStats);
-    saveStats(updatedStats);
-    setSessionResults((prev) => [...prev, { players: game.players.map((p) => p.name), placements: [] }]);
-    setResultsAborted(true);
-    setShowResults(true);
+    const human = game.players.find((p) => p.id === HUMAN_SEAT)!;
+    setResignedPlayerName(human.name);
+    endGameIfOver(removePlayers(game, [HUMAN_SEAT]), [human.name]);
   }
 
   function handleRematch() {
     if (!game) return;
     setShowResults(false);
-    setResultsAborted(false);
     prevRevertSeq.current = 0;
     prevRankingIds.current = [];
     const next = rematch(game);
@@ -265,6 +267,17 @@ export default function VsComputerPage() {
                 maxLength={40}
               />
             </div>
+            <div className="sound-prompt">
+              <div className="sound-prompt-question">{t('setup.resignAllowedQuestion')}</div>
+              <button
+                type="button"
+                className={`btn-sound ${resignAllowed ? 'is-on' : 'is-off'}`}
+                onClick={() => setResignAllowed((v) => !v)}
+                title={resignAllowed ? t('setup.resignDisableTitle') : t('setup.resignEnableTitle')}
+              >
+                {resignAllowed ? t('setup.resignOn') : t('setup.resignOff')}
+              </button>
+            </div>
             <button className="action-btn btn-start" type="submit">
               {t('setup.startGame')}
             </button>
@@ -303,9 +316,11 @@ export default function VsComputerPage() {
             isMyTurn={game.players[game.currentTurnIndex].id === HUMAN_SEAT}
           />
           <div className="post-dice-actions">
-            <button className="action-btn btn-abort" onClick={handleAbort}>
-              {t('game.abortButton')}
-            </button>
+            {resignAllowed && (
+              <button className="action-btn btn-abort" onClick={handleResign}>
+                {t('resign.gameButton')}
+              </button>
+            )}
             <button className="btn-debug-log" onClick={() => setShowReportBug(true)} title={t('game.reportBugTitle')}>
               {t('game.reportBug')}
             </button>
@@ -320,14 +335,17 @@ export default function VsComputerPage() {
         </div>
       </div>
 
+      {resignedPlayerName && (
+        <ResignModal playerName={resignedPlayerName} onDismiss={() => setResignedPlayerName(null)} />
+      )}
+
       {showReportBug && <ReportBugModal debugLog={game.debugLog} onClose={() => setShowReportBug(false)} />}
 
       {statsFor && <StatsModal name={statsFor} stats={stats[statsFor]} onClose={() => setStatsFor(null)} />}
 
-      {showResults && (
+      {!resignedPlayerName && showResults && (
         <ResultsModal
-          placements={resultsAborted ? [] : computePlacements(game)}
-          aborted={resultsAborted}
+          placements={computePlacements(game)}
           sessionResults={sessionResults}
           stats={stats}
           onRematch={handleRematch}

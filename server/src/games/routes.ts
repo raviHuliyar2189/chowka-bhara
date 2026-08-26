@@ -3,7 +3,8 @@ import { pool } from '../db/pool';
 import { readSession, requireAuth } from '../auth/middleware';
 import { getIo, lobbyRoom } from '../realtime/io';
 import { createGame, rematch, type GameState } from '@chowka/game-core/turnEngine';
-import { PLAYER_COLORS, SEATS_BY_COUNT, type PlayerId } from '@chowka/game-core/paths';
+import { PLAYER_COLORS, SEATS_BY_COUNT, AI_SEAT, AI_NAME, type PlayerId } from '@chowka/game-core/paths';
+import { maybeScheduleAiTurn } from '../realtime/gameplay';
 import { recordPlayerDeclined } from './stats';
 
 export const gamesRouter = Router();
@@ -71,8 +72,10 @@ async function loadLobby(gameId: string) {
     joinedCount,
     // At least 2 must actually join — the rest of the originally-planned seats can go unfilled
     // (declined or simply never responded); see /start below for how the final seat assignment
-    // adapts to however many actually joined.
-    canStart: joinedCount >= 2,
+    // adapts to however many actually joined. A 1-player game is the one exception: it's always
+    // just the creator (secretly playing against the AI — see /start), so there's no one else to
+    // wait for.
+    canStart: game.seat_count === 1 ? joinedCount >= 1 : joinedCount >= 2,
   };
 }
 
@@ -81,15 +84,17 @@ async function broadcastLobbyUpdate(gameId: string) {
   if (lobby) getIo().to(lobbyRoom(gameId)).emit('lobby-updated', lobby);
 }
 
-// POST /games { seatCount: 2 | 3 | 4 } — creates a lobby with just the creator seated; the
+// POST /games { seatCount: 1 | 2 | 3 | 4 } — creates a lobby with just the creator seated; the
 // remaining seats are claimed (joined or declined) by whoever opens the game's shareable link
 // next — see /join and /decline below. Who specifically gets that link is entirely up to the
-// creator sharing it via WhatsApp; this app has no invitee list of its own.
+// creator sharing it via WhatsApp; this app has no invitee list of its own. seatCount 1 is the one
+// exception: no one else ever joins — see /start below for how it secretly becomes a 2-seat game
+// against the AI once started.
 gamesRouter.post('/games', async (req, res) => {
   const seatCount = Number(req.body?.seatCount);
   const seatOrder = SEATS_BY_COUNT[seatCount];
   if (!seatOrder) {
-    res.status(400).json({ error: 'seatCount must be 2, 3, or 4.' });
+    res.status(400).json({ error: 'seatCount must be 1, 2, 3, or 4.' });
     return;
   }
   const resignAllowed = Boolean(req.body?.resignAllowed);
@@ -266,6 +271,14 @@ gamesRouter.post('/games/:id/start', async (req, res) => {
     name: s.displayName,
     color: PLAYER_COLORS[s.seat as PlayerId],
   }));
+  // A 1-player game never had anyone else to invite — it secretly plays against the AI instead,
+  // same seat/name the online server's own AI-driving code (gameplay.ts) and hotseat/Vs
+  // Computer's client-driven AI use, so all three can never drift apart on what "the computer"
+  // means. Deliberately NOT given a game_seats row: that absence is exactly how
+  // maybeScheduleAiTurn (gameplay.ts) tells "this seat is AI-controlled" apart from a real player.
+  if (lobby.seatCount === 1) {
+    playerDefs.push({ id: AI_SEAT, name: AI_NAME, color: PLAYER_COLORS[AI_SEAT] });
+  }
   const declinedLetters = new Set(finalSeats.filter((s) => s.status === 'declined').map((s) => s.seat));
   const freshState = createGame(playerDefs);
   const state = {
@@ -279,6 +292,7 @@ gamesRouter.post('/games/:id/start', async (req, res) => {
     gameId,
   ]);
   getIo().to(lobbyRoom(gameId)).emit('game-updated', state);
+  await maybeScheduleAiTurn(getIo(), gameId, state);
 
   res.json({ game: state });
 });
@@ -319,6 +333,7 @@ gamesRouter.post('/games/:id/rematch', async (req, res) => {
     gameId,
   ]);
   getIo().to(lobbyRoom(gameId)).emit('game-updated', next);
+  await maybeScheduleAiTurn(getIo(), gameId, next);
 
   res.json({ game: next });
 });

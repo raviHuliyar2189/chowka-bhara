@@ -21,12 +21,17 @@ export function registerResignHandlers(io: Server, socket: Socket, session: Sess
     if (!rows[0]?.resign_allowed) return;
 
     let resigningName: string | null = null;
-    await applyAndBroadcast(io, gameId, (state) => {
-      const player = state.players.find((p) => p.id === seat);
-      if (!player || player.isFinished || player.hasLost) return state;
-      resigningName = player.name;
-      return removePlayers(state, [seat]);
-    });
+    await applyAndBroadcast(
+      io,
+      gameId,
+      (state) => {
+        const player = state.players.find((p) => p.id === seat);
+        if (!player || player.isFinished || player.hasLost) return state;
+        resigningName = player.name;
+        return removePlayers(state, [seat]);
+      },
+      () => (resigningName ? [resigningName] : [])
+    );
 
     if (resigningName) {
       io.to(lobbyRoom(gameId)).emit('resign:notice', { playerName: resigningName });

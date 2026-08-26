@@ -17,6 +17,19 @@ export interface Piece {
   // move together at the halved gatti rate, until either both are captured (sent home, unbonded)
   // or both reach the center. Only ever set inside the inner ring (16-23) — see tolluAt.
   isGatti: boolean;
+  // Which of this player's own piece ids it's bonded with, while isGatti is true (null otherwise).
+  // A player can have two entirely separate gatti pairs at once (e.g. pieces 1+2 bonded, and
+  // separately 3+4 bonded) that could even end up sharing the same inner-ring cell — this explicit
+  // link is what lets movePiece find the *actual* bonded partner rather than just "any other gatti
+  // piece at this position," which would pick the wrong sibling once two pairs coincide.
+  gattiPartnerId: number | null;
+  // Set when this (non-gatti) piece just landed exactly on an opponent's gatti cell — it couldn't
+  // cross the gatti, so it stopped there instead (see opponentGattiBlocksCrossing). While true, the
+  // piece is frozen in place: it can't move again until it survives to its own owner's next turn
+  // (cleared in turnEngine.ts's advanceTurn), enforcing "rest for at least one turn" before
+  // continuing past. If the gatti moves away in the meantime, this piece is captured outright
+  // (capturePiecesLeftBehind) regardless of this flag.
+  restingOnGatti: boolean;
 }
 
 export interface Player {
@@ -85,6 +98,10 @@ export function canMovePiece(allPlayers: Player[], player: Player, piece: Piece,
     if (step === null) return false;
     return piece.pos + step <= FINISH_POS;
   }
+
+  // Still serving its mandatory rest on an opponent's gatti cell — see restingOnGatti's own
+  // comment. No dice value can move it again until it survives to its own owner's next turn.
+  if (piece.restingOnGatti) return false;
 
   const newPos = piece.pos + val;
   if (newPos > FINISH_POS) return false;
@@ -169,8 +186,15 @@ export interface CaptureResult {
 // - A single piece lands on an opponent's gatti: no capture at all — a single piece can never
 //   capture a gatti, they simply coexist on that cell (see opponentGattiBlocksCrossing above for
 //   what happens if that gatti later moves away instead).
-// - A gatti lands on anything (a lone piece, a whole tollu, or an opposing gatti): every piece
-//   occupying that cell is captured.
+// - A gatti lands on a cell: for EACH opponent present there independently, it captures only that
+//   opponent's single highest-priority group — their gatti pair, if they have one there; else
+//   their tollu; else a lone single piece — never more than one group from the same opponent, even
+//   if that opponent happens to have several coexisting on this cell at once (e.g. their own gatti
+//   pair AND a separate tollu both sharing it — only the gatti is taken, the tollu is left
+//   completely alone). A gatti move therefore captures at most 2 pieces per opponent present,
+//   though it can still capture from multiple different opponents in the same move if more than
+//   one occupies the cell. If this opponent has two separate gatti pairs here, only one pair is
+//   captured (deterministically, the one containing the lower piece id) — the other survives.
 export function resolveCaptures(
   players: Player[],
   movingPlayer: Player,
@@ -184,10 +208,29 @@ export function resolveCaptures(
     const here = opp.pieces.filter((p) => isSameCell(coordAt(opp.id, p.pos), targetCoord));
     if (here.length === 0) continue;
 
-    if (!moverIsGatti && here.some((p) => p.isGatti)) continue;
+    if (!moverIsGatti) {
+      if (here.some((p) => p.isGatti)) continue;
+      captured.push({ player: opp, piece: here[0] });
+      continue;
+    }
 
-    if (moverIsGatti) {
-      here.forEach((p) => captured.push({ player: opp, piece: p }));
+    const gattiHere = here.filter((p) => p.isGatti);
+    if (gattiHere.length > 0) {
+      let chosenPair: [Piece, Piece] | null = null;
+      const claimed = new Set<number>();
+      for (const p of gattiHere) {
+        if (claimed.has(p.id)) continue;
+        const partner = gattiHere.find((q) => q.id === p.gattiPartnerId);
+        if (!partner) continue;
+        claimed.add(p.id);
+        claimed.add(partner.id);
+        if (!chosenPair) chosenPair = [p, partner];
+      }
+      if (chosenPair) {
+        captured.push({ player: opp, piece: chosenPair[0] }, { player: opp, piece: chosenPair[1] });
+      }
+    } else if (here.length >= 2) {
+      captured.push({ player: opp, piece: here[0] }, { player: opp, piece: here[1] });
     } else {
       captured.push({ player: opp, piece: here[0] });
     }
@@ -213,6 +256,8 @@ function applyCaptures(captured: CaptureResult[], movingPlayer: Player): void {
   captured.forEach(({ piece: p }) => {
     p.pos = 0;
     p.isGatti = false; // sent home — both members of a captured tollu/gatti are unbonded
+    p.gattiPartnerId = null;
+    p.restingOnGatti = false;
   });
   if (captured.length > 0) movingPlayer.hasCaptured = true;
 }
@@ -221,12 +266,25 @@ function checkFinished(player: Player): void {
   if (player.pieces.every((p) => p.pos === FINISH_POS)) player.isFinished = true;
 }
 
+// Whether landing on targetCoord means this (non-gatti) piece is now resting on an opponent's
+// gatti — the two coexist (resolveCaptures never lets a single piece capture a gatti), so this
+// isn't reflected in the capture list at all and has to be checked separately.
+function landsOnOpponentGatti(players: Player[], movingPlayer: Player, targetCoord: Coord): boolean {
+  if (isSafeCell(targetCoord)) return false;
+  return players.some(
+    (opp) =>
+      opp.id !== movingPlayer.id &&
+      !opp.hasLost &&
+      opp.pieces.some((p) => p.isGatti && isSameCell(coordAt(opp.id, p.pos), targetCoord))
+  );
+}
+
 export function movePiece(players: Player[], player: Player, piece: Piece, val: number): CaptureResult[] {
   if (piece.isGatti) {
     const step = gattiStepFor(val)!; // caller must have already checked canMovePiece
     const oldPos = piece.pos;
     const oldCoord = coordAt(player.id, oldPos);
-    const sibling = player.pieces.find((p) => p !== piece && p.isGatti && p.pos === oldPos)!;
+    const sibling = player.pieces.find((p) => p.id === piece.gattiPartnerId)!;
     piece.pos += step;
     sibling.pos += step;
     const targetCoord = coordAt(player.id, piece.pos);
@@ -244,6 +302,7 @@ export function movePiece(players: Player[], player: Player, piece: Piece, val: 
   const targetCoord = coordAt(player.id, piece.pos);
   const captured = resolveCaptures(players, player, targetCoord, false);
   applyCaptures(captured, player);
+  piece.restingOnGatti = landsOnOpponentGatti(players, player, targetCoord);
   checkFinished(player);
   return captured;
 }
@@ -254,9 +313,10 @@ export function movePiece(players: Player[], player: Player, piece: Piece, val: 
 // this very forming move (landing on an opponent occupying the next cell) behaves identically to
 // any other gatti move.
 export function formGatti(players: Player[], player: Player, pos: number): CaptureResult[] {
-  const pair = tolluAt(player, pos)!;
-  pair.forEach((p) => {
-    p.isGatti = true;
-  });
-  return movePiece(players, player, pair[0], 2);
+  const [a, b] = tolluAt(player, pos)!;
+  a.isGatti = true;
+  b.isGatti = true;
+  a.gattiPartnerId = b.id;
+  b.gattiPartnerId = a.id;
+  return movePiece(players, player, a, 2);
 }

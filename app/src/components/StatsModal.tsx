@@ -9,7 +9,10 @@ interface Props {
 
 export default function StatsModal({ name, stats, onClose }: Props) {
   const t = useT();
-  const s = stats ?? EMPTY_STATS;
+  // Backfills any fields missing from an older-shaped stored entry (see session.ts's own copy of
+  // this same normalization) so a player who hasn't played since a stats-shape change doesn't show
+  // NaN% until their next game silently fixes it up.
+  const s: PlayerStats = { ...EMPTY_STATS, ...stats };
   const g = s.games || 1;
   const pct = (n: number) => `${((n / g) * 100).toFixed(1)}%`;
 
@@ -40,11 +43,34 @@ export default function StatsModal({ name, stats, onClose }: Props) {
               <td>{pct(s.losses)}</td>
             </tr>
             <tr>
-              <th>{t('stats.aborted')}</th>
-              <td>{pct(s.aborted)}</td>
+              <th>{t('stats.resigned')}</th>
+              <td>{pct(s.resigned)}</td>
             </tr>
           </tbody>
         </table>
+
+        <h4>{t('stats.breakdownTitle')}</h4>
+        <table>
+          <tbody>
+            <tr>
+              <th>{t('stats.games1p')}</th>
+              <td>{s.games1p}</td>
+            </tr>
+            <tr>
+              <th>{t('stats.games2p')}</th>
+              <td>{s.games2p}</td>
+            </tr>
+            <tr>
+              <th>{t('stats.games3p')}</th>
+              <td>{s.games3p}</td>
+            </tr>
+            <tr>
+              <th>{t('stats.games4p')}</th>
+              <td>{s.games4p}</td>
+            </tr>
+          </tbody>
+        </table>
+
         <button className="action-btn" style={{ width: '100%', marginTop: 15 }} onClick={onClose}>
           {t('common.close')}
         </button>

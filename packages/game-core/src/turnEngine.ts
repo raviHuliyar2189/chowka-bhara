@@ -65,7 +65,7 @@ export function createGame(playerDefs: PlayerDef[]): GameState {
     id: d.id,
     name: d.name,
     color: d.color,
-    pieces: [1, 2, 3, 4].map((id) => ({ id, pos: 0, isGatti: false })),
+    pieces: [1, 2, 3, 4].map((id) => ({ id, pos: 0, isGatti: false, gattiPartnerId: null, restingOnGatti: false })),
     isFinished: false,
     hasLost: false,
     hasCaptured: false,
@@ -396,18 +396,29 @@ function advanceTurn(state: GameState): GameState {
     idx = (idx + 1) % checked.players.length;
   } while (checked.players[idx].isFinished || checked.players[idx].hasLost);
 
+  // Gatti-tollu requirement: a piece resting on an opponent's gatti (restingOnGatti — see its own
+  // comment in rules.ts) must survive to its own owner's next turn before it can move again. That
+  // turn has now arrived for whoever idx points to, so clear it for just their pieces — nobody
+  // else's wait is affected.
+  const players = checked.players.map((p, i) =>
+    i === idx
+      ? { ...p, pieces: p.pieces.map((pc) => (pc.restingOnGatti ? { ...pc, restingOnGatti: false } : pc)) }
+      : p
+  );
+
   return withLog(
     {
       ...checked,
+      players,
       currentTurnIndex: idx,
       pool: [],
       rollHistory: [],
       selectedPoolIndex: null,
       phase: 'awaiting-roll',
-      message: `${checked.players[idx].name}, ನಿಮ್ಮ ಸರದಿ, ಕವಡೆ ಹಾಕಿ`,
-      turnStartSnapshot: clonePlayers(checked.players),
+      message: `${players[idx].name}, ನಿಮ್ಮ ಸರದಿ, ಕವಡೆ ಹಾಕಿ`,
+      turnStartSnapshot: clonePlayers(players),
     },
-    `Turn passes to ${checked.players[idx].name}`
+    `Turn passes to ${players[idx].name}`
   );
 }
 
@@ -469,7 +480,7 @@ export function removePlayers(state: GameState, playerIds: PlayerId[]): GameStat
 export function rematch(state: GameState): GameState {
   const players: Player[] = state.players.map((p) => ({
     ...p,
-    pieces: [1, 2, 3, 4].map((id) => ({ id, pos: 0, isGatti: false })),
+    pieces: [1, 2, 3, 4].map((id) => ({ id, pos: 0, isGatti: false, gattiPartnerId: null, restingOnGatti: false })),
     isFinished: false,
     hasLost: false,
     hasCaptured: false,

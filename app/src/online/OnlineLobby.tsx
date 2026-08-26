@@ -117,8 +117,9 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
           // justCreated's own comment in App.tsx) — opens WhatsApp with the invite pre-filled so
           // the very next thing they do is pick who to send it to, no separate "now go invite
           // people" step. Everyone else who reaches this waiting room already came in via the
-          // link, so there's nothing for them to send.
-          if (justCreated && !autoOpenedRef.current) {
+          // link, so there's nothing for them to send. A 1-player game has no one to invite at
+          // all — it secretly plays against the AI (§13) — so this never fires for one.
+          if (justCreated && current.seatCount > 1 && !autoOpenedRef.current) {
             autoOpenedRef.current = true;
             window.open(whatsappLinkFor(current), '_blank', 'noopener,noreferrer');
           }
