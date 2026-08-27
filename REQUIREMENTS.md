@@ -54,14 +54,24 @@ person (§14).
 
 ## 4. Dice
 
-- 4 two-sided dice, each face is black (value 0) or white (value 1).
+- 4 two-sided dice ("kavade"/cowrie shells), each face is black (value 0) or white (value 1).
 - All 4 rolled together each throw.
 - Scoring a throw:
-  | Result | Condition | Move value |
-  |---|---|---|
-  | Bhara | all 4 black | 8 |
-  | Chauka | all 4 white | 4 |
-  | Normal | mixed | count of white faces (1, 2, or 3) |
+  | Result | Condition | Move value | Probability |
+  |---|---|---|---|
+  | Bhara | all 4 black | 8 | 8% |
+  | Chauka | all 4 white | 4 | 10% |
+  | Normal | 1 white | 1 | 23<sup>2</sup>&frasl;<sub>7</sub>% (≈23.43%) |
+  | Normal | 2 white | 2 | 35<sup>1</sup>&frasl;<sub>7</sub>% (≈35.14%) |
+  | Normal | 3 white | 3 | 23<sup>2</sup>&frasl;<sub>7</sub>% (≈23.43%) |
+- **Deliberately not 4 independent 50/50 shells** — that would force a fixed binomial shape
+  (25/37.5/25/6.25/6.25%) with no way to move one outcome's odds without moving all the others.
+  Weighted directly instead, per an explicit request to make the two bonus rolls more common:
+  Bhara/Chauka raised to 8%/10% (from 6.25% each), 1/2/3 scaled down to fit the remaining 82%
+  while keeping their old relative shape (2:3:2 — "2" stays the single most common non-bonus
+  roll). Implemented in `packages/game-core/src/dice.ts`'s `OUTCOME_WEIGHTS`; which of the 4
+  physical shells shows white for a given outcome is still randomized purely for the tray's
+  animation, no gameplay meaning attaches to which specific shell landed which way.
 - **Bhara or Chauka grants an immediate bonus roll** (roll again, in addition to the value just earned).
 - A turn keeps rolling as long as bonus rolls keep coming. Every value earned during the sequence
   is added to that turn's **move pool** — nothing is discarded until the player has used it or the
