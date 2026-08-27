@@ -53,7 +53,10 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   // --- Mode select ---
   'modeSelect.heading': { en: 'How do you want to play?', kn: 'ಹೇಗೆ ಆಡಬೇಕೆಂದಿದ್ದೀರಿ?' },
   'modeSelect.singlePlayer': { en: '🤖 Single player', kn: '🤖 ಒಬ್ಬ ಆಟಗಾರ' },
-  'modeSelect.multiLocal': { en: '📱 Multiple players (Local)', kn: '📱 ಅನೇಕ ಆಟಗಾರರು (ಸ್ಥಳೀಯ)' },
+  'modeSelect.multiLocal': {
+    en: '📱 Multiple Players (on a single device)',
+    kn: '📱 ಅನೇಕ ಆಟಗಾರರು (ಒಂದೇ ಸಾಧನದಲ್ಲಿ)',
+  },
   'modeSelect.multiOnline': { en: '🌐 Multiple Players (Online)', kn: '🌐 ಅನೇಕ ಆಟಗಾರರು (ಆನ್‌ಲೈನ್)' },
   'modeSelect.developTest': { en: '🛠️ Develop Test', kn: '🛠️ ಡೆವಲಪ್ ಟೆಸ್ಟ್' },
 
