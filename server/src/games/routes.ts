@@ -16,7 +16,7 @@ interface SeatRow {
   status: string;
   joined_at: string | null;
   display_name: string;
-  email: string;
+  phone: string;
 }
 
 async function loadLobby(gameId: string) {
@@ -41,7 +41,7 @@ async function loadLobby(gameId: string) {
   if (!game) return null;
 
   const seatsResult = await pool.query(
-    `select gs.seat, gs.player_id, gs.status, gs.joined_at, p.display_name, p.email
+    `select gs.seat, gs.player_id, gs.status, gs.joined_at, p.display_name, p.phone
      from game_seats gs join players p on p.id = gs.player_id
      where gs.game_id = $1
      order by gs.joined_at`,
@@ -65,7 +65,7 @@ async function loadLobby(gameId: string) {
       seat: s.seat,
       playerId: s.player_id,
       displayName: s.display_name,
-      email: s.email,
+      phone: s.phone,
       status: s.status,
       joinedAt: s.joined_at,
     })),

@@ -3,11 +3,11 @@ import { signup, type PlayerInfo } from './api';
 import { useT } from '../i18n/strings';
 
 interface Props {
-  email: string;
+  phone: string;
   onDone: (player: PlayerInfo) => void;
 }
 
-export default function NeedsProfile({ email, onDone }: Props) {
+export default function NeedsProfile({ phone, onDone }: Props) {
   const t = useT();
   const [displayName, setDisplayName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -23,7 +23,7 @@ export default function NeedsProfile({ email, onDone }: Props) {
     setSaving(true);
     setError(null);
     try {
-      const result = await signup(email, trimmed);
+      const result = await signup(phone, trimmed);
       onDone(result.player);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('auth.createAccountFailed'));

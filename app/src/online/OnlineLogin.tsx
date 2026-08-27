@@ -5,24 +5,32 @@ import LanguageToggle from '../components/LanguageToggle';
 
 interface Props {
   onLoggedIn: (player: PlayerInfo) => void;
-  onNoAccount: (email: string) => void;
+  onNoAccount: (phone: string) => void;
 }
 
 export default function OnlineLogin({ onLoggedIn, onNoAccount }: Props) {
   const t = useT();
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const trimmed = email.trim();
+    const trimmed = phone.trim();
+    // type="tel" (unlike type="email") has no built-in browser format check — this mirrors the
+    // server's own normalizePhone() digit-count validation (7-15 digits) so an obviously-wrong
+    // number is caught immediately instead of waiting on a round trip.
+    const digitCount = trimmed.replace(/[^\d]/g, '').length;
+    if (digitCount < 7 || digitCount > 15) {
+      setError(t('auth.phoneInvalid'));
+      return;
+    }
     setSending(true);
     setError(null);
     try {
       const result = await login(trimmed);
       if (result.status === 'no-account') {
-        onNoAccount(result.email);
+        onNoAccount(result.phone);
       } else {
         onLoggedIn(result.player);
       }
@@ -43,16 +51,16 @@ export default function OnlineLogin({ onLoggedIn, onNoAccount }: Props) {
       <p>{t('auth.signInPrompt')}</p>
       <form onSubmit={handleSubmit}>
         <div className="setup-row">
-          <label className="setup-label" htmlFor="onlineEmail">
-            {t('auth.emailLabel')}
+          <label className="setup-label" htmlFor="onlinePhone">
+            {t('auth.phoneLabel')}
           </label>
           <input
-            id="onlineEmail"
-            type="email"
+            id="onlinePhone"
+            type="tel"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@gmail.com"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+91 98765 43210"
           />
         </div>
         {error && <p className="online-error">{error}</p>}

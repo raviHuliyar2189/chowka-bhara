@@ -5,7 +5,7 @@ import NeedsProfile from './NeedsProfile';
 import { useT } from '../i18n/strings';
 import { setChromeHidden } from '../ui/appChrome';
 
-type View = { kind: 'loading' } | { kind: 'login' } | { kind: 'needs-profile'; email: string };
+type View = { kind: 'loading' } | { kind: 'login' } | { kind: 'needs-profile'; phone: string };
 
 interface Props {
   onAuthed: (player: PlayerInfo) => void;
@@ -53,14 +53,14 @@ export default function AuthGate({ onAuthed }: Props) {
   if (view.kind === 'login') {
     return (
       <div className="setup-inline">
-        <OnlineLogin onLoggedIn={onAuthed} onNoAccount={(email) => setView({ kind: 'needs-profile', email })} />
+        <OnlineLogin onLoggedIn={onAuthed} onNoAccount={(phone) => setView({ kind: 'needs-profile', phone })} />
       </div>
     );
   }
 
   return (
     <div className="setup-inline">
-      <NeedsProfile email={view.email} onDone={onAuthed} />
+      <NeedsProfile phone={view.phone} onDone={onAuthed} />
     </div>
   );
 }

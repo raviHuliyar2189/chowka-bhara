@@ -3,7 +3,7 @@ import { env } from '../env';
 
 export interface SessionPayload {
   playerId: string;
-  email: string;
+  phone: string;
   displayName: string;
 }
 

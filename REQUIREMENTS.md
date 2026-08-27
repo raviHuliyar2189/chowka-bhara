@@ -1105,6 +1105,34 @@ Resolved during requirements gathering:
   players will see this name."; the "Display Name:" field label → "Name:". Its language toggle was
   already gone by this point too — covered by `AuthGate`'s chrome-hiding from the sign-in entry
   just above, not a separate change.
+- **Account identity switched from email address to WhatsApp/phone number** (§13): a real backend
+  change, not a wording tweak — confirmed explicitly before starting, given the alternative (just
+  relabeling the text) would leave the field silently rejecting any actual phone number typed into
+  it. Chosen as the right moment to do it cleanly since the `players` table had just been emptied
+  by the full database reset a few entries above — no real account data to migrate.
+  - `players.email` renamed to `players.phone` (migration `008_phone_instead_of_email.sql`; the
+    unique constraint carries over automatically with the column rename). The `magic_links` table
+    (its own, separate `email` column) is untouched — already fully vestigial before this change,
+    created by the initial migration but never queried by any actual route; left alone as strictly
+    out of scope rather than cleaned up incidentally here.
+  - Server: `isValidEmail`'s regex replaced with `normalizePhone` (strips everything but digits,
+    accepts 7-15 of them — real-world national numbers up to E.164's own 15-digit maximum);
+    `/auth/login`, `/auth/signup`, `/auth/me` and the session JWT (`SessionPayload.email` →
+    `.phone`) all renamed to match; the seat-listing query (`games/routes.ts`) selects `p.phone`
+    instead of `p.email`.
+  - Client: `PlayerInfo`/`SeatInfo`/`LoginResult` (`api.ts`), `AuthGate`/`OnlineLogin`/
+    `NeedsProfile`'s own props all renamed `email` → `phone`; the input itself changed from
+    `type="email"` to `type="tel"` with a matching client-side digit-count check (`type="tel"` has
+    no built-in browser format validation the way `type="email"` did, so losing that silently would
+    have been a real regression) — mirrors the server's own `normalizePhone` range so an obviously-
+    wrong number is caught before the round trip, not just after. Every user-facing string updated
+    to say "WhatsApp number" (`strings.ts`): the sign-in prompt, the field label, the placeholder
+    (`+91 98765 43210`), and a new `auth.phoneInvalid` message for the client-side check.
+  - Verified directly against the real dev server end-to-end (signup with a formatted number,
+    login again with the same digits differently formatted — confirms normalization — `/auth/me`,
+    and game creation, all succeeding; an obviously-invalid number correctly rejected with 400) and
+    through the actual UI via Playwright (sign in → create account → reaches mode-select). Test
+    rows cleaned up after each check.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
@@ -1119,9 +1147,13 @@ Still open / assumed defaults (flag if any of these are wrong):
 ## 13. Online Multiplayer
 
 ### Accounts & sign-in
-- Register with an email address and a mandatory display name; logging back in only needs the
-  email (no password). See §12 for why this is deliberately lighter-weight than magic-link
-  verification or OAuth.
+- Register with a WhatsApp/phone number and a mandatory display name; logging back in only needs
+  the number (no password). See §12 for why this is deliberately lighter-weight than magic-link
+  verification or OAuth, and for the account model's own change from email to phone number.
+- The number is normalized to digits-only for storage/lookup (`normalizePhone` strips everything
+  but digits; 7-15 digits accepted, covering real-world numbers up to E.164's own maximum) — two
+  different-looking inputs for the same number (with/without `+`, spaces, dashes) log in to the
+  same account.
 - A session is a signed token (JWT) issued on login/registration, stored in the browser's
   `localStorage` and sent as a `Bearer` `Authorization` header on every API call and in the
   Socket.IO connection handshake (see §12 for why not a cookie).

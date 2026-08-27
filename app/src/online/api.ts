@@ -63,31 +63,31 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export interface PlayerInfo {
   id: string;
-  email: string;
+  phone: string;
   displayName: string;
 }
 
-export type LoginResult = { status: 'logged-in'; player: PlayerInfo } | { status: 'no-account'; email: string };
+export type LoginResult = { status: 'logged-in'; player: PlayerInfo } | { status: 'no-account'; phone: string };
 
-// No password, no verification — the email alone identifies a returning player. A 404 response
-// (status 'no-account') means the caller should offer sign-up instead.
-export async function login(email: string): Promise<LoginResult> {
+// No password, no verification — the WhatsApp number alone identifies a returning player. A 404
+// response (status 'no-account') means the caller should offer sign-up instead.
+export async function login(phone: string): Promise<LoginResult> {
   const resp = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ phone }),
   });
   const body = await resp.json().catch(() => ({}));
-  if (resp.status === 404) return { status: 'no-account', email };
+  if (resp.status === 404) return { status: 'no-account', phone };
   if (!resp.ok) throw new Error(body.error ?? `Request failed (${resp.status})`);
   setToken(body.token);
   return body as LoginResult;
 }
 
-export async function signup(email: string, displayName: string): Promise<{ status: string; player: PlayerInfo }> {
+export async function signup(phone: string, displayName: string): Promise<{ status: string; player: PlayerInfo }> {
   const body = await request<{ status: string; token: string; player: PlayerInfo }>('/auth/signup', {
     method: 'POST',
-    body: JSON.stringify({ email, displayName }),
+    body: JSON.stringify({ phone, displayName }),
   });
   setToken(body.token);
   return body;
@@ -107,7 +107,7 @@ export interface SeatInfo {
   seat: string;
   playerId: string;
   displayName: string;
-  email: string;
+  phone: string;
   status: 'joined' | 'declined';
   joinedAt: string | null;
 }

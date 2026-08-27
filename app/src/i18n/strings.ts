@@ -34,10 +34,14 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'auth.loading': { en: 'Loading…', kn: 'ಲೋಡ್ ಆಗುತ್ತಿದೆ…' },
   'auth.signInTitle': { en: 'Sign In', kn: 'ಸೈನ್ ಇನ್' },
   'auth.signInPrompt': {
-    en: 'Enter your email to log in, or to create a new account.',
-    kn: 'ಲಾಗ್ ಇನ್ ಮಾಡಲು ಅಥವಾ ಹೊಸ ಖಾತೆ ರಚಿಸಲು ನಿಮ್ಮ ಇಮೇಲ್ ನಮೂದಿಸಿ.',
+    en: 'Enter your WhatsApp number to log in, or to create a new account.',
+    kn: 'ಲಾಗ್ ಇನ್ ಮಾಡಲು ಅಥವಾ ಹೊಸ ಖಾತೆ ರಚಿಸಲು ನಿಮ್ಮ WhatsApp ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ.',
   },
-  'auth.emailLabel': { en: 'Email:', kn: 'ಇಮೇಲ್:' },
+  'auth.phoneLabel': { en: 'WhatsApp Number:', kn: 'WhatsApp ಸಂಖ್ಯೆ:' },
+  'auth.phoneInvalid': {
+    en: 'Enter a valid WhatsApp number, digits only (with country code).',
+    kn: 'ಮಾನ್ಯವಾದ WhatsApp ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ, ಅಂಕಿಗಳು ಮಾತ್ರ (ದೇಶದ ಕೋಡ್ ಸಹಿತ).',
+  },
   'auth.checking': { en: 'Checking…', kn: 'ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ…' },
   'auth.continue': { en: 'Continue', kn: 'ಮುಂದುವರಿಸಿ' },
   'auth.loginFailed': { en: 'Could not log in.', kn: 'ಲಾಗ್ ಇನ್ ಆಗಲಿಲ್ಲ.' },
