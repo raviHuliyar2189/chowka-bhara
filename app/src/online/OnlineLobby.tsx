@@ -26,6 +26,10 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
   // and the game-updated handler below needs it without retriggering the effect.
   const mySeatRef = useRef<PlayerId | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  // Which joined seats currently have a live connection (§13) — same server-authoritative signal
+  // OnlinePlay.tsx's own board uses, shown here too since a player can sit in this waiting room
+  // for a while before Start is clicked.
+  const [connectedSeats, setConnectedSeats] = useState<PlayerId[]>([]);
   // Guards the WhatsApp auto-open below to exactly once per mount, even though the effect that
   // triggers it can in principle re-run (StrictMode double-invoke, a fast gameId/me.id change).
   const autoOpenedRef = useRef(false);
@@ -44,7 +48,27 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
   function connectAndListen() {
     const socket = connectSocket();
     socketRef.current = socket;
-    socket.emit('join-lobby-room', { gameId });
+    // Re-joins on every reconnect, not just the first connect — see OnlinePlay.tsx's own copy of
+    // this same fix for why (a socket.io-client auto-reconnect after a network blip never re-runs
+    // application-level room joins on its own). Also re-fetches once the join is actually
+    // acknowledged, to catch up on anything that happened in the gap between this device
+    // connecting and its join finishing — e.g. another player joining/declining right in that
+    // window, which would otherwise broadcast to a room this socket wasn't in yet and leave this
+    // screen stuck showing stale "waiting for a response" state indefinitely (a real reported bug:
+    // the creator kept seeing "waiting" even after the second player had already joined).
+    socket.on('connect', () => {
+      socket.emit('join-lobby-room', { gameId }, (ok: boolean) => {
+        if (!ok) return;
+        fetchGame(gameId)
+          .then((fresh) => {
+            if (fresh.status !== 'aborted') setLobby(fresh);
+          })
+          .catch(() => {});
+      });
+    });
+    socket.on('presence:update', ({ connectedSeats: seats }: { connectedSeats: PlayerId[] }) => {
+      setConnectedSeats(seats);
+    });
     socket.on('lobby-updated', (updated: LobbyState) => {
       if (updated.status === 'aborted') {
         setError(t('lobby.aborted'));
@@ -269,8 +293,18 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
           let label = t('lobby.waitingForResponse');
           if (s?.status === 'joined') label = t('lobby.joinedLabel', s.displayName);
           else if (s?.status === 'declined') label = t('lobby.declinedLabel', s.displayName);
+          const isOnline = connectedSeats.includes(seat);
           return (
             <li key={seat}>
+              {/* Presence only means anything once a seat is actually joined — a still-empty or
+                  declined seat has no connection to show one way or the other. */}
+              {s?.status === 'joined' && (
+                <span
+                  className={`presence-dot ${isOnline ? 'online' : 'offline'} presence-dot-inline`}
+                  aria-hidden="true"
+                  title={t(isOnline ? 'presence.online' : 'presence.offline')}
+                />
+              )}
               {seat}: {label}
             </li>
           );

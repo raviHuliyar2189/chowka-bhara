@@ -423,6 +423,60 @@ h1 {
   opacity: 0.45;
 }
 
+/* Online mode only — a small connected/disconnected dot pinned to the label's corner, distinct
+   from the status/capture text lines below the name so it reads at a glance without adding a
+   third line. Green pulses gently while connected (a quiet "still here" cue); gray is still. */
+.presence-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.presence-dot.online {
+  background: #3ecf5f;
+  animation: presencePulse 2.2s ease-in-out infinite;
+}
+
+.presence-dot.offline {
+  background: #9a9a9a;
+}
+
+/* The lobby's player-list variant — sits inline before the seat label rather than pinned to a
+   positioned ancestor's corner. */
+.presence-dot-inline {
+  position: static;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 5px;
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Small mic badge pinned to the opposite corner from the presence dot (top-left vs. top-right —
+   see .presence-dot above) so both can show at once without overlapping. */
+.voice-indicator {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  font-size: 11px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+}
+
+@keyframes presencePulse {
+  0%,
+  100% {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(62, 207, 95, 0.6);
+  }
+  50% {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 4px rgba(62, 207, 95, 0);
+  }
+}
+
 .home-label.declined {
   opacity: 0.45;
   filter: grayscale(0.6);

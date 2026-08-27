@@ -112,6 +112,9 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'status.resignedSuffix': { en: (s: string) => `${s} (Resigned)`, kn: (s: string) => `${s} (ರಾಜೀನಾಮೆ)` },
   'status.notCaptured': { en: 'Not Captured', kn: 'ಸೆರೆ ಹಿಡಿದಿಲ್ಲ' },
   'status.captureDone': { en: 'Capture Done', kn: 'ಸೆರೆ ಹಿಡಿದಿದೆ' },
+  // --- Presence (online mode only, Board.tsx) ---
+  'presence.online': { en: 'Connected', kn: 'ಸಂಪರ್ಕದಲ್ಲಿದ್ದಾರೆ' },
+  'presence.offline': { en: 'Not connected', kn: 'ಸಂಪರ್ಕದಲ್ಲಿಲ್ಲ' },
   'board.statsTitle': {
     en: (name: string, status: string, capture: string) => `${name}'s statistics — ${status} — ${capture}`,
     kn: (name: string, status: string, capture: string) => `${name} ಅವರ ಅಂಕಿಅಂಶಗಳು — ${status} — ${capture}`,
@@ -147,6 +150,20 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'game.reportBugTitle': { en: 'Report a bug', kn: 'ದೋಷವನ್ನು ವರದಿ ಮಾಡಿ' },
   'game.soundOn': { en: '🔊 Sound On', kn: '🔊 ಧ್ವನಿ ಆನ್' },
   'game.muted': { en: '🔇 Muted', kn: '🔇 ಮ್ಯೂಟ್ ಮಾಡಲಾಗಿದೆ' },
+  // --- Voice chat (online mode only) ---
+  'voice.join': { en: '🎙️ Join Voice', kn: '🎙️ ಧ್ವನಿಗೆ ಸೇರಿ' },
+  'voice.joinTitle': {
+    en: 'Join voice chat with the other connected players',
+    kn: 'ಇತರ ಸಂಪರ್ಕಿತ ಆಟಗಾರರೊಂದಿಗೆ ಧ್ವನಿ ಚಾಟ್‌ಗೆ ಸೇರಿ',
+  },
+  'voice.leave': { en: '📴 Leave Voice', kn: '📴 ಧ್ವನಿಯಿಂದ ನಿರ್ಗಮಿಸಿ' },
+  'voice.leaveTitle': { en: 'Leave voice chat', kn: 'ಧ್ವನಿ ಚಾಟ್‌ನಿಂದ ನಿರ್ಗಮಿಸಿ' },
+  'voice.unmuted': { en: '🎤 Mic On', kn: '🎤 ಮೈಕ್ ಆನ್' },
+  'voice.muted': { en: '🔇 Mic Off', kn: '🔇 ಮೈಕ್ ಆಫ್' },
+  'voice.muteTitle': { en: 'Mute your microphone', kn: 'ನಿಮ್ಮ ಮೈಕ್ರೊಫೋನ್ ಮ್ಯೂಟ್ ಮಾಡಿ' },
+  'voice.unmuteTitle': { en: 'Unmute your microphone', kn: 'ನಿಮ್ಮ ಮೈಕ್ರೊಫೋನ್ ಅನ್‌ಮ್ಯೂಟ್ ಮಾಡಿ' },
+  'voice.inVoice': { en: 'In voice chat', kn: 'ಧ್ವನಿ ಚಾಟ್‌ನಲ್ಲಿದ್ದಾರೆ' },
+
   'game.captureToast': {
     en: (player: string, count: number) => `${player} captured ${count} piece${count === 1 ? '' : 's'}!`,
     kn: (player: string, count: number) => `${player} ${count} ಕಾಯಿ ಸೆರೆ ಹಿಡಿದಿದ್ದಾರೆ!`,

@@ -845,12 +845,57 @@ Resolved during requirements gathering:
   (`AI_NAME` in `packages/game-core/paths.ts`), so hotseat/Develop Test's "1 player" option, Vs
   Computer, and the online server's AI-driving code all picked up the new name automatically with
   one change, no risk of the three drifting to different names.
+- **Root-caused two real online connectivity bugs, plus a latent server-crash bug found while
+  investigating them** (§13): reported as "no announcements to Player 1" after Player 2's device
+  briefly closed and reopened, and separately "Player 1 shows waiting" in the lobby even after
+  Player 2 had already joined. Reproduced both live and traced them to the same root cause —
+  `socket.io-client`'s automatic reconnection (which fires on any transient network blip, not just
+  a deliberate close) never re-runs the app's own `join-lobby-room` call, so a reconnected client
+  stays fully "connected" yet silently outside its game's room forever after, with no visible sign
+  anything is wrong. Fixed by re-joining on every `'connect'` event (not just the first) and
+  re-fetching current state once the (re)join is acknowledged, in both `OnlineLobby.tsx` and
+  `OnlinePlay.tsx`. While instrumenting the server to trace this, also found and fixed a separate,
+  more severe latent bug: the Postgres connection pool (`server/src/db/pool.ts`) had no `'error'`
+  handler, so Neon recycling an *idle* pooled connection (routine, expected behavior for
+  serverless Postgres) crashed the **entire server process** — reproduced locally when exactly
+  this happened mid-test. `pg`'s own docs call this out explicitly; fixed with a no-op `pool.on
+  ('error', ...)` handler, since Node already removes the dead client from the pool on its own —
+  the only thing missing was catching the event so it isn't treated as fatal. This plausibly
+  explains at least some of the reported symptoms outright (a mid-game server crash would disconnect
+  every player without warning) independent of the reconnect-rejoin issue.
+- **Presence indicator** (§13): added at the user's explicit request ("a visible indication to
+  know status and which players are in real time communication") — a small connected/disconnected
+  dot per player, both in the lobby's waiting-room list and on the live board's home labels.
+  Server-authoritative (tracks live socket-per-seat counts in memory, not a client-reported
+  heartbeat) specifically so it can't drift from reality the way a client-side-only indicator
+  could — the same reconnect-handling work above is what makes this reliable rather than just
+  reflecting whatever a client last happened to report before going silent. Verified live: closing
+  a player's tab correctly flips their dot to offline on the other player's board within the test's
+  poll window.
+- **Voice chat implemented** (§13): the user's report that they "didn't see any voice
+  communication channel available for players" was confirmed (via a clarifying question) to mean
+  **real voice chat between players**, not the existing automated spoken announcements (§11, which
+  remain one-device narration, never player-to-player audio) — then built as a distinct follow-up.
+  A full WebRTC mesh (direct peer-to-peer, one connection per pair of players in voice — reasonable
+  up to the game's own 4-player cap), signaled over the same Socket.IO connection gameplay already
+  uses (`server/src/realtime/voice.ts` relays offer/answer/ICE messages between exactly the two
+  peers negotiating a connection; the server never touches the audio itself). Deliberately
+  asymmetric joining (existing members always offer to a new joiner, never the reverse) avoids
+  WebRTC "glare" without needing a more complex negotiation protocol. Uses a public STUN server
+  only, no TURN — accepted as a real, known limitation (§13's own note) given a TURN server's
+  ongoing cost isn't justified for this deployment's scale. Verified live with two real browser
+  instances and fake microphone devices: both sides completed the full WebRTC negotiation and
+  received each other's actual audio stream, mic indicators appeared correctly, and leaving voice
+  cleanly tore down just that one peer connection without affecting anyone else still in voice.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has
   real per-account server-side stats (§10), just not yet surfaced in any UI.
 - **No online stats UI yet**: recorded server-side but not shown anywhere in the online screens.
+- **Voice chat has no TURN server** — see the Decisions log entry above. Two players who can't
+  establish a direct connection (some restrictive NATs/firewalls) will find voice not connecting
+  between them specifically, while the game itself keeps working normally.
 
 ## 13. Online Multiplayer
 
@@ -933,11 +978,64 @@ Still open / assumed defaults (flag if any of these are wrong):
   locally, then persists the result and broadcasts it to every socket in that game's room.
 - Clients never compute a move themselves in online mode — they send an intent (roll / pick a pool
   value / pick a piece / roll back the last move) and render whatever state comes back.
+- **Reconnects re-join the room, not just the first connect**: `socket.io-client` reconnects
+  automatically after any transient drop (a network blip, backgrounding on mobile, briefly losing
+  signal) — but a reconnect is a brand-new underlying connection that was never told to join this
+  game's Socket.IO room on its own. Every client listens for its own `'connect'` event (fires on
+  both the first connection and every later reconnect) and re-emits `join-lobby-room` each time,
+  then re-fetches the current game/lobby state once that join is acknowledged, to catch up on
+  anything broadcast during the gap. Without this, a client could stay fully "connected" yet
+  silently outside the room forever after one reconnect — no error, nothing visibly wrong, just
+  never receiving another update (confirmed reports: a player who stopped hearing any
+  announcements partway through a game; a creator whose lobby view stayed stuck on "waiting for a
+  response" even after the second player had already joined).
+
+### Presence (online)
+Every player's home label (in the waiting room's player list, and on the live board) shows a small
+connected/disconnected dot — server-authoritative, based on whether that seat currently has a live
+socket in the game's room (not a client-reported "I'm here" ping, so it can't be spoofed or go
+stale). Broadcast to the room whenever a seat's connection count crosses zero in either direction
+(first device connecting, or last device disconnecting) — a player with two tabs/devices open only
+reads as offline once every one of them has actually disconnected. A newly-joined socket also gets
+the full current picture once, not just future changes, so a late joiner immediately sees
+everyone else's status rather than waiting for the next change to happen to arrive.
+
+### Voice chat (online)
+Real-time voice between players — separate from, and in addition to, the automated spoken
+announcements (§11), which are one-way narration for whoever's own device is speaking, not
+player-to-player audio.
+- **Opt-in, never automatic**: joining voice is a deliberate "🎙️ Join Voice" button click, which is
+  what triggers the browser's own microphone-permission prompt — nothing requests mic access on
+  page load or on entering a game. A denied/unavailable microphone shows an inline error rather
+  than failing silently.
+- **A full mesh of direct peer-to-peer connections** (WebRTC), one per pair of players currently in
+  voice — reasonable up to this game's own 4-player cap (at most 3 simultaneous connections for any
+  one device) without needing a media relay server. The app's own server is signaling-only: it
+  relays offer/answer/ICE-cand' messages between exactly the two peers negotiating a connection
+  (over the same Socket.IO connection gameplay already uses) and never sees or touches the audio
+  itself.
+- **Joining is asymmetric on purpose**: whoever's already in voice initiates the connection to a
+  newly-joining player; the new joiner only ever answers, never offers. This makes the direction of
+  every connection deterministic by join order, so two peers can never both try to offer the same
+  connection at once ("glare").
+- **STUN only, no TURN server**: uses a public STUN server (Google's) for NAT traversal, which
+  works for the large majority of home/mobile connections. There's deliberately no TURN (relay)
+  server — running one has a real ongoing cost, not justified for a small-scale hobby deployment —
+  so voice can fail to connect between two specific players stuck behind unusually restrictive
+  NATs/firewalls even though the game itself keeps working fine (it never depended on a direct
+  P2P path). Accepted as a known limitation.
+- **Per-player indicators**: a mic icon on a player's home label shows they're currently in the
+  voice channel (distinct from the presence dot above — a player can be connected to the game
+  without having opted into voice). A per-device mute toggle silences only that device's own
+  microphone, same "local, per-device setting" pattern the existing sound toggle already uses.
+- Leaving voice (an explicit button, or simply closing the tab/losing connection) tears down every
+  peer connection to that player and stops their microphone; everyone still in voice keeps talking
+  to each other unaffected.
 
 ### In-game controls (online)
-Mirrors hotseat's Play Area panel (§11) — Resign Game (below), Report Bug, and a sound toggle —
-with sound being a purely local, per-device setting (each player mutes/unmutes only their own
-device).
+Mirrors hotseat's Play Area panel (§11) — Resign Game, Voice Chat (above), Report Bug, and a sound
+toggle — with sound and voice both being purely local, per-device settings (each player controls
+only their own device's speaker/microphone).
 
 ### Resign (online)
 Online's in-game leave flow is now **identical in behavior** to hotseat's Resign (§9) — the old

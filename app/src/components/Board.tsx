@@ -42,6 +42,15 @@ interface Props {
   // their status. Tracked client-side (not part of GameState) since resigning is unconditional
   // and purely a per-device UI action, not a game-core concept.
   resignedIds?: PlayerId[];
+  // Online mode only: which seats currently have a live socket connection (server-authoritative,
+  // §13) — shown as a small dot on each player's home label. Omitted (the default) in every other
+  // mode, where "connected" isn't a meaningful concept (everyone shares one device, or it's just
+  // the local human + an always-present AI).
+  connectedSeats?: PlayerId[];
+  // Online mode only: which seats are currently in the voice channel (§13) — distinct from
+  // connectedSeats, since a player can be connected to the game without having opted into voice.
+  // Shown as a small mic icon on their home label.
+  voiceParticipants?: PlayerId[];
 }
 
 // A placement's exact ordinal (Winner/2nd place/3rd place) is only safe to show once it's stable
@@ -158,6 +167,8 @@ export default function Board({
   editable,
   onEditMove,
   resignedIds,
+  connectedSeats,
+  voiceParticipants,
 }: Props) {
   const t = useT();
   const current = game.players[game.currentTurnIndex];
@@ -375,6 +386,15 @@ export default function Board({
     const status = statusFor(p, game, placements, t);
     const statusLabel = resignedIds?.includes(p.id) ? t('status.resignedSuffix', status) : status;
     const captureLabel = p.hasCaptured ? t('status.captureDone') : t('status.notCaptured');
+    // Online mode only (§13) — connectedSeats is only ever passed there. isOnline is meaningless
+    // (and not shown) everywhere else, where "connected" isn't a real concept.
+    const isOnline = connectedSeats?.includes(p.id);
+    const inVoice = voiceParticipants?.includes(p.id);
+    const presenceTitle = connectedSeats ? t(isOnline ? 'presence.online' : 'presence.offline') : null;
+    const voiceTitle = inVoice ? t('voice.inVoice') : null;
+    const title = [t('board.statsTitle', p.name, statusLabel, captureLabel), presenceTitle, voiceTitle]
+      .filter(Boolean)
+      .join(' — ');
     return (
       <button
         key={p.id}
@@ -383,8 +403,16 @@ export default function Board({
         }`}
         style={{ background: p.color }}
         onClick={() => onSelectStats(p.name)}
-        title={t('board.statsTitle', p.name, statusLabel, captureLabel)}
+        title={title}
       >
+        {connectedSeats && (
+          <span className={`presence-dot ${isOnline ? 'online' : 'offline'}`} aria-hidden="true" />
+        )}
+        {inVoice && (
+          <span className="voice-indicator" aria-hidden="true">
+            🎙️
+          </span>
+        )}
         {p.name}
         <span className="status-line">{statusLabel}</span>
         <span className="capture-status">{captureLabel}</span>

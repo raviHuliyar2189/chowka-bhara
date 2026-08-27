@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { connectSocket } from './socket';
-import { rematchGame } from './api';
+import { rematchGame, fetchGame } from './api';
+import { VoiceChatManager } from './voiceChat';
 import type { GameState } from '../game/turnEngine';
 import { moverOfLastMove } from '../game/turnEngine';
 import { computePlacements } from '../game/session';
@@ -48,6 +49,20 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
   const [resignedPlayerName, setResignedPlayerName] = useState<string | null>(null);
   const [rematching, setRematching] = useState(false);
   const [rematchError, setRematchError] = useState<string | null>(null);
+  // Which seats currently have a live connection — a per-player online/offline indicator (§13).
+  // Starts empty (not "everyone offline," just "not known yet") until the first presence:update
+  // arrives right after this device's own join is acknowledged.
+  const [connectedSeats, setConnectedSeats] = useState<PlayerId[]>([]);
+  // Real-time voice chat (§13) — who's currently in the voice channel (not the same as
+  // connectedSeats: a player can be connected to the game without having opted into voice), this
+  // device's own joined/muted state, per-peer remote audio streams to actually play, and a
+  // mic-permission-or-similar error to surface if joining fails.
+  const [voiceParticipants, setVoiceParticipants] = useState<PlayerId[]>([]);
+  const [inVoice, setInVoice] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [remoteStreams, setRemoteStreams] = useState<Partial<Record<PlayerId, MediaStream>>>({});
+  const voiceRef = useRef<VoiceChatManager | null>(null);
   const socketRef = useRef<Socket | null>(null);
   // The persistent turn banner (replaces reading game.message directly — see i18n/strings.ts)
   // initialized from the rejoining state's own current player, same reasoning as prevRevertSeq
@@ -67,9 +82,56 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
   useEffect(() => {
     const socket = connectSocket();
     socketRef.current = socket;
-    socket.emit('join-lobby-room', { gameId });
+
+    // Room membership is per-connection, not per-player — socket.io-client reconnects
+    // automatically after any transient drop (a network blip, backgrounding on mobile, briefly
+    // losing signal), but a reconnect gets a brand-new underlying connection that was never told
+    // to join this game's room. Without re-joining here, a client can end up fully connected yet
+    // silently outside the room forever after — still "online," but never receiving another
+    // game-updated broadcast again (this was a real reported bug: one player stopped hearing any
+    // announcements after some point in the game, with no error or visible sign anything was
+    // wrong). 'connect' fires for the very first connection too, so this replaces what used to be
+    // a single one-time emit outside any event handler.
+    function joinRoom() {
+      socket.emit('join-lobby-room', { gameId }, (ok: boolean) => {
+        if (!ok) return;
+        // Catch up on whatever happened while this device was disconnected/reconnecting — the
+        // next move might not come from anyone for a while, so don't just wait for one.
+        fetchGame(gameId)
+          .then((fresh) => {
+            if (fresh.state) setGame(fresh.state);
+          })
+          .catch(() => {});
+      });
+    }
+    socket.on('connect', joinRoom);
+
+    voiceRef.current = new VoiceChatManager(socket, gameId, mySeat, {
+      onRosterChange: setVoiceParticipants,
+      onRemoteStream: (seat, stream) => {
+        setRemoteStreams((prev) => {
+          const next = { ...prev };
+          if (stream) next[seat] = stream;
+          else delete next[seat];
+          return next;
+        });
+      },
+      onError: (message) => {
+        setVoiceError(message);
+        setInVoice(false);
+      },
+    });
+
     socket.on('game-updated', (state: GameState) => {
       setGame(state);
+    });
+
+    // Server-authoritative presence (§13) — broadcast whenever a seat's connection count changes
+    // between zero and non-zero (see server/src/realtime/presence.ts), and sent once in full to
+    // this socket specifically right after it joins, so a late joiner sees everyone else's current
+    // status immediately rather than waiting for the next change.
+    socket.on('presence:update', ({ connectedSeats: seats }: { connectedSeats: PlayerId[] }) => {
+      setConnectedSeats(seats);
     });
 
     // Broadcast by the server alongside its own game-updated (see server/src/realtime/resign.ts)
@@ -79,6 +141,9 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
     });
 
     return () => {
+      socket.off('connect', joinRoom);
+      voiceRef.current?.destroy();
+      voiceRef.current = null;
       socket.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -171,6 +236,22 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
   function handleResign() {
     socketRef.current?.emit('game:resign', { gameId });
   }
+  async function handleJoinVoice() {
+    setVoiceError(null);
+    await voiceRef.current?.join();
+    if (voiceRef.current?.isJoined()) setInVoice(true);
+  }
+  function handleLeaveVoice() {
+    voiceRef.current?.leave();
+    setInVoice(false);
+    setMuted(false);
+    setRemoteStreams({});
+  }
+  function handleToggleMute() {
+    const next = !muted;
+    setMuted(next);
+    voiceRef.current?.setMuted(next);
+  }
   async function handleRematch() {
     setRematching(true);
     setRematchError(null);
@@ -237,6 +318,8 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
           onPieceClickedBeforeValue={handlePieceClickedBeforeValue}
           onFormGatti={handleFormGatti}
           viewerSeat={mySeat}
+          connectedSeats={connectedSeats}
+          voiceParticipants={voiceParticipants}
         />
       </div>
       <div className="play-area">
@@ -255,6 +338,24 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
               {t('resign.gameButton')}
             </button>
           )}
+          {inVoice ? (
+            <>
+              <button className="btn-debug-log" onClick={handleLeaveVoice} title={t('voice.leaveTitle')}>
+                {t('voice.leave')}
+              </button>
+              <button
+                className={`btn-sound in-game-sound ${muted ? 'is-off' : 'is-on'}`}
+                onClick={handleToggleMute}
+                title={muted ? t('voice.unmuteTitle') : t('voice.muteTitle')}
+              >
+                {muted ? t('voice.muted') : t('voice.unmuted')}
+              </button>
+            </>
+          ) : (
+            <button className="btn-debug-log" onClick={handleJoinVoice} title={t('voice.joinTitle')}>
+              {t('voice.join')}
+            </button>
+          )}
           <button className="btn-debug-log" onClick={() => setShowReportBug(true)} title={t('game.reportBugTitle')}>
             {t('game.reportBug')}
           </button>
@@ -266,7 +367,21 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
             {soundOn ? t('game.soundOn') : t('game.muted')}
           </button>
         </div>
+        {voiceError && <p className="online-error">{voiceError}</p>}
       </div>
+
+      {/* One hidden auto-playing audio element per connected voice peer — never rendered visibly,
+          this is purely how a received MediaStream actually gets played out loud. */}
+      {Object.entries(remoteStreams).map(([seat, stream]) => (
+        <audio
+          key={seat}
+          ref={(el) => {
+            if (el) el.srcObject = stream as MediaStream;
+          }}
+          autoPlay
+          style={{ display: 'none' }}
+        />
+      ))}
 
       {resignedPlayerName && (
         <ResignModal playerName={resignedPlayerName} onDismiss={() => setResignedPlayerName(null)} />
