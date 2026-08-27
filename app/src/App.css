@@ -25,24 +25,17 @@
 }
 
 /* The slim top bar shown on every screen except the welcome splash and live gameplay (see
-   App.tsx's AppHeader / useChromeHidden) — just the language toggle now that the app name/version
-   live on the welcome page instead, so this no longer needs an h1's line-height/margin budget. */
+   App.tsx's AppHeader / useChromeHidden) — just the language toggle now that the app's version
+   lives on the welcome page instead (the English name was dropped from there too — the Kannada
+   title above it already names the game), so this no longer needs an h1's line-height/margin
+   budget. */
 .app-header-bar {
   margin-bottom: 8px;
 }
 
-/* Colors match .welcome-message below (not var(--text)/var(--text-muted), which are sized for
-   the app's normal light-surface screens) — this splash's background is always the fixed dark
-   wood gradient regardless of theme, so text here needs its own always-legible palette. */
-.welcome-app-name {
-  margin: 0;
-  color: #ecd9b3;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 20px;
-  letter-spacing: 1px;
-  text-decoration: underline;
-}
-
+/* Color matches .welcome-message below (not var(--text-muted), which is sized for the app's
+   normal light-surface screens) — this splash's background is always the fixed dark wood gradient
+   regardless of theme, so text here needs its own always-legible palette. */
 .welcome-app-version {
   display: block;
   text-align: center;
@@ -1014,16 +1007,6 @@
 .dice-tray {
   position: absolute;
   inset: 0;
-}
-
-/* The current roll's value, as a caption below the circle rather than tucked in its corner —
-   a corner label doesn't read well against a round shape. */
-.roll-label-row {
-  min-height: 18px;
-  font-size: 13px;
-  font-weight: bold;
-  color: #ecd9b3;
-  text-align: center;
 }
 
 /* Dice: the traditional Chowka Bhara kavade (cowrie shells) — real cropped photos (see

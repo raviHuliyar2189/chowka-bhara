@@ -987,6 +987,13 @@ Resolved during requirements gathering:
     trimmed mode-select header) compared directly against the reference mockup — the height
     reduction above was itself discovered and tuned this way (the first pass left a large empty gap
     under Game Controls that the screenshot made obvious).
+- **Two small follow-up removals from the layout pass above** (§11, §1): the caption under the
+  dice circle (the latest roll's value, or "<player>'s turn" before rolling) was removed —
+  redundant with the turn banner above it and the pool/dice-face display already showing the same
+  information (`DiceTray.tsx`'s `.roll-label-row`, and the now-unused `dice.currentTurn`/`dice.bonus`
+  strings, both deleted). And the English "Chowka Bhara" name added to the welcome page just above
+  was removed again — the existing Kannada title already names the game, so showing both was
+  redundant; the version number stays.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

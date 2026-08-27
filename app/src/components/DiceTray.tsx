@@ -153,16 +153,6 @@ export default function DiceTray({
             )}
           </AnimatePresence>
         </div>
-        <div className="roll-label-row">
-          {lastRoll ? (
-            <>
-              {lastRoll.label}
-              {lastRoll.isBonus ? t('dice.bonus') : ''}
-            </>
-          ) : (
-            t('dice.currentTurn', current.name)
-          )}
-        </div>
       </div>
 
       {/* "Game controls" (§11's layout pass): Roll the Dice / Roll Back Last Move, then Moves

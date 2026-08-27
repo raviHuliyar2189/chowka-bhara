@@ -127,10 +127,8 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
     kn: 'ಕೊನೆಯ ನಡೆಯನ್ನು ರದ್ದುಗೊಳಿಸಿ ಮತ್ತು ಬಾಕಿ ಇರುವ ಗರ/ಕಾಯಿ ಆಯ್ಕೆಯನ್ನು ಮರುಸ್ಥಾಪಿಸಿ',
   },
   'dice.rollbackButton': { en: '⟲ Roll Back Last Move', kn: '⟲ ಕೊನೆಯ ನಡೆ ಹಿಂತೆಗೆದುಕೊಳ್ಳಿ' },
-  'dice.currentTurn': { en: (name: string) => `${name}'s turn`, kn: (name: string) => `${name} ಅವರ ಸರದಿ` },
   'dice.movesRemaining': { en: 'Moves still to play:', kn: 'ನಡೆಸಬೇಕಾದ ಗರಗಳು:' },
   'dice.none': { en: 'None', kn: 'ಯಾವುದೂ ಇಲ್ಲ' },
-  'dice.bonus': { en: ' (bonus)', kn: ' (ಬೋನಸ್)' },
   'dice.faceBlack': { en: 'Black', kn: 'ಕಪ್ಪು' },
   'dice.faceWhite': { en: 'White', kn: 'ಬಿಳಿ' },
 
