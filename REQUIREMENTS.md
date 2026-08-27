@@ -1073,6 +1073,21 @@ Resolved during requirements gathering:
   own `localStorage` are outside this session's reach entirely (a different machine/browser) —
   the user was given the two `localStorage.removeItem` keys (`chowka-bhara:roster`,
   `chowka-bhara:stats`) to clear that themselves.
+- **Fixed: the database reset above left an already-open tab's "Create Game" failing with a bare
+  "Internal server error"** (§13): a validly-*signed* session token only proves it was issued by
+  this server at some point — it says nothing about whether that player row still exists (deleting
+  it doesn't invalidate tokens already issued for it; signing is stateless by design). `requireAuth`
+  (`server/src/auth/middleware.ts`, gating every `/auth/me` and `/games/*` route) trusted the
+  token's claims alone, so a stale token sailed straight through looking perfectly valid, only to
+  hit a foreign-key violation several steps later on whatever route actually touched `players`
+  (`games.created_by`, in the reported case) — an opaque generic 500 with no indication of what
+  actually went wrong or how to recover. Fixed at both ends: `requireAuth` now re-checks the player
+  actually exists and returns a clear 401 ("Your account no longer exists. Please sign in again.")
+  if not, and the client's shared `request()` helper (`app/src/online/api.ts`) clears a token that
+  gets a 401 back, so the next reload lands cleanly on the login screen instead of presenting that
+  same now-useless token again. Verified against the real dev server: a token for a deleted player
+  now gets a clean 401 with the message above on both `/auth/me` and `POST /games` (previously a
+  500 on the latter), while a token for a real, still-existing player is completely unaffected.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

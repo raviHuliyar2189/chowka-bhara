@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { verifySession, type SessionPayload } from './tokens';
+import { pool } from '../db/pool';
 
 declare global {
   namespace Express {
@@ -28,10 +29,24 @@ export function readSession(req: Request, _res: Response, next: NextFunction): v
   next();
 }
 
-// For routes that require a signed-in caller — must run after readSession.
-export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+// For routes that require a signed-in caller — must run after readSession. A validly-*signed*
+// token only proves it was issued by this server at some point; it says nothing about whether
+// that player still exists (an admin data reset, a GDPR deletion, anything that removes the
+// row without also invalidating every token issued for it — signing is stateless by design, so
+// there's no server-side session to revoke). Without this re-check, a client holding a stale
+// token sails past this middleware, `req.player` looking perfectly valid, only to hit a foreign-
+// key violation several steps later on whatever route actually touches the players table (e.g.
+// games.created_by) — surfacing as an opaque generic 500 instead of an actionable "sign in
+// again." Reproduced for real: a full players-table wipe left an already-open tab's create-game
+// action failing exactly that way.
+export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   if (!req.player) {
     res.status(401).json({ error: 'Not signed in.' });
+    return;
+  }
+  const { rows } = await pool.query('select 1 from players where id = $1', [req.player.playerId]);
+  if (rows.length === 0) {
+    res.status(401).json({ error: 'Your account no longer exists. Please sign in again.' });
     return;
   }
   next();

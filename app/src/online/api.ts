@@ -49,6 +49,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
   const body = await resp.json().catch(() => ({}));
   if (!resp.ok) {
+    // A 401 on an authenticated request means the server has rejected this token outright — not
+    // just "this specific action needs auth," since every route here already requires it (see
+    // requireAuth's own comment: a validly-*signed* token can still point at a player that no
+    // longer exists, e.g. after a data reset). Clearing it here means the next thing that calls
+    // fetchMe() (a reload, most naturally) lands cleanly on the login screen instead of presenting
+    // this same now-useless token again.
+    if (resp.status === 401 && token) clearToken();
     throw new Error(body.error ?? `Request failed (${resp.status})`);
   }
   return body as T;
