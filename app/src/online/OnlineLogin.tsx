@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { login, type PlayerInfo } from './api';
 import { useT } from '../i18n/strings';
+import LanguageToggle from '../components/LanguageToggle';
 
 interface Props {
   onLoggedIn: (player: PlayerInfo) => void;
@@ -34,7 +35,11 @@ export default function OnlineLogin({ onLoggedIn, onNoAccount }: Props) {
 
   return (
     <div className="modal">
-      <h2>{t('auth.signInTitle')}</h2>
+      <p className="screen-app-title">{t('app.title')}</p>
+      <div className="screen-heading-row">
+        <h2>{t('auth.signInTitle')}</h2>
+        <LanguageToggle />
+      </div>
       <p>{t('auth.signInPrompt')}</p>
       <form onSubmit={handleSubmit}>
         <div className="setup-row">

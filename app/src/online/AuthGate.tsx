@@ -3,6 +3,7 @@ import { fetchMe, type PlayerInfo } from './api';
 import OnlineLogin from './OnlineLogin';
 import NeedsProfile from './NeedsProfile';
 import { useT } from '../i18n/strings';
+import { setChromeHidden } from '../ui/appChrome';
 
 type View = { kind: 'loading' } | { kind: 'login' } | { kind: 'needs-profile'; email: string };
 
@@ -15,6 +16,15 @@ interface Props {
 export default function AuthGate({ onAuthed }: Props) {
   const t = useT();
   const [view, setView] = useState<View>({ kind: 'loading' });
+
+  // Hides the global app header's own language toggle (App.tsx's AppHeader) for as long as this
+  // screen is up — OnlineLogin shows its own copy instead, right-aligned next to its "Sign In"
+  // heading, at the user's explicit request; same reasoning and mechanism as mode-select's own
+  // copy of this (see REQUIREMENTS.md's Decisions log).
+  useEffect(() => {
+    setChromeHidden(true);
+    return () => setChromeHidden(false);
+  }, []);
 
   useEffect(() => {
     fetchMe()

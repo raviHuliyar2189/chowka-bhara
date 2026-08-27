@@ -25,9 +25,14 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   },
   'error.reload': { en: 'Reload', kn: 'ಮರುಲೋಡ್ ಮಾಡಿ' },
 
+  // --- App name (OnlineLogin's own title — see below; the welcome page hardcodes its own
+  // Kannada-only copy of this instead, since it's always shown in Kannada regardless of the
+  // language setting) ---
+  'app.title': { en: 'Chowka Bhara', kn: 'ಚೌಕಾ ಭಾರ' },
+
   // --- Auth (AuthGate / OnlineLogin / NeedsProfile) ---
   'auth.loading': { en: 'Loading…', kn: 'ಲೋಡ್ ಆಗುತ್ತಿದೆ…' },
-  'auth.signInTitle': { en: 'Sign In to Play', kn: 'ಆಡಲು ಸೈನ್ ಇನ್ ಮಾಡಿ' },
+  'auth.signInTitle': { en: 'Sign In', kn: 'ಸೈನ್ ಇನ್' },
   'auth.signInPrompt': {
     en: 'Enter your email to log in, or to create a new account.',
     kn: 'ಲಾಗ್ ಇನ್ ಮಾಡಲು ಅಥವಾ ಹೊಸ ಖಾತೆ ರಚಿಸಲು ನಿಮ್ಮ ಇಮೇಲ್ ನಮೂದಿಸಿ.',

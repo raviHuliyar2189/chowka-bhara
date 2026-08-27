@@ -40,7 +40,7 @@ export default function ModeSelect({ onChoose }: Props) {
   return (
     <div className="setup-inline">
       <div className="modal">
-        <div className="mode-select-heading-row">
+        <div className="screen-heading-row">
           <h2>{t('modeSelect.heading')}</h2>
           <LanguageToggle />
         </div>

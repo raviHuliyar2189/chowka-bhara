@@ -1088,6 +1088,17 @@ Resolved during requirements gathering:
   same now-useless token again. Verified against the real dev server: a token for a deleted player
   now gets a clean 401 with the message above on both `/auth/me` and `POST /games` (previously a
   500 on the latter), while a token for a real, still-existing player is completely unaffected.
+- **Sign-in screen (§13): added an app-name title, shortened its heading, and moved the language
+  toggle onto that heading's own row** — the same treatment mode-select just got, applied here too
+  once the sign-in screen came up in practice (recovering from the database reset above). "Sign In
+  to Play" shortened to "Sign In"; a small "Chowka Bhara" line added above it (`app.title`,
+  reinstated in `strings.ts` after being deleted as unused two entries back — it has a real use
+  again now); the language toggle moved right-aligned onto the "Sign In" row itself, out of the
+  standalone top bar, via the same `setChromeHidden` mechanism mode-select uses — now covering
+  `AuthGate`'s whole lifecycle (loading/login/needs-profile), not just the login view specifically,
+  so the header doesn't flicker back in transitioning between those. The heading-row styling itself
+  was generalized from `.mode-select-heading-row` to `.screen-heading-row` so both screens (and any
+  later one) share it rather than duplicating the same rule under a screen-specific name.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
@@ -1388,10 +1399,11 @@ needed).
 ### Toggle
 Two small pill buttons, "EN" / "ಕನ್ನಡ" (`LanguageToggle.tsx`, shared markup for every place this
 appears), reachable before a game even starts:
-- On mode-select specifically, right-aligned on the same row as its "How do you want to play?"
-  heading — not the standalone top bar, at the user's explicit request (see the Decisions log).
-- On every other pre-game screen (login/sign-up, hotseat/vs-computer/online setup, the online
-  lobby), in the shared app header, same as before.
+- On mode-select, right-aligned on the same row as its "How do you want to play?" heading.
+- On the online sign-in screen, right-aligned on the same row as its "Sign In" heading.
+- Both above are moved off the standalone top bar specifically, at the user's explicit request
+  (see the Decisions log) — every *other* pre-game screen (needs-profile/create-account,
+  hotseat/vs-computer/online setup, the online lobby) still shows it in the shared app header.
 
 During live gameplay the header is hidden entirely (see §11's Decisions log entry) and the same
 toggle moves into that screen's App Controls overlay instead — still reachable, just consolidated
