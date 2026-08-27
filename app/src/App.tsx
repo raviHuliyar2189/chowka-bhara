@@ -9,39 +9,23 @@ import HotseatPage from './hotseat/HotseatPage';
 import VsComputerPage from './vscomputer/VsComputerPage';
 import type { PlayerInfo } from './online/api';
 import { unlockAudioOnFirstInteraction } from './audio/announcer';
-import { useLanguage } from './i18n/useLanguage';
-import { setLanguage } from './i18n/language';
 import { useChromeHidden } from './ui/appChrome';
+import LanguageToggle from './components/LanguageToggle';
 import './App.css';
 
-// Shared header for every screen after the welcome splash (mode-select, login, online setup) —
-// just the language toggle now; the app name/version moved to the welcome page itself (the only
-// place a title's vertical space isn't competing with the board — see REQUIREMENTS.md's Decisions
-// log). Renders nothing at all while a live game screen has hidden it (useChromeHidden), so that
-// space goes to the board instead — those screens carry their own compact "App Controls" button
-// with the same language toggle, alongside sound/report-bug/voice controls.
+// Shared header for every screen after the welcome splash (login, hotseat/vs-computer/online
+// setup, the online lobby) — just the language toggle now; the app name/version moved to the
+// welcome page itself (the only place a title's vertical space isn't competing with the board —
+// see REQUIREMENTS.md's Decisions log). Renders nothing while a screen has hidden it via
+// useChromeHidden: live gameplay screens (their own compact "App Controls" button carries the same
+// toggle alongside sound/report-bug/voice controls) and mode-select (which shows its own copy
+// right-aligned next to its own heading instead of this standalone bar).
 function AppHeader() {
-  const lang = useLanguage();
   const hidden = useChromeHidden();
   if (hidden) return null;
   return (
     <div className="app-header-bar">
-      <span className="lang-toggle">
-        <button
-          className={`lang-btn${lang === 'en' ? ' active' : ''}`}
-          onClick={() => setLanguage('en')}
-          disabled={lang === 'en'}
-        >
-          EN
-        </button>
-        <button
-          className={`lang-btn${lang === 'kn' ? ' active' : ''}`}
-          onClick={() => setLanguage('kn')}
-          disabled={lang === 'kn'}
-        >
-          ಕನ್ನಡ
-        </button>
-      </span>
+      <LanguageToggle />
     </div>
   );
 }

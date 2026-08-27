@@ -190,8 +190,8 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
     kn: 'ಈ ತೊಳ್ಳನ್ನು (2 ಕಾಯಿಗಳು) ಶಾಶ್ವತ ಗಟ್ಟಿಯನ್ನಾಗಿ ಮಾಡಿ ಒಂದು ಚೌಕ ಮುಂದೆ ಸರಿಸಿ',
   },
   'banner.gattiFormed': {
-    en: (name: string) => `${name} formed a Gatti!`,
-    kn: (name: string) => `${name} ಗಟ್ಟಿ ಮಾಡಿದರು!`,
+    en: (name: string) => `${name} formed Gatti`,
+    kn: (name: string) => `${name} ಗಟ್ಟಿ ಮಾಡಿದರು`,
   },
 
   // --- Vs Computer ---
@@ -360,36 +360,42 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   },
 
   // --- Turn banner / hint (shared: hotseat, vs-computer, online) ---
+  // Deliberately terse — <player name> plus a 1-word action and, where useful, one more word
+  // (a die label, a count, a place) — not a full sentence. The fuller spoken-aloud phrasing lives
+  // separately in audio/announcer.ts's own announce*() functions, unaffected by this.
   'hint.selectValueFirst': { en: 'Select a dice value first.', kn: 'ಮೊದಲು ಗರ ಆಯ್ಕೆಮಾಡಿ.' },
   'banner.turnStart': {
-    en: (name: string) => `${name}, it's your turn — roll the dice.`,
-    kn: (name: string) => `${name}, ನಿಮ್ಮ ಸರದಿ, ಕವಡೆ ಹಾಕಿ.`,
+    en: (name: string) => `${name}'s turn`,
+    kn: (name: string) => `${name} ಸರದಿ`,
   },
+  // A revert also just means it's now someone's turn — the same short form as turnStart, not a
+  // separate explanation of what got undone (still in the debug log and the spoken announcement).
   'banner.turnReverted': {
-    en: (revertedName: string, nextName: string) =>
-      `${revertedName} couldn't play out all the dice — that turn is undone. ${nextName}, it's your turn — roll the dice.`,
-    kn: (revertedName: string, nextName: string) =>
-      `${revertedName} ಎಲ್ಲಾ ಗರಗಳನ್ನು ಆಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ — ಆ ಸರದಿ ರದ್ದಾಗಿದೆ. ${nextName}, ನಿಮ್ಮ ಸರದಿ, ಕವಡೆ ಹಾಕಿ.`,
+    en: (_revertedName: string, nextName: string) => `${nextName}'s turn`,
+    kn: (_revertedName: string, nextName: string) => `${nextName} ಸರದಿ`,
   },
+  // rollResult and rollBonus share this exact same form — label alone already distinguishes a
+  // bonus roll (dice.ts's label is 'Bhara'/'Chauka' there, a plain number otherwise), so there's
+  // nothing a separate bonus phrasing would add.
   'banner.rollResult': {
-    en: (name: string, label: string) => `${name} rolled ${label}. Move your piece.`,
-    kn: (name: string, label: string) => `${name} ${label} ಎಸೆದರು. ನಿಮ್ಮ ಕಾಯಿ ನಡೆಸಿ.`,
+    en: (name: string, label: string) => `${name} rolled ${label}`,
+    kn: (name: string, label: string) => `${name} ${label} ಎಸೆದರು`,
   },
   'banner.rollBonus': {
-    en: (name: string, label: string) => `${name} rolled ${label}! Bonus roll — roll again.`,
-    kn: (name: string, label: string) => `${name} ${label} ಎಸೆದರು! ಬೋನಸ್ ಎಸೆತ — ಮತ್ತೆ ಕವಡೆ ಹಾಕಿ.`,
+    en: (name: string, label: string) => `${name} rolled ${label}`,
+    kn: (name: string, label: string) => `${name} ${label} ಎಸೆದರು`,
   },
   'banner.captured': {
-    en: (name: string, count: number) => `${name} captured ${count > 1 ? `${count} pieces` : 'a piece'}! Roll again.`,
-    kn: (name: string, count: number) => `${name} ${count} ಕಾಯಿ ಸೆರೆ ಹಿಡಿದರು! ಮತ್ತೆ ಕವಡೆ ಹಾಕಿ.`,
+    en: (name: string, count: number) => `${name} captured${count > 1 ? ` ${count}` : ''}`,
+    kn: (name: string, count: number) => `${name} ${count > 1 ? `${count} ` : ''}ಸೆರೆ ಹಿಡಿದರು`,
   },
   'banner.finished': {
-    en: (name: string, place: number) => `${name} finished in ${ordinalEn(place)} place.`,
-    kn: (name: string, place: number) => `${name} ${place}ನೇ ಸ್ಥಾನದಲ್ಲಿ ಮುಗಿಸಿದರು.`,
+    en: (name: string, place: number) => `${name} finished ${ordinalEn(place)}`,
+    kn: (name: string, place: number) => `${name} ${place}ನೇ ಸ್ಥಾನ`,
   },
   'banner.won': {
-    en: (name: string) => `${name} won the game!`,
-    kn: (name: string) => `${name} ಆಟವನ್ನು ಗೆದ್ದರು!`,
+    en: (name: string) => `${name} won`,
+    kn: (name: string) => `${name} ಗೆದ್ದರು`,
   },
   'banner.gameOver': { en: 'Game over!', kn: 'ಆಟ ಮುಗಿದಿದೆ!' },
 };

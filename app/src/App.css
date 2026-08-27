@@ -12,6 +12,25 @@
   margin-top: 16px;
 }
 
+/* Heading on the left, language toggle right-aligned on the same row — moved here from the
+   standalone top bar at the user's explicit request (see REQUIREMENTS.md's Decisions log; the
+   toggle still lives there for every other pre-game screen). */
+.mode-select-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mode-select-heading-row h2 {
+  margin: 0;
+}
+
+.mode-select-heading-row .lang-toggle {
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
 .online-error {
   color: #96402f;
   font-weight: bold;

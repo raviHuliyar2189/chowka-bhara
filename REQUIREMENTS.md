@@ -321,8 +321,11 @@ or in the session summary table) opens their full lifetime statistics (**hotseat
 ### Play Area panel
 The right-hand panel next to the board ("Play Area", chocolate-brown background, fixed footprint
 close to the board's own height) contains, top to bottom:
-1. A text box announcing whose turn it is (in Kannada or English depending on the language
-   setting — see §16).
+1. A text box announcing what just happened, kept deliberately terse: player name plus a 1-word
+   action and, where it adds something, one more word — "Ravi's turn," "Ravi rolled 3," "Ravi
+   captured 2," "Ravi finished 2nd," "Ravi won" — not a full sentence (the fuller, natural-sounding
+   phrasing is reserved for the *spoken* announcement, a separate thing — see the spoken
+   announcements subsection under §16).
 2. **Dice row**: the round kavade-throw area (shows a shaking-hands idle animation while waiting
    for a roll, then the scattered result of the latest throw once rolled) sits beside — not above
    — **Game Controls**: one uniformly-sized, full-width, vertically-stacked button column —
@@ -1029,6 +1032,28 @@ Resolved during requirements gathering:
     since) was dropped too — nothing but the Kannada title, the dedication line, and the portrait
     remain. `app.title`/`app.version` deleted from `strings.ts` as fully unused once nothing
     referenced them any more.
+- **Turn banner shortened to name + 1-word action (+ optional word); language toggle moved onto
+  mode-select's own heading row** (§11, §16): two independent requests landed together.
+  - Every `banner.*` string in `strings.ts` rewritten to the terse form: "Ravi's turn," "Ravi
+    rolled 3," "Ravi captured 2" (count omitted entirely when it's just 1 — "Ravi captured," not
+    "Ravi captured 1"), "Ravi finished 2nd," "Ravi won," "Ravi formed Gatti." `rollResult` and
+    `rollBonus` collapsed into one identical form — the roll's own label already reads "Bhara"/
+    "Chauka" for a bonus throw (see `dice.ts`), so a separate bonus phrasing said nothing a plain
+    "rolled Bhara" doesn't already say. `turnReverted` no longer explains what got undone in the
+    banner itself (still in the debug log, and in the fuller spoken announcement) — it just shows
+    whose turn it now is, identical to `turnStart`. This is the *visible* banner only; the spoken
+    announcements (`audio/announcer.ts`'s own `announce*()` functions) are separate strings and
+    keep their fuller, more natural phrasing — shortening one was never meant to shorten the other.
+  - The language toggle's original request ("move it under App Control") turned out, once
+    clarified with a screenshot, to mean something more specific: right-align it on mode-select's
+    own heading row, next to "How do you want to play?", rather than the standalone top bar it
+    shared with every other pre-game screen. Extracted the toggle's markup into a shared
+    `LanguageToggle.tsx` (previously duplicated inline in `App.tsx`'s header and, since the App
+    Controls work, inside that overlay too) so mode-select could reuse it without a second copy of
+    the same JSX. Mode-select now calls the same `setChromeHidden` used to hide the header during
+    live gameplay, suppressing the standalone bar just for itself while it shows its own copy —
+    every *other* pre-game screen (login, hotseat/vs-computer/online setup, the online lobby) is
+    unaffected and keeps the toggle in the shared header exactly as before.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
@@ -1318,14 +1343,18 @@ spoken announcement uses. Defaults to **English** for a first-time visitor; the 
 needed).
 
 ### Toggle
-Two small pill buttons, "EN" / "ಕನ್ನಡ", in the shared app header — visible on every screen after
-the welcome splash up through starting a game (mode-select, login/sign-up, setup), so it's
-reachable before a game even starts. During live gameplay itself the header is hidden (see §11's
-Decisions log entry) and the same toggle moves into that screen's App Controls popover instead —
-still reachable, just consolidated with the rest of that screen's non-gameplay controls rather than
-occupying its own persistent bar. Each language's own button always shows in that language's own
-script (not translated by the *other* selected language), the standard convention for a language
-switcher.
+Two small pill buttons, "EN" / "ಕನ್ನಡ" (`LanguageToggle.tsx`, shared markup for every place this
+appears), reachable before a game even starts:
+- On mode-select specifically, right-aligned on the same row as its "How do you want to play?"
+  heading — not the standalone top bar, at the user's explicit request (see the Decisions log).
+- On every other pre-game screen (login/sign-up, hotseat/vs-computer/online setup, the online
+  lobby), in the shared app header, same as before.
+
+During live gameplay the header is hidden entirely (see §11's Decisions log entry) and the same
+toggle moves into that screen's App Controls overlay instead — still reachable, just consolidated
+with the rest of that screen's non-gameplay controls rather than occupying its own persistent bar.
+Each language's own button always shows in that language's own script (not translated by the
+*other* selected language), the standard convention for a language switcher.
 
 ### Scope
 Every user-facing string in the app switches with the setting: every mode's screens (mode-select,
