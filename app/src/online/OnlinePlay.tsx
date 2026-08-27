@@ -9,7 +9,7 @@ import { computePlacements } from '../game/session';
 import type { PlayerId } from '../game/paths';
 import Board from '../components/Board';
 import DiceTray from '../components/DiceTray';
-import AppControlsMenu from '../components/AppControlsMenu';
+import AppControlsPanel from '../components/AppControlsMenu';
 import ReportBugModal from '../components/ReportBugModal';
 import ResignModal from '../components/ResignModal';
 import {
@@ -372,7 +372,7 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
           resignAllowed={resignAllowed}
           onResign={handleResign}
           appControls={
-            <AppControlsMenu soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)}>
+            <AppControlsPanel soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)}>
               {/* Voice call setup (§13) — join/leave, mute, and the autoplay-blocked recovery
                   button all belong here per the App Controls consolidation; the connection-failure
                   text below stays outside the (closed-by-default) panel since it's status the
@@ -403,7 +403,7 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
                   </button>
                 )}
               </div>
-            </AppControlsMenu>
+            </AppControlsPanel>
           }
         />
         {voiceError && <p className="online-error">{voiceError}</p>}

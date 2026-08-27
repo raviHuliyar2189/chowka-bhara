@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { GameState } from '../game/turnEngine';
 import { useT } from '../i18n/strings';
@@ -22,9 +22,10 @@ interface Props {
   // default) wherever a mode never offers it at all.
   resignAllowed?: boolean;
   onResign?: () => void;
-  // The App Controls button (AppControlsMenu.tsx) — rendered last in this same stack, below
-  // Resign, rather than by the page itself elsewhere, so every button in the playing screen's
-  // control column shares one uniform size/spacing (see .game-controls-col in App.css).
+  // Just the App Controls panel's inner content (AppControlsMenu.tsx's AppControlsPanel) — the
+  // button and open/close state live here in DiceTray instead, since clicking it needs to overlay
+  // the dice throw area (dice-circle-col) exactly, not pop over near the button itself; see
+  // appControlsOpen below and .app-controls-overlay in App.css.
   appControls?: ReactNode;
 }
 
@@ -112,6 +113,25 @@ export default function DiceTray({
   const lastRollIndex = game.rollHistory.length - 1;
   const lastRoll = lastRollIndex >= 0 ? game.rollHistory[lastRollIndex] : null;
 
+  const [appControlsOpen, setAppControlsOpen] = useState(false);
+  // The button and the overlay it opens live in two different branches of this same render (game-
+  // controls-col vs dice-circle-col — see below), so a single wrapping ref can't catch outside
+  // clicks the way a plain popover would; both are tracked here instead.
+  const appControlsBtnRef = useRef<HTMLButtonElement>(null);
+  const appControlsOverlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!appControlsOpen) return;
+    function onDocPointerDown(e: PointerEvent) {
+      const target = e.target as Node;
+      if (appControlsBtnRef.current?.contains(target)) return;
+      if (appControlsOverlayRef.current?.contains(target)) return;
+      setAppControlsOpen(false);
+    }
+    document.addEventListener('pointerdown', onDocPointerDown);
+    return () => document.removeEventListener('pointerdown', onDocPointerDown);
+  }, [appControlsOpen]);
+
   return (
     <div className="dice-section">
       {/* Round throw area: shake (idle) or the latest throw's scattered result — sits beside
@@ -158,6 +178,17 @@ export default function DiceTray({
             )}
           </AnimatePresence>
         </div>
+
+        {/* App Controls opens right on top of the dice throw area, at exactly its size (see
+           .app-controls-overlay in App.css — position: absolute; inset: 0 against this column,
+           which .dice-stage alone otherwise fills, so the overlay automatically matches its
+           footprint instead of duplicating pixel dimensions). Content scrolls internally
+           (.app-controls-overlay's own overflow-y) if it doesn't all fit at once. */}
+        {appControlsOpen && (
+          <div className="app-controls-overlay" ref={appControlsOverlayRef}>
+            {appControls}
+          </div>
+        )}
       </div>
 
       {/* "Game controls" (§11's layout pass): Roll the Dice, Roll Back Last Move, Moves still to
@@ -202,7 +233,16 @@ export default function DiceTray({
           </button>
         )}
 
-        {appControls}
+        <button
+          type="button"
+          className="action-btn app-controls-btn"
+          ref={appControlsBtnRef}
+          onClick={() => setAppControlsOpen((v) => !v)}
+          title={t('appControls.title')}
+          aria-expanded={appControlsOpen}
+        >
+          {t('appControls.button')}
+        </button>
       </div>
     </div>
   );

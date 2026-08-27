@@ -30,7 +30,7 @@ import { useT } from '../i18n/strings';
 import { setChromeHidden } from '../ui/appChrome';
 import Board from '../components/Board';
 import DiceTray from '../components/DiceTray';
-import AppControlsMenu from '../components/AppControlsMenu';
+import AppControlsPanel from '../components/AppControlsMenu';
 import ResignModal from '../components/ResignModal';
 import ReportBugModal from '../components/ReportBugModal';
 import StatsModal from '../components/StatsModal';
@@ -330,7 +330,7 @@ export default function VsComputerPage() {
             resignAllowed={resignAllowed}
             onResign={handleResign}
             appControls={
-              <AppControlsMenu soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)} />
+              <AppControlsPanel soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)} />
             }
           />
         </div>

@@ -25,10 +25,6 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   },
   'error.reload': { en: 'Reload', kn: 'ಮರುಲೋಡ್ ಮಾಡಿ' },
 
-  // --- App header ---
-  'app.title': { en: 'Chowka Bhara', kn: 'ಚೌಕಾ ಭಾರ' },
-  'app.version': { en: 'Version 0.2', kn: 'ಆವೃತ್ತಿ 0.2' },
-
   // --- Auth (AuthGate / OnlineLogin / NeedsProfile) ---
   'auth.loading': { en: 'Loading…', kn: 'ಲೋಡ್ ಆಗುತ್ತಿದೆ…' },
   'auth.signInTitle': { en: 'Sign In to Play', kn: 'ಆಡಲು ಸೈನ್ ಇನ್ ಮಾಡಿ' },
@@ -150,7 +146,7 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'game.muted': { en: '🔇 Muted', kn: '🔇 ಮ್ಯೂಟ್ ಮಾಡಲಾಗಿದೆ' },
   // --- App Controls button (§11's layout pass) — sound/report-bug/language/voice, out of the
   // playing screen's fixed layout and into one popover, so that space goes to the board instead.
-  'appControls.button': { en: 'App', kn: 'ಆ್ಯಪ್' },
+  'appControls.button': { en: 'App Control', kn: 'ಆ್ಯಪ್ ನಿಯಂತ್ರಣ' },
   'appControls.title': {
     en: 'App Controls — language, sound, voice, report a bug',
     kn: 'ಆ್ಯಪ್ ನಿಯಂತ್ರಣಗಳು — ಭಾಷೆ, ಧ್ವನಿ, ಕರೆ, ದೋಷ ವರದಿ',

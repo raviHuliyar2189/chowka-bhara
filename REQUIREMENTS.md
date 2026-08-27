@@ -334,16 +334,18 @@ close to the board's own height) contains, top to bottom:
      identical in behavior everywhere; Vs Computer's one necessary adaptation is *who* it resigns
      (always the human, since there's no "whoever's turn it is" to pick between when only one seat
      is ever human — see §14).
-   - The **App Controls** button (labeled "App"), always last.
+   - The **App Controls** button (labeled "App Control"), always last.
 
    Every button in this column shares the same size (width, padding, and the same gradient/shadow
    "keycap" styling, just its own color per button) rather than each having its own dimensions —
    reads as one deliberate, cohesive control group. Reflows back to stacked (circle above Game
    Controls) on narrow/phone widths, where there isn't room for both side by side.
-3. **App Controls** opens a popover *above* itself (it's the last item in the column, so opening
-   downward would routinely spill past the panel's own bottom edge), containing: the language
-   toggle (§16), the sound on/off toggle, the Report Bug button, and — online mode only — voice
-   call setup (join/leave, mute, and any connection-failure status; §13). Consolidates everything
+3. **App Controls** opens right on top of the dice throw area — not a popover anchored to the
+   button, but a full overlay at exactly that area's own position and size (same width, height,
+   and screen position as the round kavade-throw circle it replaces while open) — containing: the
+   language toggle (§16), the sound on/off toggle, the Report Bug button, and — online mode only —
+   voice call setup (join/leave, mute, and any connection-failure status; §13). Scrolls internally
+   if its content doesn't all fit at that size rather than overflowing. Consolidates everything
    that used to be a wide row of buttons under the dice into one small control, so the panel's
    fixed width goes to Game Controls/the board instead (see the Decisions log for why).
 
@@ -1007,6 +1009,28 @@ Resolved during requirements gathering:
   reads as a distinct kind of action while matching everything else in size and depth. Its popover
   now opens upward (`bottom` anchor, not `top`) since it's the last item in the column — opening
   downward would otherwise routinely spill past the panel's own bottom edge.
+- **App Controls now overlays the dice throw area exactly, instead of a popover; button relabeled
+  "App Control"; the welcome page's version-number line removed** (§11, §1): three quick follow-
+  ups to the two entries just above.
+  - Clicking App Control no longer opens a small popover anchored near the button — it opens a
+    full overlay at exactly the dice throw area's own position and size, replacing it while open.
+    Required lifting the open/close state and the button itself out of the old self-contained
+    `AppControlsMenu` component and into `DiceTray.tsx` (renamed to a "dumb" `AppControlsPanel`
+    that only renders the panel's inner content): the button lives in Game Controls, but the
+    overlay it opens is a DOM sibling positioned inside `.dice-circle-col` instead, so its
+    `position: absolute; inset: 0` sizes against that column automatically (no duplicated pixel
+    dimensions to keep in sync with `.dice-stage`'s own desktop/mobile sizes) — confirmed via a
+    Playwright bounding-box comparison that the two boxes are pixel-identical. Content is tight at
+    that size (as small as 150×150 on phones), so the overlay scrolls internally rather than
+    clipping. Outside-click-to-close now tracks two separate refs (button and overlay, no longer
+    one wrapping element) since they're in different branches of the render tree.
+  - The button's label changed from "App" to "App Control".
+  - The welcome page's version-number line (added two entries above, English name already removed
+    since) was dropped too — nothing but the Kannada title, the dedication line, and the portrait
+    remain. `app.title`/`app.version` deleted from `strings.ts` as fully unused once nothing
+    referenced them any more.
+
+Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has
   real per-account server-side stats (§10), just not yet surfaced in any UI.

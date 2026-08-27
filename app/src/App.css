@@ -25,24 +25,10 @@
 }
 
 /* The slim top bar shown on every screen except the welcome splash and live gameplay (see
-   App.tsx's AppHeader / useChromeHidden) — just the language toggle now that the app's version
-   lives on the welcome page instead (the English name was dropped from there too — the Kannada
-   title above it already names the game), so this no longer needs an h1's line-height/margin
-   budget. */
+   App.tsx's AppHeader / useChromeHidden) — just the language toggle; no longer needs an h1's
+   line-height/margin budget. */
 .app-header-bar {
   margin-bottom: 8px;
-}
-
-/* Color matches .welcome-message below (not var(--text-muted), which is sized for the app's
-   normal light-surface screens) — this splash's background is always the fixed dark wood gradient
-   regardless of theme, so text here needs its own always-legible palette. */
-.welcome-app-version {
-  display: block;
-  text-align: center;
-  font-size: 13px;
-  font-weight: normal;
-  letter-spacing: 0.5px;
-  color: #cbb995;
 }
 
 .lang-toggle {
@@ -232,15 +218,6 @@
   transform: scale(0.97);
 }
 
-/* The "App" button + its popover (AppControlsMenu.tsx) — sound, report-bug, language, and
-   (online) voice call setup, consolidated out of the playing screen's old fixed-width button row
-   and into one small control at the end of Game Controls (see .game-controls-col below), the same
-   uniform size as Roll/Roll Back/Resign next to it. */
-.app-controls {
-  position: relative;
-  width: 100%;
-}
-
 /* Same gradient/shadow "keycap" treatment as .action-btn (Roll/Resign/Roll Back — inherited via
    the shared class, see AppControlsMenu.tsx), just its own neutral gold/tan palette rather than
    green/red — it isn't a game move, so it reads as a distinct kind of button while still matching
@@ -265,24 +242,26 @@ button.app-controls-btn:active:not(:disabled) {
     0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-/* Opens upward, not downward: the App button is now the last item at the bottom of Game
-   Controls, so a downward popover would routinely spill past the play-area's own bottom edge
-   (scrollable, not clipped, but still awkward) — anchoring it above the button instead always
-   opens into space Game Controls' own buttons already occupy. */
-.app-controls-panel {
+/* Opens right on top of the dice throw area, at exactly its size — inset: 0 against
+   .dice-circle-col (position: relative, see below), which .dice-stage alone otherwise fills
+   completely, so this automatically matches that area's footprint with no duplicated pixel
+   dimensions to keep in sync (mobile's smaller dice-stage, for instance, needs no override here
+   at all). Not circular like the dice tray itself — a circular settings panel would clip its own
+   text unreadably at the top/bottom — just the same rectangular bounding box and position. Scrolls
+   internally if its content doesn't all fit at this size, rather than overflowing or clipping. */
+.app-controls-overlay {
   position: absolute;
-  bottom: calc(100% + 6px);
-  right: 0;
+  inset: 0;
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-width: 210px;
+  gap: 6px;
+  overflow-y: auto;
   background: linear-gradient(165deg, var(--wood-mid), var(--wood-dark) 70%);
   color: #ecd9b3;
   border: 1px solid var(--wood-dark);
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 10px;
+  padding: 10px;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
@@ -298,18 +277,29 @@ button.app-controls-btn:active:not(:disabled) {
   font-weight: bold;
 }
 
-/* Online only, inside the panel — join/leave/mute/audio-blocked-recovery can be more than one
+/* Online only, inside the overlay — join/leave/mute/audio-blocked-recovery can be more than one
    button at once, so this wraps rather than trying to force everything onto one line. */
 .app-controls-voice {
   flex-wrap: wrap;
   justify-content: flex-start;
 }
 
-.app-controls-panel .btn-debug-log,
-.app-controls-panel .btn-sound {
+.app-controls-overlay .btn-debug-log,
+.app-controls-overlay .btn-sound {
   width: 100%;
   box-sizing: border-box;
   text-align: center;
+  font-size: 11px;
+}
+
+.app-controls-overlay .btn-debug-log {
+  padding: 5px 6px;
+}
+
+/* Keep the left padding wide enough for the toggle-switch track drawn via ::before/::after (see
+   the base .btn-sound rule) — only trim the rest to fit the overlay's tight space budget. */
+.app-controls-overlay .btn-sound {
+  padding: 5px 6px 5px 40px;
 }
 
 .app-controls-voice .btn-debug-log,
@@ -866,6 +856,9 @@ button.app-controls-btn:active:not(:disabled) {
 }
 
 .dice-circle-col {
+  /* Positioned so .app-controls-overlay's inset: 0 sizes/positions against this exact box (which
+     .dice-stage alone fills completely) when App Controls is open — see that rule for why. */
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1483,15 +1476,6 @@ th {
 
   .pool-section {
     padding: 8px 10px;
-  }
-
-  /* Anchored to the button's own right edge (not the panel's ancestor), so on a narrow phone it
-     stays within the play-area's own padding instead of the popover's min-width pushing it past
-     the viewport edge — right: 0 alone already achieves this (see the desktop rule above), just
-     capped tighter here so it can't itself exceed a small screen's width. */
-  .app-controls-panel {
-    min-width: 180px;
-    max-width: calc(100vw - 40px);
   }
 
   /* Label above input instead of beside it — the desktop's fixed 170px label + 230px input
