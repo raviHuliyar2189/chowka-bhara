@@ -1099,6 +1099,12 @@ Resolved during requirements gathering:
   so the header doesn't flicker back in transitioning between those. The heading-row styling itself
   was generalized from `.mode-select-heading-row` to `.screen-heading-row` so both screens (and any
   later one) share it rather than duplicating the same rule under a screen-specific name.
+- **Create-account screen (§13) reworded to sound less like a rejection**: "No account yet for
+  &lt;email&gt;" → "Adding a new player..." (no longer names the email at all); "Pick a display
+  name — this is what other players will see on the board." → "Enter a friendly name — other
+  players will see this name."; the "Display Name:" field label → "Name:". Its language toggle was
+  already gone by this point too — covered by `AuthGate`'s chrome-hiding from the sign-in entry
+  just above, not a separate change.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

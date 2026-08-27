@@ -34,7 +34,7 @@ export default function NeedsProfile({ email, onDone }: Props) {
 
   return (
     <div className="modal">
-      <h2>{t('auth.noAccountTitle', email)}</h2>
+      <h2>{t('auth.noAccountTitle')}</h2>
       <p>{t('auth.pickDisplayName')}</p>
       <form onSubmit={handleSubmit}>
         <div className="setup-row">
