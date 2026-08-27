@@ -286,6 +286,18 @@ h1 {
   white-space: nowrap;
 }
 
+/* Shown only when a peer's voice audio is connected but the browser blocked autoplay (§13) — an
+   actionable prompt, not a diagnostic tool like .btn-debug-log, so it needs to stand out rather
+   than blend in: solid gold fill and a gentle pulse draw the eye the same way .active-turn does
+   for pieces. Clicking it is a real user gesture, which always satisfies autoplay policies. */
+.voice-audio-blocked {
+  background: var(--gold);
+  color: #2a1e05;
+  border: 1px solid var(--gold);
+  font-size: 12px;
+  animation: activeGlow 1.1s ease-in-out infinite;
+}
+
 /* Fixed-width label column so every player-name input starts at the same left edge, regardless
    of how long each seat's label text ("P1 (Bottom) Name:" vs "P3 (Top) Name:") happens to be. */
 .setup-row {
@@ -465,6 +477,21 @@ h1 {
   font-size: 11px;
   line-height: 1;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+}
+
+/* Mid-negotiation (no TURN server, so this can take a moment or never resolve) — dimmed and
+   pulsing rather than the solid look of an actually-working connection, so it doesn't falsely
+   read as "you can hear them" (see the "voice not heard" bug this distinction fixed). */
+.voice-indicator.voice-connecting {
+  opacity: 0.55;
+  animation: presencePulse 1.4s ease-in-out infinite;
+}
+
+/* The peer connection genuinely failed (most often a restrictive NAT with no TURN server to fall
+   back on) — a distinct warning glyph (see the icon swap in Board.tsx), not just a dimmer mic,
+   since this state won't resolve on its own the way "connecting" might. */
+.voice-indicator.voice-failed {
+  opacity: 0.9;
 }
 
 @keyframes presencePulse {

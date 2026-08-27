@@ -163,6 +163,16 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'voice.muteTitle': { en: 'Mute your microphone', kn: 'ನಿಮ್ಮ ಮೈಕ್ರೊಫೋನ್ ಮ್ಯೂಟ್ ಮಾಡಿ' },
   'voice.unmuteTitle': { en: 'Unmute your microphone', kn: 'ನಿಮ್ಮ ಮೈಕ್ರೊಫೋನ್ ಅನ್‌ಮ್ಯೂಟ್ ಮಾಡಿ' },
   'voice.inVoice': { en: 'In voice chat', kn: 'ಧ್ವನಿ ಚಾಟ್‌ನಲ್ಲಿದ್ದಾರೆ' },
+  'voice.connecting': { en: 'Voice connecting…', kn: 'ಧ್ವನಿ ಸಂಪರ್ಕಗೊಳ್ಳುತ್ತಿದೆ…' },
+  'voice.connectFailed': {
+    en: "Voice couldn't connect (network issue) — no audio between you and this player",
+    kn: 'ಧ್ವನಿ ಸಂಪರ್ಕಗೊಳ್ಳಲಿಲ್ಲ (ನೆಟ್‌ವರ್ಕ್ ಸಮಸ್ಯೆ) — ನಿಮ್ಮ ಮತ್ತು ಈ ಆಟಗಾರರ ನಡುವೆ ಯಾವುದೇ ಧ್ವನಿ ಇಲ್ಲ',
+  },
+  'voice.connectFailedNamed': {
+    en: (name: string) => `⚠️ Voice couldn't connect to ${name} (network issue) — you won't hear each other`,
+    kn: (name: string) => `⚠️ ${name} ಜೊತೆ ಧ್ವನಿ ಸಂಪರ್ಕಗೊಳ್ಳಲಿಲ್ಲ (ನೆಟ್‌ವರ್ಕ್ ಸಮಸ್ಯೆ) — ನೀವಿಬ್ಬರೂ ಪರಸ್ಪರ ಕೇಳಿಸುವುದಿಲ್ಲ`,
+  },
+  'voice.enableAudio': { en: '🔊 Tap to hear voice', kn: '🔊 ಧ್ವನಿ ಕೇಳಲು ಒತ್ತಿ' },
 
   'game.captureToast': {
     en: (player: string, count: number) => `${player} captured ${count} piece${count === 1 ? '' : 's'}!`,

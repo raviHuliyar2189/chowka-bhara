@@ -62,6 +62,18 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
   const [muted, setMuted] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<Partial<Record<PlayerId, MediaStream>>>({});
+  // This device's own real WebRTC connection state to each other voice participant — see
+  // Board.tsx's voiceConnectionStates prop for why roster membership alone isn't enough to claim
+  // voice is actually working.
+  const [peerConnectionStates, setPeerConnectionStates] = useState<
+    Partial<Record<PlayerId, RTCPeerConnectionState>>
+  >({});
+  // A remote peer's audio element can fail to autoplay under a browser's autoplay policy — the
+  // WebRTC connection itself completes fine (roster/mic indicators look correct), the track just
+  // never becomes audible, silently. This tracks whether that's happened, so a real button click
+  // (a guaranteed-valid user gesture) can retry play() on every current audio element.
+  const [audioBlocked, setAudioBlocked] = useState(false);
+  const audioElsRef = useRef<Map<PlayerId, HTMLAudioElement>>(new Map());
   const voiceRef = useRef<VoiceChatManager | null>(null);
   const socketRef = useRef<Socket | null>(null);
   // The persistent turn banner (replaces reading game.message directly — see i18n/strings.ts)
@@ -115,6 +127,9 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
           else delete next[seat];
           return next;
         });
+      },
+      onPeerConnectionState: (seat, state) => {
+        setPeerConnectionStates((prev) => ({ ...prev, [seat]: state }));
       },
       onError: (message) => {
         setVoiceError(message);
@@ -246,6 +261,17 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
     setInVoice(false);
     setMuted(false);
     setRemoteStreams({});
+    setPeerConnectionStates({});
+    setAudioBlocked(false);
+  }
+  // Retries play() on every current peer's audio element from inside a real click handler — a
+  // guaranteed-valid user gesture, unlike the moment a remote track first arrives (which can be
+  // well after the "Join Voice" click that granted mic access, so browsers are free to block it).
+  function handleEnableAudioPlayback() {
+    for (const el of audioElsRef.current.values()) {
+      el.play().catch(() => {});
+    }
+    setAudioBlocked(false);
   }
   function handleToggleMute() {
     const next = !muted;
@@ -320,6 +346,7 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
           viewerSeat={mySeat}
           connectedSeats={connectedSeats}
           voiceParticipants={voiceParticipants}
+          voiceConnectionStates={peerConnectionStates}
         />
       </div>
       <div className="play-area">
@@ -356,6 +383,11 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
               {t('voice.join')}
             </button>
           )}
+          {inVoice && audioBlocked && (
+            <button className="btn-debug-log voice-audio-blocked" onClick={handleEnableAudioPlayback}>
+              {t('voice.enableAudio')}
+            </button>
+          )}
           <button className="btn-debug-log" onClick={() => setShowReportBug(true)} title={t('game.reportBugTitle')}>
             {t('game.reportBug')}
           </button>
@@ -368,17 +400,41 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
           </button>
         </div>
         {voiceError && <p className="online-error">{voiceError}</p>}
+        {/* A hover-only tooltip (the per-player mic icon's title) isn't discoverable on a phone —
+            this is the same "voice connection failed" fact as plain, always-visible text instead,
+            since this app's players are mostly on mobile (see the "voice not heard" bug this and
+            voiceConnectionStates above were both added to fix). */}
+        {inVoice &&
+          game.players
+            .filter((p) => p.id !== mySeat && peerConnectionStates[p.id] === 'failed')
+            .map((p) => (
+              <p key={p.id} className="online-error">
+                {t('voice.connectFailedNamed', p.name)}
+              </p>
+            ))}
       </div>
 
-      {/* One hidden auto-playing audio element per connected voice peer — never rendered visibly,
-          this is purely how a received MediaStream actually gets played out loud. */}
+      {/* One hidden audio element per connected voice peer — never rendered visibly, this is
+          purely how a received MediaStream actually gets played out loud. Relying on the
+          `autoPlay` attribute alone isn't enough: the WebRTC handshake can take long enough after
+          the "Join Voice" click that the browser's autoplay policy no longer honors it, silently
+          leaving the peer connected (roster/mic indicators look fine) but inaudible — so play() is
+          called explicitly here, and a rejection surfaces the "tap to enable audio" fallback above
+          (a real click always satisfies the browser's user-gesture requirement). */}
       {Object.entries(remoteStreams).map(([seat, stream]) => (
         <audio
           key={seat}
           ref={(el) => {
-            if (el) el.srcObject = stream as MediaStream;
+            if (!el) {
+              audioElsRef.current.delete(seat as PlayerId);
+              return;
+            }
+            audioElsRef.current.set(seat as PlayerId, el);
+            if (el.srcObject !== stream) el.srcObject = stream as MediaStream;
+            el.play().catch(() => setAudioBlocked(true));
           }}
           autoPlay
+          playsInline
           style={{ display: 'none' }}
         />
       ))}

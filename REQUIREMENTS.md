@@ -906,15 +906,38 @@ Resolved during requirements gathering:
   (submitted via the in-app bug report's debug log) directly against the game-core reducer: the
   move a single piece makes landing on an opponent's gatti is, and always was, legal and coexists
   without a capture (§7); the bug was purely this one UI signal, not the underlying rule.
+- **Fixed: voice chat could look connected while being completely silent** (§13): reported as
+  joining voice, granting the mic prompt, seeing what looked like an established connection, and
+  hearing nothing. Two independent real bugs, both fixed together since they produce the identical
+  symptom:
+  1. The remote `<audio>` element relied solely on the `autoPlay` attribute to start playback. A
+     browser's autoplay policy is tied to a recent user gesture — clicking "Join Voice" is one, but
+     the actual remote track can arrive well after that (a full WebRTC handshake later), by which
+     point the browser is free to silently block playback. `voiceChat.ts`'s peer connections and
+     the audio element's `ref` in `OnlinePlay.tsx` now call `.play()` explicitly and catch a
+     rejection; if it's blocked, a gold pulsing "Tap to hear voice" button appears (a real click is
+     always a valid gesture, guaranteeing the retry succeeds).
+  2. The per-player mic icon (Board.tsx) was driven purely by voice-channel *roster* membership
+     ("called voice:join" — `server/src/realtime/voice.ts`'s bookkeeping), never by whether that
+     player's actual peer-to-peer WebRTC connection succeeded. With no TURN server (see the next
+     bullet), two players behind incompatible NATs can both sit in the roster indefinitely while
+     never exchanging audio — exactly "looks connected, isn't." `voiceChat.ts` now reports each
+     peer's real `RTCPeerConnection.connectionState` via a new `onPeerConnectionState` callback;
+     the mic icon reflects it honestly (dim + pulsing while negotiating, a ⚠️ if it fails), and a
+     plain-text line (not just a hover title, which a phone can't see) names which player voice
+     failed to reach. Verified end-to-end with two real browser instances over the actual
+     WebRTC/Socket.IO stack (not mocked): both connected, the icon read "connected," and the
+     hidden audio element was confirmed genuinely playing (`paused: false`), not just present.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has
   real per-account server-side stats (§10), just not yet surfaced in any UI.
 - **No online stats UI yet**: recorded server-side but not shown anywhere in the online screens.
-- **Voice chat has no TURN server** — see the Decisions log entry above. Two players who can't
-  establish a direct connection (some restrictive NATs/firewalls) will find voice not connecting
-  between them specifically, while the game itself keeps working normally.
+- **Voice chat still has no TURN server** — seat pairs behind incompatible NATs still won't be able
+  to hear each other at all (the game itself keeps working normally); the difference after the fix
+  above is that this now shows up honestly in the UI (a stuck "connecting" or a ⚠️ + named message)
+  instead of silently looking the same as a working connection.
 
 ## 13. Online Multiplayer
 

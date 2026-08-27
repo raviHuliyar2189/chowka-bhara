@@ -49,8 +49,16 @@ interface Props {
   connectedSeats?: PlayerId[];
   // Online mode only: which seats are currently in the voice channel (§13) — distinct from
   // connectedSeats, since a player can be connected to the game without having opted into voice.
-  // Shown as a small mic icon on their home label.
+  // This is roster membership only ("called voice:join"), not proof that audio is actually
+  // flowing — see voiceConnectionStates below for that.
   voiceParticipants?: PlayerId[];
+  // Online mode only: for every OTHER seat in the voice roster, this device's own real
+  // RTCPeerConnection state to them (never present for viewerSeat itself — a client has no peer
+  // connection to its own microphone). With no TURN server, two peers behind incompatible NATs can
+  // sit in the roster forever while stuck at 'failed'/'disconnected' with no audio ever crossing —
+  // the roster alone can't be told apart from a genuinely working connection, so the mic icon
+  // reflects this instead of just membership (see the "voice chat not heard" bug this fixed).
+  voiceConnectionStates?: Partial<Record<PlayerId, RTCPeerConnectionState>>;
 }
 
 // A placement's exact ordinal (Winner/2nd place/3rd place) is only safe to show once it's stable
@@ -169,6 +177,7 @@ export default function Board({
   resignedIds,
   connectedSeats,
   voiceParticipants,
+  voiceConnectionStates,
 }: Props) {
   const t = useT();
   const current = game.players[game.currentTurnIndex];
@@ -398,8 +407,31 @@ export default function Board({
     // (and not shown) everywhere else, where "connected" isn't a real concept.
     const isOnline = connectedSeats?.includes(p.id);
     const inVoice = voiceParticipants?.includes(p.id);
+    // Roster membership alone ("called voice:join") doesn't mean audio is actually flowing — with
+    // no TURN server, a peer stuck behind an incompatible NAT can sit in the roster forever while
+    // never connecting. viewerSeat itself has no peer connection to its own microphone, so it's
+    // always shown as connected once in the roster; every other seat reflects this device's own
+    // real RTCPeerConnection state to them, which can differ from what another device sees for
+    // that same peer (each mesh link is its own independent connection).
+    const voiceState: 'connected' | 'connecting' | 'failed' | null = !inVoice
+      ? null
+      : p.id === viewerSeat
+        ? 'connected'
+        : (() => {
+            const s = voiceConnectionStates?.[p.id];
+            if (s === 'connected') return 'connected';
+            if (s === 'failed' || s === 'disconnected' || s === 'closed') return 'failed';
+            return 'connecting';
+          })();
     const presenceTitle = connectedSeats ? t(isOnline ? 'presence.online' : 'presence.offline') : null;
-    const voiceTitle = inVoice ? t('voice.inVoice') : null;
+    const voiceTitle =
+      voiceState === 'connected'
+        ? t('voice.inVoice')
+        : voiceState === 'connecting'
+          ? t('voice.connecting')
+          : voiceState === 'failed'
+            ? t('voice.connectFailed')
+            : null;
     const title = [t('board.statsTitle', p.name, statusLabel, captureLabel), presenceTitle, voiceTitle]
       .filter(Boolean)
       .join(' — ');
@@ -416,9 +448,9 @@ export default function Board({
         {connectedSeats && (
           <span className={`presence-dot ${isOnline ? 'online' : 'offline'}`} aria-hidden="true" />
         )}
-        {inVoice && (
-          <span className="voice-indicator" aria-hidden="true">
-            🎙️
+        {voiceState && (
+          <span className={`voice-indicator voice-${voiceState}`} aria-hidden="true">
+            {voiceState === 'failed' ? '⚠️' : '🎙️'}
           </span>
         )}
         {p.name}

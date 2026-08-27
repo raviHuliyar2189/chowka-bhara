@@ -30,6 +30,13 @@ export interface VoiceChatCallbacks {
   // stream is null when a peer's connection closes (they left, or it failed) — the caller should
   // stop playing/remove that peer's audio element.
   onRemoteStream: (seat: PlayerId, stream: MediaStream | null) => void;
+  // The actual WebRTC connection state for one peer (RTCPeerConnection.connectionState) — distinct
+  // from roster membership, which only means "called voice:join," not "audio is actually flowing."
+  // With no TURN server (see ICE_SERVERS above), two peers behind incompatible NATs can both show
+  // up in the roster forever while their connection sits at 'failed'/'disconnected' and no audio
+  // ever crosses — the roster alone can't tell them apart from a healthy connection, so the UI
+  // needs this to avoid claiming voice is working when it demonstrably isn't.
+  onPeerConnectionState: (seat: PlayerId, state: RTCPeerConnectionState) => void;
   onError: (message: string) => void;
 }
 
@@ -118,6 +125,10 @@ export class VoiceChatManager {
     pc.ontrack = (event) => {
       this.callbacks.onRemoteStream(seat, event.streams[0] ?? null);
     };
+    pc.onconnectionstatechange = () => {
+      this.callbacks.onPeerConnectionState(seat, pc.connectionState);
+    };
+    this.callbacks.onPeerConnectionState(seat, pc.connectionState); // 'new', for an immediate first read
     this.peers.set(seat, { pc, pendingCandidates: [] });
     return pc;
   }
@@ -128,6 +139,7 @@ export class VoiceChatManager {
     entry.pc.close();
     this.peers.delete(seat);
     this.callbacks.onRemoteStream(seat, null);
+    this.callbacks.onPeerConnectionState(seat, 'closed');
   }
 
   private async flushPendingCandidates(seat: PlayerId): Promise<void> {
