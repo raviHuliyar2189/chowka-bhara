@@ -37,7 +37,7 @@ export default function AppControlsMenu({ soundOn, onToggleSound, onReportBug, c
     <div className="app-controls" ref={rootRef}>
       <button
         type="button"
-        className="app-controls-btn"
+        className="action-btn app-controls-btn"
         onClick={() => setOpen((v) => !v)}
         title={t('appControls.title')}
         aria-expanded={open}

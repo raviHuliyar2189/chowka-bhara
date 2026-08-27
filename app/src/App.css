@@ -232,50 +232,46 @@
   transform: scale(0.97);
 }
 
-/* The playing screen's top row (§11's layout pass): the turn/status banner on the left, the App
-   Controls button pinned to the right — replaces the old fixed title bar's vertical space with
-   something that costs almost none, so the board gets the room instead (see the Decisions log). */
-.play-area-top-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
+/* The "App" button + its popover (AppControlsMenu.tsx) — sound, report-bug, language, and
+   (online) voice call setup, consolidated out of the playing screen's old fixed-width button row
+   and into one small control at the end of Game Controls (see .game-controls-col below), the same
+   uniform size as Roll/Roll Back/Resign next to it. */
+.app-controls {
+  position: relative;
   width: 100%;
 }
 
-.play-area-top-row .announcer {
-  width: auto;
-  flex: 1;
-  min-width: 0;
+/* Same gradient/shadow "keycap" treatment as .action-btn (Roll/Resign/Roll Back — inherited via
+   the shared class, see AppControlsMenu.tsx), just its own neutral gold/tan palette rather than
+   green/red — it isn't a game move, so it reads as a distinct kind of button while still matching
+   every other button in Game Controls in size and depth. */
+button.app-controls-btn {
+  width: 100%;
+  background: linear-gradient(180deg, #c9963f 0%, #a8792c 55%, #8a6224 100%);
+  box-shadow:
+    0 3px 0 #5c4013,
+    0 5px 8px rgba(0, 0, 0, 0.35);
 }
 
-/* The "App" button + its popover (AppControlsMenu.tsx) — sound, report-bug, language, and
-   (online) voice call setup, consolidated out of the playing screen's fixed-width button row and
-   into one small control, the same way Game Controls (roll/rollback/resign — see .dice-section
-   below) consolidated the other half of that old row. */
-.app-controls {
-  position: relative;
-  flex-shrink: 0;
+button.app-controls-btn:hover:not(:disabled) {
+  box-shadow:
+    0 4px 0 #5c4013,
+    0 7px 10px rgba(0, 0, 0, 0.4);
 }
 
-.app-controls-btn {
-  padding: 8px 14px;
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: bold;
-  cursor: pointer;
-  white-space: nowrap;
+button.app-controls-btn:active:not(:disabled) {
+  box-shadow:
+    0 1px 0 #5c4013,
+    0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.app-controls-btn:hover {
-  filter: brightness(1.08);
-}
-
+/* Opens upward, not downward: the App button is now the last item at the bottom of Game
+   Controls, so a downward popover would routinely spill past the play-area's own bottom edge
+   (scrollable, not clipped, but still awkward) — anchoring it above the button instead always
+   opens into space Game Controls' own buttons already occupy. */
 .app-controls-panel {
   position: absolute;
-  top: calc(100% + 6px);
+  bottom: calc(100% + 6px);
   right: 0;
   z-index: 20;
   display: flex;
@@ -1170,18 +1166,11 @@ button.action-btn:active:not(:disabled) {
     0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.roll-row {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-}
-
+/* Every button in Game Controls (Roll, Roll Back, Resign, App) is a direct child of
+   .game-controls-col now, not wrapped in its own row — that flex column's default cross-axis
+   stretch is what actually gives them their shared full width (see .game-controls-col above);
+   width: auto here just opts into that stretch rather than the browser's intrinsic button width. */
 .btn-roll {
-  min-width: 150px;
   width: auto;
 }
 
@@ -1459,17 +1448,23 @@ th {
   }
 
   /* Circle beside Game Controls (see the desktop rule above) doesn't fit a phone's width — back
-     to stacked, same as this layout always was on mobile before the §9 pass. */
+     to stacked, same as this layout always was on mobile before the §11 layout pass. */
   .dice-section {
     flex-direction: column;
     align-items: center;
     gap: 8px;
   }
 
-  .dice-circle-col,
-  .game-controls-col {
+  .dice-circle-col {
     width: 100%;
     align-items: center;
+  }
+
+  /* Deliberately no align-items: center override here — .game-controls-col's default stretch
+     (see the desktop rule above) is what keeps every button the same full width on mobile too,
+     not just on wide screens. */
+  .game-controls-col {
+    width: 100%;
   }
 
   .dice-stage {

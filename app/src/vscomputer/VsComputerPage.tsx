@@ -319,10 +319,7 @@ export default function VsComputerPage() {
           />
         </div>
         <div className="play-area">
-          <div className="play-area-top-row">
-            <div className={`announcer${hint ? ' announcer-hint' : ''}`}>{hint ? hint.text : banner}</div>
-            <AppControlsMenu soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)} />
-          </div>
+          <div className={`announcer${hint ? ' announcer-hint' : ''}`}>{hint ? hint.text : banner}</div>
           <DiceTray
             game={game}
             onRoll={handleRoll}
@@ -332,6 +329,9 @@ export default function VsComputerPage() {
             isMyTurn={game.players[game.currentTurnIndex].id === HUMAN_SEAT}
             resignAllowed={resignAllowed}
             onResign={handleResign}
+            appControls={
+              <AppControlsMenu soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)} />
+            }
           />
         </div>
       </div>

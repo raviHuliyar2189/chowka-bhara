@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { GameState } from '../game/turnEngine';
 import { useT } from '../i18n/strings';
@@ -16,12 +16,16 @@ interface Props {
   // when false, the roll button and pool values are disabled even though the phase would
   // otherwise allow them, so a player can't act out of turn on someone else's behalf.
   isMyTurn?: boolean;
-  // "Game controls" (§11's layout pass): Roll the Dice / Roll Back Last Move / Resign Game are one
-  // grouped component now, stacked below the dice circle rather than the game-mode page rendering
-  // Resign separately elsewhere — see the App Controls split for where sound/report-bug/language/
-  // voice moved instead. Omitted (the default) wherever a mode never offers Resign at all.
+  // "Game controls" (§11's layout pass): Roll the Dice / Roll Back Last Move / Moves still to play
+  // / Resign Game / App Controls are one grouped, uniformly-sized, vertically-stacked component —
+  // the game-mode page never renders any of these separately elsewhere. Resign is omitted (the
+  // default) wherever a mode never offers it at all.
   resignAllowed?: boolean;
   onResign?: () => void;
+  // The App Controls button (AppControlsMenu.tsx) — rendered last in this same stack, below
+  // Resign, rather than by the page itself elsewhere, so every button in the playing screen's
+  // control column shares one uniform size/spacing (see .game-controls-col in App.css).
+  appControls?: ReactNode;
 }
 
 const rand = (n: number) => {
@@ -98,6 +102,7 @@ export default function DiceTray({
   isMyTurn = true,
   resignAllowed,
   onResign,
+  appControls,
 }: Props) {
   const t = useT();
   const canRoll = game.phase === 'awaiting-roll' && isMyTurn;
@@ -155,21 +160,19 @@ export default function DiceTray({
         </div>
       </div>
 
-      {/* "Game controls" (§11's layout pass): Roll the Dice / Roll Back Last Move, then Moves
-         still to play, then Resign Game — one grouped, vertically-stacked component. Everything
-         else that used to share this row (sound, report bug, language, voice) moved to the App
-         Controls button instead (see AppControlsMenu.tsx). */}
+      {/* "Game controls" (§11's layout pass): Roll the Dice, Roll Back Last Move, Moves still to
+         play, Resign Game, and App Controls — one grouped, uniformly-sized, vertically-stacked
+         component (each direct child the same width/height via .game-controls-col's own CSS, not
+         per-button rules). */}
       <div className="game-controls-col">
-        <div className="roll-row">
-          <button className="action-btn btn-roll" disabled={!canRoll} onClick={onRoll}>
-            {t('dice.rollButton')}
+        <button className="action-btn btn-roll" disabled={!canRoll} onClick={onRoll}>
+          {t('dice.rollButton')}
+        </button>
+        {showRollback && (
+          <button className="action-btn btn-rollback" onClick={onRollback} title={t('dice.rollbackTitle')}>
+            {t('dice.rollbackButton')}
           </button>
-          {showRollback && (
-            <button className="action-btn btn-rollback" onClick={onRollback} title={t('dice.rollbackTitle')}>
-              {t('dice.rollbackButton')}
-            </button>
-          )}
-        </div>
+        )}
 
         {(() => {
           const needsChoice = game.phase === 'awaiting-selection' && game.pool.length > 1;
@@ -198,6 +201,8 @@ export default function DiceTray({
             {t('resign.gameButton')}
           </button>
         )}
+
+        {appControls}
       </div>
     </div>
   );

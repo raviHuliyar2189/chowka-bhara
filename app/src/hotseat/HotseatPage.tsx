@@ -452,10 +452,7 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
             />
           </div>
           <div className="play-area">
-            <div className="play-area-top-row">
-              <div className={`announcer${hint ? ' announcer-hint' : ''}`}>{hint ? hint.text : banner}</div>
-              <AppControlsMenu soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)} />
-            </div>
+            <div className={`announcer${hint ? ' announcer-hint' : ''}`}>{hint ? hint.text : banner}</div>
             <DiceTray
               game={game}
               onRoll={handleRoll}
@@ -464,6 +461,9 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
               onRollback={handleRollback}
               resignAllowed={resignAllowed}
               onResign={handleResign}
+              appControls={
+                <AppControlsMenu soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)} />
+              }
             />
           </div>
         </div>

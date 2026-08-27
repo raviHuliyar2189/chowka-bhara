@@ -321,28 +321,31 @@ or in the session summary table) opens their full lifetime statistics (**hotseat
 ### Play Area panel
 The right-hand panel next to the board ("Play Area", chocolate-brown background, fixed footprint
 close to the board's own height) contains, top to bottom:
-1. **Top row**: a text box announcing whose turn it is (in Kannada or English depending on the
-   language setting — see §16), and the **App Controls** button (labeled "App") pinned to its
-   right edge.
+1. A text box announcing whose turn it is (in Kannada or English depending on the language
+   setting — see §16).
 2. **Dice row**: the round kavade-throw area (shows a shaking-hands idle animation while waiting
    for a roll, then the scattered result of the latest throw once rolled) sits beside — not above
-   — **Game Controls**, a vertically-stacked group of:
-   - The roll button, plus the Roll Back Last Move button alongside it once available.
+   — **Game Controls**: one uniformly-sized, full-width, vertically-stacked button column —
+   - The roll button.
+   - The Roll Back Last Move button, once available.
    - The cumulative list of pool values still to be played this turn ("Moves still to play").
    - The Resign Game button, shown only when Resignation Allowed was turned on at setup — hotseat
      (§9), online (§13), and Vs Computer (§14) all use this same unconditional self-resign flow,
      identical in behavior everywhere; Vs Computer's one necessary adaptation is *who* it resigns
      (always the human, since there's no "whoever's turn it is" to pick between when only one seat
      is ever human — see §14).
+   - The **App Controls** button (labeled "App"), always last.
 
-   Reflows back to stacked (circle above Game Controls) on narrow/phone widths, where there isn't
-   room for both side by side.
-3. **App Controls** (the button from the top row) opens a small popover, not a fixed part of the
-   panel's layout, containing: the language toggle (§16), the sound on/off toggle, the Report Bug
-   button, and — online mode only — voice call setup (join/leave, mute, and any connection-failure
-   status; §13). Consolidates everything that used to be a wide row of buttons under the dice into
-   one small control, so the panel's fixed width goes to Game Controls/the board instead (see the
-   Decisions log for why).
+   Every button in this column shares the same size (width, padding, and the same gradient/shadow
+   "keycap" styling, just its own color per button) rather than each having its own dimensions —
+   reads as one deliberate, cohesive control group. Reflows back to stacked (circle above Game
+   Controls) on narrow/phone widths, where there isn't room for both side by side.
+3. **App Controls** opens a popover *above* itself (it's the last item in the column, so opening
+   downward would routinely spill past the panel's own bottom edge), containing: the language
+   toggle (§16), the sound on/off toggle, the Report Bug button, and — online mode only — voice
+   call setup (join/leave, mute, and any connection-failure status; §13). Consolidates everything
+   that used to be a wide row of buttons under the dice into one small control, so the panel's
+   fixed width goes to Game Controls/the board instead (see the Decisions log for why).
 
 The app-wide title/version bar shown on every other screen (mode select, login, setup) is hidden
 entirely while a live game is on screen — see the Decisions log entry below.
@@ -994,8 +997,16 @@ Resolved during requirements gathering:
   strings, both deleted). And the English "Chowka Bhara" name added to the welcome page just above
   was removed again — the existing Kannada title already names the game, so showing both was
   redundant; the version number stays.
-
-Still open / assumed defaults (flag if any of these are wrong):
+- **App Controls moved into Game Controls, and every button in it made the same size** (§11): the
+  App button used to sit in its own top row next to the turn banner; moved to the end of Game
+  Controls instead (after Resign Game), so Roll/Roll Back/Resign/App all live in one column.
+  Requested alongside a general "beautify" pass, taken as: every button in that column gets the
+  same width (Game Controls' own flex-column stretch, not a per-button width rule) and the same
+  gradient/shadow "keycap" treatment `.action-btn` already used for Roll/Resign — App Controls
+  gets that same treatment in its own neutral gold/tan rather than reusing green/red, so it still
+  reads as a distinct kind of action while matching everything else in size and depth. Its popover
+  now opens upward (`bottom` anchor, not `top`) since it's the last item in the column — opening
+  downward would otherwise routinely spill past the panel's own bottom edge.
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has
   real per-account server-side stats (§10), just not yet surfaced in any UI.
