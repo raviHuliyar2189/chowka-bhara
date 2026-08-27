@@ -1142,6 +1142,22 @@ Resolved during requirements gathering:
   note confirming the invite already went out and suggesting a manual follow-up if someone hasn't
   joined. The per-seat "P1"/"P3" prefixes dropped from the player list (just the status line now);
   "Waiting for a response…" reworded to "Waiting for other players to join the game…".
+- **Fixed the account-identifier fallout from the phone-number switch above, and added a real
+  Sign Out** (§13): investigating a "Game not found" report (a stale invite link from earlier in
+  this session — reproduced the current flow cleanly end-to-end, unrelated) surfaced a real self-
+  inflicted issue: the user's own account had `phone` = their *email address*. Sequence: the full
+  database reset happened, then the stale-token fix prompted a re-signup — still email-based at
+  that point — then the phone-number switch renamed the `email` column to `phone` on the
+  assumption the table was still empty, which was no longer true by then. A column rename doesn't
+  touch existing values, so the email carried straight through into the new field, unchanged. The
+  account kept working only because the browser still held a pre-switch login token; it would have
+  been unrecoverable through the sign-in screen the moment that token expired or got cleared, since
+  login now requires digits, not an email. Fixed by deleting that one stale row (the user's choice,
+  offered alongside "update it to my real number instead") so a fresh sign-up creates it correctly
+  — and by adding a real **Sign Out** button (mode-select, understated styling) so reaching a clean
+  sign-in screen no longer requires the DevTools `localStorage.removeItem` workaround this same
+  scenario required earlier in the session; clears the token and reloads, landing on `AuthGate`
+  exactly like an expired/deleted-account token already does on its own.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

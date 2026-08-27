@@ -68,6 +68,7 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   },
   'modeSelect.multiOnline': { en: '🌐 Multiple Players (Online)', kn: '🌐 ಅನೇಕ ಆಟಗಾರರು (ಆನ್‌ಲೈನ್)' },
   'modeSelect.developTest': { en: '🛠️ Developer Mode', kn: '🛠️ ಡೆವಲಪರ್ ಮೋಡ್' },
+  'modeSelect.signOut': { en: 'Sign Out', kn: 'ಸೈನ್ ಔಟ್' },
 
   // --- Setup (hotseat / develop test) ---
   'setup.title': { en: 'Select Players', kn: 'ಆಟಗಾರರನ್ನು ಆಯ್ಕೆಮಾಡಿ' },

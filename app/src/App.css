@@ -12,6 +12,13 @@
   margin-top: 16px;
 }
 
+/* Understated on purpose (same treatment as .btn-debug-log) — a fallback/reset action, not
+   something most players ever need to reach for. */
+.mode-select-sign-out {
+  display: block;
+  margin: 16px auto 0;
+}
+
 /* A screen's own heading on the left, language toggle right-aligned on the same row — used by
    mode-select and the online sign-in screen, both moved here from the standalone top bar at the
    user's explicit request (see REQUIREMENTS.md's Decisions log; the toggle still lives there for
