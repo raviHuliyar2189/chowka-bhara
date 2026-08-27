@@ -1054,6 +1054,25 @@ Resolved during requirements gathering:
     live gameplay, suppressing the standalone bar just for itself while it shows its own copy —
     every *other* pre-game screen (login, hotseat/vs-computer/online setup, the online lobby) is
     unaffected and keeps the toggle in the shared header exactly as before.
+- **"Multiple Players (Local)" reworded**: to "Multiple Players (on a single device)" — clearer
+  for a player unfamiliar with "local" as UI jargon for "shared device."
+- **"Develop Test" renamed to "Developer Mode" and hidden behind a keyboard shortcut** (§15): see
+  §15's own new subsection. A debugging tool, not a real way to play, so it shouldn't have been a
+  permanently-visible 4th button on mode-select to begin with.
+- **Welcome splash now always shows first, including for a fresh WhatsApp invite-link open**
+  (§1/§13): reverses an earlier deliberate decision (skip it for invite links specifically, "since
+  the person just clicked a link that only makes sense in that context") at explicit request —
+  `App.tsx`'s `isGameInviteLink` check and the conditional it drove are removed; `showWelcome` now
+  always starts `true` regardless of the opened URL.
+- **Online player/game data reset**: at explicit user request, every row in the production Neon
+  database's `players`, `magic_links`, `games`, `game_seats`, and `player_stats` tables was deleted
+  (counted first — 148/30/111/210/16 rows respectively — then removed in FK-safe order inside one
+  transaction, verified back down to 0 each). This includes real accounts, not just this session's
+  own test signups — confirmed explicitly before running it, given local dev *is* the production
+  database (§1's own note) and this is irreversible. The hotseat roster/stats kept in a browser's
+  own `localStorage` are outside this session's reach entirely (a different machine/browser) —
+  the user was given the two `localStorage.removeItem` keys (`chowka-bhara:roster`,
+  `chowka-bhara:stats`) to clear that themselves.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
@@ -1297,12 +1316,21 @@ needed.
   roster-keyed persistence (§10), always including "Indramma" as one of the two players; "End
   Session" returns to mode-select the same way hotseat's does (§9).
 
-## 15. Develop Test
+## 15. Develop Test ("Developer Mode")
 
 A testing/debugging mode for reaching a specific board position without playing through many
 random dice rolls first — identical to hotseat (§9) in every respect (setup — including the
 1-player-vs-AI option, gameplay, resign, session/rematch, stats) except for one extra screen
 inserted between player setup and the first turn: a **Board Editor**.
+
+### Hidden from ordinary players
+Labeled "Developer Mode" on mode-select (was "Develop Test") and hidden from the button list by
+default — it's a debugging tool, not a real way to play, and showing it to every player invited
+questions about what it's for. Revealed by pressing **Ctrl+Shift+D** (toggles visibility on/off
+each press), not persisted — every fresh visit starts hidden again, same "secret until you know
+the shortcut" spirit as the shortcut itself. No on-screen way to reveal it at all on a touch-only
+device, same as any keyboard shortcut; accepted, since this mode is aimed at development/testing
+anyway, not everyday play on a phone.
 
 ### Board Editor screen
 - Shown immediately after picking player count/names, before any dice are rolled.

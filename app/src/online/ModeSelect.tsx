@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useT } from '../i18n/strings';
 import { setChromeHidden } from '../ui/appChrome';
 import LanguageToggle from '../components/LanguageToggle';
@@ -9,6 +9,23 @@ interface Props {
 
 export default function ModeSelect({ onChoose }: Props) {
   const t = useT();
+  // Developer Mode (the old "Develop Test" Board Editor entry) is hidden from ordinary players by
+  // default — it's a debugging tool, not a real way to play — and only revealed by a keyboard
+  // shortcut (Ctrl+Shift+D), toggled on/off each time it's pressed. Deliberately not persisted: a
+  // fresh visit always starts hidden again, same "secret until you know it" spirit as the shortcut
+  // itself. Not available on-screen at all for a touch-only device, same as any keyboard shortcut.
+  const [devModeVisible, setDevModeVisible] = useState(false);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        setDevModeVisible((v) => !v);
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // Hides the global app header's own language toggle (App.tsx's AppHeader) while this screen is
   // mounted — this screen shows its own copy instead, right-aligned next to its heading, at the
@@ -37,9 +54,11 @@ export default function ModeSelect({ onChoose }: Props) {
           <button className="action-btn" onClick={() => onChoose('online')}>
             {t('modeSelect.multiOnline')}
           </button>
-          <button className="action-btn" onClick={() => onChoose('develop-test')}>
-            {t('modeSelect.developTest')}
-          </button>
+          {devModeVisible && (
+            <button className="action-btn" onClick={() => onChoose('develop-test')}>
+              {t('modeSelect.developTest')}
+            </button>
+          )}
         </div>
       </div>
     </div>

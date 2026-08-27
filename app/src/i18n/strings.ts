@@ -58,7 +58,7 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
     kn: '📱 ಅನೇಕ ಆಟಗಾರರು (ಒಂದೇ ಸಾಧನದಲ್ಲಿ)',
   },
   'modeSelect.multiOnline': { en: '🌐 Multiple Players (Online)', kn: '🌐 ಅನೇಕ ಆಟಗಾರರು (ಆನ್‌ಲೈನ್)' },
-  'modeSelect.developTest': { en: '🛠️ Develop Test', kn: '🛠️ ಡೆವಲಪ್ ಟೆಸ್ಟ್' },
+  'modeSelect.developTest': { en: '🛠️ Developer Mode', kn: '🛠️ ಡೆವಲಪರ್ ಮೋಡ್' },
 
   // --- Setup (hotseat / develop test) ---
   'setup.title': { en: 'Select Players', kn: 'ಆಟಗಾರರನ್ನು ಆಯ್ಕೆಮಾಡಿ' },

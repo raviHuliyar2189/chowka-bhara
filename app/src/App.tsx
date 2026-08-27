@@ -30,12 +30,10 @@ function AppHeader() {
   );
 }
 
-// A game-invite link (/games/:id) opened fresh always means "online, right now" — skip the
-// dedication splash for that case, since the person just clicked a link that only makes sense in
-// that context. The router below matches whatever path is already in the address bar the moment
-// it mounts, so no separate redirect-preservation bookkeeping is needed once auth completes.
-const isGameInviteLink = typeof window !== 'undefined' && /^\/games\/[^/]+$/.test(window.location.pathname);
-
+// The router below matches whatever path is already in the address bar the moment it mounts
+// (including a game-invite link, /games/:id), so no redirect-preservation bookkeeping is needed
+// once the welcome splash finishes and auth completes — showWelcome just gates what's rendered
+// first, never what URL is actually being navigated to.
 const MODE_PATHS = {
   hotseat: '/hotseat',
   online: '/online',
@@ -72,7 +70,10 @@ function OnlineGameRoute({ me }: { me: PlayerInfo }) {
 }
 
 export default function App() {
-  const [showWelcome, setShowWelcome] = useState(!isGameInviteLink);
+  // Always shown first now, even for a game-invite link opened fresh from WhatsApp — the earlier
+  // "skip it for invite links" behavior was a deliberate choice, reversed at explicit request (see
+  // REQUIREMENTS.md's Decisions log).
+  const [showWelcome, setShowWelcome] = useState(true);
   const [player, setPlayer] = useState<PlayerInfo | null>(null);
 
   useEffect(() => {
