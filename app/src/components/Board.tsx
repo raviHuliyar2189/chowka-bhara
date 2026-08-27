@@ -188,7 +188,15 @@ export default function Board({
     const isLegal = isSelectable && selectedVal !== null && canMovePiece(game.players, player, piece, selectedVal);
     const isIllegal = isSelectable && selectedVal !== null && !isLegal;
     const isFinished = piece.pos === FINISH_POS;
-    const relevantVals = selectedVal !== null ? [selectedVal] : game.pool;
+    // Only let the dice pool narrow the glow while a value is actually pickable right now
+    // (awaiting-selection). During awaiting-roll — including the mandatory bonus roll right after
+    // a capture, which leaves a leftover pool value sitting unusable until that roll happens — no
+    // piece is clickable yet, so every one of the current player's live pieces glows uniformly
+    // (matching plain turn-start, where the pool is empty) rather than singling out whichever piece
+    // could use that not-yet-playable leftover value, which reads exactly like a legal move and
+    // isn't (see Board.tsx bug: piece glowing as if landing on an opponent's gatti were clickable).
+    const relevantVals =
+      game.phase === 'awaiting-selection' ? (selectedVal !== null ? [selectedVal] : game.pool) : [];
     const hasValidMove =
       relevantVals.length === 0 || relevantVals.some((v) => canMovePiece(game.players, player, piece, v));
     const isActive = isCurrentPlayer && !isFinished && hasValidMove;

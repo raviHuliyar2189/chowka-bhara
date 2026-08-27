@@ -887,6 +887,25 @@ Resolved during requirements gathering:
   instances and fake microphone devices: both sides completed the full WebRTC negotiation and
   received each other's actual audio stream, mic indicators appeared correctly, and leaving voice
   cleanly tore down just that one peer connection without affecting anyone else still in voice.
+- **Fixed: a piece could glow as if movable, then do nothing when clicked** (§7/§11): reported as
+  landing exactly on an opponent's gatti — the board showed the piece pulsing gold (the
+  "active-turn" highlight, meant to mark all of the current player's live pieces "for the whole
+  turn" regardless of dice) right after it had just captured and earned a bonus roll. That capture
+  correctly sends the turn back to `awaiting-roll` (a fresh roll is mandatory before anything is
+  selectable again — see `finalizeMove` in `turnEngine.ts`) while any not-yet-used pool value from
+  before the capture is kept, not discarded (per the bonus-chain rule above). The board's glow
+  logic, though, kept reading that leftover pool value even during `awaiting-roll` and pulsed only
+  the piece(s) that could use it — which, unlike the uniform "everyone glows, pool is empty" glow at
+  a normal turn start, singled out one specific piece for one specific destination and so looked
+  exactly like a legal, clickable move. It wasn't: `canMovePiece` genuinely agreed the move was
+  legal, but `selectPiece` correctly refuses to act until `awaiting-selection`, silently no-opping
+  the click with no feedback. Fix: the glow only lets the pool narrow which pieces light up while a
+  value is actually pickable (`awaiting-selection`); during `awaiting-roll` every live piece of the
+  current player glows uniformly, same as an ordinary turn start, never implying one piece has a
+  move ready before it actually does. Verified by reconstructing the reported board position
+  (submitted via the in-app bug report's debug log) directly against the game-core reducer: the
+  move a single piece makes landing on an opponent's gatti is, and always was, legal and coexists
+  without a capture (§7); the bug was purely this one UI signal, not the underlying rule.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
