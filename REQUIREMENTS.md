@@ -336,10 +336,12 @@ close to the board's own height) contains, top to bottom:
      (§9), online (§13), and Vs Computer (§14) all use this same unconditional self-resign flow,
      identical in behavior everywhere; Vs Computer's one necessary adaptation is *who* it resigns
      (always the human, since there's no "whoever's turn it is" to pick between when only one seat
-     is ever human — see §14).
-   - The **App Controls** button (labeled "App Control"), always last.
+     is ever human — see §14) — and the **App Controls** button (labeled "App Control"), sharing
+     this same bottom row rather than its own — the one pair of buttons in the column that sit
+     side by side instead of stacked, at the user's explicit request. When Resign isn't offered at
+     all, App Control simply fills that row alone.
 
-   Every button in this column shares the same size (width, padding, and the same gradient/shadow
+   Every button in this column shares the same size (height, padding, and the same gradient/shadow
    "keycap" styling, just its own color per button) rather than each having its own dimensions —
    reads as one deliberate, cohesive control group. Reflows back to stacked (circle above Game
    Controls) on narrow/phone widths, where there isn't room for both side by side.
@@ -1158,6 +1160,10 @@ Resolved during requirements gathering:
   sign-in screen no longer requires the DevTools `localStorage.removeItem` workaround this same
   scenario required earlier in the session; clears the token and reloads, landing on `AuthGate`
   exactly like an expired/deleted-account token already does on its own.
+- **Resign Game and App Control share one row** (§11): the one exception to Game Controls'
+  otherwise fully-stacked layout, at explicit request — both buttons get `flex: 1` inside a shared
+  row wrapper so they split the width evenly, same height/style as before. When Resign isn't
+  offered, App Control's own `flex: 1` fills the row alone with no extra conditional needed.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

@@ -914,6 +914,23 @@ button.app-controls-btn:active:not(:disabled) {
   min-width: 0;
 }
 
+/* Resign Game and App Control share this one row (see DiceTray.tsx) instead of each being its
+   own full-width row like the rest of Game Controls — both stretch to share the row equally via
+   flex: 1 on each button, rather than the column's own stretch (which only sizes direct block-
+   level children, not a nested row's own items). When Resign isn't rendered at all, App Control's
+   own flex: 1 still fills the whole row on its own — no extra conditional needed here. */
+.game-controls-bottom-row {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  width: 100%;
+}
+
+.game-controls-bottom-row > button {
+  flex: 1;
+  min-width: 0;
+}
+
 /* The round throw area: a fixed-size felt/parchment disc, not a flex-filled rectangle — a
    physical dice bowl doesn't resize to fit its container, and a fixed size sidesteps the
    collapse bug a flex-grow + all-absolutely-positioned-children region is prone to (see git

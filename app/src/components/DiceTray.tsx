@@ -227,22 +227,28 @@ export default function DiceTray({
           );
         })()}
 
-        {resignAllowed && (
-          <button className="action-btn btn-abort" onClick={onResign}>
-            {t('resign.gameButton')}
-          </button>
-        )}
+        {/* Resign Game and App Control share one row (at the user's explicit request) rather than
+           each being its own full-width row like the rest of Game Controls — both still the same
+           height/style, just side by side. When Resign isn't offered at all, App Control simply
+           takes the full row alone (.game-controls-bottom-row's own CSS, not a conditional here). */}
+        <div className="game-controls-bottom-row">
+          {resignAllowed && (
+            <button className="action-btn btn-abort" onClick={onResign}>
+              {t('resign.gameButton')}
+            </button>
+          )}
 
-        <button
-          type="button"
-          className="action-btn app-controls-btn"
-          ref={appControlsBtnRef}
-          onClick={() => setAppControlsOpen((v) => !v)}
-          title={t('appControls.title')}
-          aria-expanded={appControlsOpen}
-        >
-          {t('appControls.button')}
-        </button>
+          <button
+            type="button"
+            className="action-btn app-controls-btn"
+            ref={appControlsBtnRef}
+            onClick={() => setAppControlsOpen((v) => !v)}
+            title={t('appControls.title')}
+            aria-expanded={appControlsOpen}
+          >
+            {t('appControls.button')}
+          </button>
+        </div>
       </div>
     </div>
   );
