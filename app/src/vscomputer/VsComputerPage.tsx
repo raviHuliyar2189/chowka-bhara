@@ -27,8 +27,10 @@ import {
   waitForAnnouncer,
 } from '../audio/announcer';
 import { useT } from '../i18n/strings';
+import { setChromeHidden } from '../ui/appChrome';
 import Board from '../components/Board';
 import DiceTray from '../components/DiceTray';
+import AppControlsMenu from '../components/AppControlsMenu';
 import ResignModal from '../components/ResignModal';
 import ReportBugModal from '../components/ReportBugModal';
 import StatsModal from '../components/StatsModal';
@@ -73,6 +75,17 @@ export default function VsComputerPage() {
   const [banner, setBanner] = useState('');
   const prevRevertSeq = useRef(0);
   const prevRankingIds = useRef<PlayerId[]>([]);
+
+  // See HotseatPage.tsx's own copy of this for the full reasoning — hides the global app header
+  // while the board is on screen, restored on unmount.
+  useEffect(() => {
+    setChromeHidden(!!game);
+    return () => setChromeHidden(false);
+    // Deliberately keyed on the boolean, not `game` itself — that object's identity changes on
+    // every single move/roll, which would tear down and re-run this effect (and its listener
+    // churn) far more often than the true/false transition it actually cares about.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!game]);
 
   useEffect(() => {
     if (!hint) return;
@@ -306,7 +319,10 @@ export default function VsComputerPage() {
           />
         </div>
         <div className="play-area">
-          <div className={`announcer${hint ? ' announcer-hint' : ''}`}>{hint ? hint.text : banner}</div>
+          <div className="play-area-top-row">
+            <div className={`announcer${hint ? ' announcer-hint' : ''}`}>{hint ? hint.text : banner}</div>
+            <AppControlsMenu soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)} />
+          </div>
           <DiceTray
             game={game}
             onRoll={handleRoll}
@@ -314,24 +330,9 @@ export default function VsComputerPage() {
             showRollback={false}
             onRollback={() => {}}
             isMyTurn={game.players[game.currentTurnIndex].id === HUMAN_SEAT}
+            resignAllowed={resignAllowed}
+            onResign={handleResign}
           />
-          <div className="post-dice-actions">
-            {resignAllowed && (
-              <button className="action-btn btn-abort" onClick={handleResign}>
-                {t('resign.gameButton')}
-              </button>
-            )}
-            <button className="btn-debug-log" onClick={() => setShowReportBug(true)} title={t('game.reportBugTitle')}>
-              {t('game.reportBug')}
-            </button>
-            <button
-              className={`btn-sound in-game-sound ${soundOn ? 'is-on' : 'is-off'}`}
-              onClick={toggleSound}
-              title={soundOn ? t('setup.muteTitle') : t('setup.unmuteTitle')}
-            >
-              {soundOn ? t('game.soundOn') : t('game.muted')}
-            </button>
-          </div>
         </div>
       </div>
 

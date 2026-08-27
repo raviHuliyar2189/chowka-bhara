@@ -24,34 +24,38 @@
   margin: 8px 0 0;
 }
 
-h1 {
-  margin: 0 0 8px;
-  color: var(--text);
-  font-family: Georgia, 'Times New Roman', serif;
-  letter-spacing: 1px;
+/* The slim top bar shown on every screen except the welcome splash and live gameplay (see
+   App.tsx's AppHeader / useChromeHidden) — just the language toggle now that the app name/version
+   live on the welcome page instead, so this no longer needs an h1's line-height/margin budget. */
+.app-header-bar {
+  margin-bottom: 8px;
 }
 
-/* The underline lives on this span (not the whole h1) so it doesn't visually bleed into
-   .app-version below — a parent's text-decoration otherwise draws through inline descendants
-   even when they set text-decoration: none themselves. */
-.app-title-main {
+/* Colors match .welcome-message below (not var(--text)/var(--text-muted), which are sized for
+   the app's normal light-surface screens) — this splash's background is always the fixed dark
+   wood gradient regardless of theme, so text here needs its own always-legible palette. */
+.welcome-app-name {
+  margin: 0;
+  color: #ecd9b3;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 20px;
+  letter-spacing: 1px;
   text-decoration: underline;
 }
 
-.app-version {
+.welcome-app-version {
   display: block;
   text-align: center;
   font-size: 13px;
   font-weight: normal;
   letter-spacing: 0.5px;
-  color: var(--text-muted);
+  color: #cbb995;
 }
 
 .lang-toggle {
   display: flex;
   justify-content: center;
   gap: 6px;
-  margin-top: 6px;
 }
 
 .lang-btn {
@@ -235,36 +239,93 @@ h1 {
   transform: scale(0.97);
 }
 
-/* In-game toggle sits at the top of the controls column, tucked to the right so it doesn't
-   compete with the announcer bar for attention. */
-/* Abort Game and the in-game sound toggle, stacked below the dice-playing component. */
-/* Abort Game and the in-game sound toggle share one row — Abort to the left, Sound to the
-   right — below the dice-playing component. */
-.post-dice-actions {
+/* The playing screen's top row (§11's layout pass): the turn/status banner on the left, the App
+   Controls button pinned to the right — replaces the old fixed title bar's vertical space with
+   something that costs almost none, so the board gets the room instead (see the Decisions log). */
+.play-area-top-row {
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  /* centered rather than space-between: with "Roll Back Last Move" in the mix this row usually
-     wraps to two lines at the panel's fixed 420px inner width, and centering keeps a lone
-     leftover button on the second line looking intentional instead of stranded on the left. */
-  justify-content: center;
-  gap: 8px 6px;
+  align-items: flex-start;
+  gap: 8px;
   width: 100%;
 }
 
-/* Buttons sharing this row (Abort, Report Bug, Roll Back, Sound) — trim padding/font size
-   versus their other uses elsewhere to keep as many as possible on one line. */
-.post-dice-actions .action-btn {
-  padding: 8px 11px;
-  font-size: 13px;
+.play-area-top-row .announcer {
+  width: auto;
+  flex: 1;
+  min-width: 0;
 }
 
-.post-dice-actions .btn-sound {
-  /* Keep the left padding wide enough for the toggle-switch track drawn via ::before/::after —
-     only trim the rest to fit this row's tighter space budget. */
-  padding: 6px 9px 6px 42px;
+/* The "App" button + its popover (AppControlsMenu.tsx) — sound, report-bug, language, and
+   (online) voice call setup, consolidated out of the playing screen's fixed-width button row and
+   into one small control, the same way Game Controls (roll/rollback/resign — see .dice-section
+   below) consolidated the other half of that old row. */
+.app-controls {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.app-controls-btn {
+  padding: 8px 14px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.app-controls-btn:hover {
+  filter: brightness(1.08);
+}
+
+.app-controls-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 210px;
+  background: linear-gradient(165deg, var(--wood-mid), var(--wood-dark) 70%);
+  color: #ecd9b3;
+  border: 1px solid var(--wood-dark);
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.app-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.app-controls-label {
   font-size: 12px;
+  font-weight: bold;
+}
+
+/* Online only, inside the panel — join/leave/mute/audio-blocked-recovery can be more than one
+   button at once, so this wraps rather than trying to force everything onto one line. */
+.app-controls-voice {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.app-controls-panel .btn-debug-log,
+.app-controls-panel .btn-sound {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.app-controls-voice .btn-debug-log,
+.app-controls-voice .btn-sound {
+  width: auto;
 }
 
 .in-game-sound {
@@ -753,7 +814,12 @@ h1 {
 .play-area {
   flex: 0 0 460px;
   width: 460px;
-  height: 560px;
+  /* Shorter than the old stacked layout needed — Moves-still-to-play now sits beside the dice
+     circle (see .dice-section) instead of below the full column, so this no longer needs to
+     reserve room for both. Sized close to the board's own natural height so the two side-by-side
+     panels read as roughly matched, with overflow-y as a safety net for the occasional extra line
+     (online mode's voice-connection-failed text) rather than a hard cutoff. */
+  height: 440px;
   overflow-y: auto;
   box-sizing: border-box;
   background: linear-gradient(165deg, var(--wood-mid), var(--wood-dark) 70%);
@@ -798,14 +864,35 @@ h1 {
 }
 
 /* Just a layout container now — the play-area itself supplies the background, and each piece
-   (round throw area, move list) carries its own styling, rather than everything sitting inside
-   one more nested card. */
+   (round throw area, Game Controls) carries its own styling, rather than everything sitting
+   inside one more nested card. Side by side (circle | controls) rather than stacked — see
+   .dice-circle-col / .game-controls-col below — matching the playing-screen layout pass; reflows
+   back to stacked on phones (see the max-width: 640px override) where there isn't width for both. */
 .dice-section {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+}
+
+.dice-circle-col {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  width: 100%;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+/* "Game controls" (§11's layout pass): Roll the Dice / Roll Back Last Move, Moves still to play,
+   and Resign Game — one grouped, vertically-stacked component next to the dice circle. See
+   DiceTray.tsx for why Resign moved in here from the old post-dice-actions row. */
+.game-controls-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
 }
 
 /* The round throw area: a fixed-size felt/parchment disc, not a flex-filled rectangle — a
@@ -1388,8 +1475,18 @@ th {
     font-size: 13px;
   }
 
+  /* Circle beside Game Controls (see the desktop rule above) doesn't fit a phone's width — back
+     to stacked, same as this layout always was on mobile before the §9 pass. */
   .dice-section {
+    flex-direction: column;
+    align-items: center;
     gap: 8px;
+  }
+
+  .dice-circle-col,
+  .game-controls-col {
+    width: 100%;
+    align-items: center;
   }
 
   .dice-stage {
@@ -1408,6 +1505,15 @@ th {
 
   .pool-section {
     padding: 8px 10px;
+  }
+
+  /* Anchored to the button's own right edge (not the panel's ancestor), so on a narrow phone it
+     stays within the play-area's own padding instead of the popover's min-width pushing it past
+     the viewport edge — right: 0 alone already achieves this (see the desktop rule above), just
+     capped tighter here so it can't itself exceed a small screen's width. */
+  .app-controls-panel {
+    min-width: 180px;
+    max-width: calc(100vw - 40px);
   }
 
   /* Label above input instead of beside it — the desktop's fixed 170px label + 230px input

@@ -16,6 +16,12 @@ interface Props {
   // when false, the roll button and pool values are disabled even though the phase would
   // otherwise allow them, so a player can't act out of turn on someone else's behalf.
   isMyTurn?: boolean;
+  // "Game controls" (§11's layout pass): Roll the Dice / Roll Back Last Move / Resign Game are one
+  // grouped component now, stacked below the dice circle rather than the game-mode page rendering
+  // Resign separately elsewhere — see the App Controls split for where sound/report-bug/language/
+  // voice moved instead. Omitted (the default) wherever a mode never offers Resign at all.
+  resignAllowed?: boolean;
+  onResign?: () => void;
 }
 
 const rand = (n: number) => {
@@ -83,7 +89,16 @@ function DiceIdleFigure() {
   );
 }
 
-export default function DiceTray({ game, onRoll, onSelectValue, showRollback, onRollback, isMyTurn = true }: Props) {
+export default function DiceTray({
+  game,
+  onRoll,
+  onSelectValue,
+  showRollback,
+  onRollback,
+  isMyTurn = true,
+  resignAllowed,
+  onResign,
+}: Props) {
   const t = useT();
   const canRoll = game.phase === 'awaiting-roll' && isMyTurn;
   const current = game.players[game.currentTurnIndex];
@@ -94,93 +109,106 @@ export default function DiceTray({ game, onRoll, onSelectValue, showRollback, on
 
   return (
     <div className="dice-section">
-      {/* 2. Roll button (the turn-indicator text box, item 1, is rendered by App.tsx just
-         above this component), with the roll-back button alongside it when available */}
-      <div className="roll-row">
-        <button className="action-btn btn-roll" disabled={!canRoll} onClick={onRoll}>
-          {t('dice.rollButton')}
-        </button>
-        {showRollback && (
-          <button className="action-btn btn-rollback" onClick={onRollback} title={t('dice.rollbackTitle')}>
-            {t('dice.rollbackButton')}
+      {/* Round throw area: shake (idle) or the latest throw's scattered result — sits beside
+         "Game controls" (roll/rollback, moves-still-to-play, resign) rather than above it, per
+         the playing-screen layout pass (see REQUIREMENTS.md's Decisions log). */}
+      <div className="dice-circle-col">
+        <div className="dice-stage">
+          <AnimatePresence>
+            {game.rollHistory.length === 0 && (
+              <motion.div
+                key={`idle-${current.id}`}
+                className="dice-idle"
+                initial={false}
+                exit={{ opacity: 0, scale: 0.7 }}
+                transition={{ duration: 0.4, ease: 'easeIn' }}
+              >
+                <DiceIdleFigure />
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <AnimatePresence>
+            {lastRoll && (
+              <motion.div
+                key={lastRollIndex}
+                className="dice-tray"
+                initial={false}
+                exit={{ opacity: 0, scale: 0.75 }}
+                transition={{ duration: 0.5, ease: 'easeIn' }}
+              >
+                {lastRoll.faces.map((f, j) => (
+                  <span
+                    key={j}
+                    className="die"
+                    style={scatterStyle(j, lastRollIndex * 41 + j * 17 + f * 7)}
+                  >
+                    <img
+                      src={f === 0 ? kavadeBlack : kavadeWhite}
+                      className="die-face"
+                      alt={f === 0 ? t('dice.faceBlack') : t('dice.faceWhite')}
+                    />
+                  </span>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+        <div className="roll-label-row">
+          {lastRoll ? (
+            <>
+              {lastRoll.label}
+              {lastRoll.isBonus ? t('dice.bonus') : ''}
+            </>
+          ) : (
+            t('dice.currentTurn', current.name)
+          )}
+        </div>
+      </div>
+
+      {/* "Game controls" (§11's layout pass): Roll the Dice / Roll Back Last Move, then Moves
+         still to play, then Resign Game — one grouped, vertically-stacked component. Everything
+         else that used to share this row (sound, report bug, language, voice) moved to the App
+         Controls button instead (see AppControlsMenu.tsx). */}
+      <div className="game-controls-col">
+        <div className="roll-row">
+          <button className="action-btn btn-roll" disabled={!canRoll} onClick={onRoll}>
+            {t('dice.rollButton')}
+          </button>
+          {showRollback && (
+            <button className="action-btn btn-rollback" onClick={onRollback} title={t('dice.rollbackTitle')}>
+              {t('dice.rollbackButton')}
+            </button>
+          )}
+        </div>
+
+        {(() => {
+          const needsChoice = game.phase === 'awaiting-selection' && game.pool.length > 1;
+          return (
+            <div className={needsChoice ? 'pool-section needs-choice' : 'pool-section'}>
+              <strong>{t('dice.movesRemaining')}</strong>
+              <div className="pool-container">
+                {game.pool.length === 0 && <span>{t('dice.none')}</span>}
+                {game.pool.map((val, i) => (
+                  <button
+                    key={i}
+                    className={`val-btn${game.selectedPoolIndex === i ? ' selected' : ''}${needsChoice && game.selectedPoolIndex !== i ? ' needs-choice' : ''}`}
+                    disabled={game.phase !== 'awaiting-selection' || !isMyTurn}
+                    onClick={() => onSelectValue(i)}
+                  >
+                    {val}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {resignAllowed && (
+          <button className="action-btn btn-abort" onClick={onResign}>
+            {t('resign.gameButton')}
           </button>
         )}
       </div>
-
-      {/* 3. Round throw area: shake (idle) or the latest throw's scattered result */}
-      <div className="dice-stage">
-        <AnimatePresence>
-          {game.rollHistory.length === 0 && (
-            <motion.div
-              key={`idle-${current.id}`}
-              className="dice-idle"
-              initial={false}
-              exit={{ opacity: 0, scale: 0.7 }}
-              transition={{ duration: 0.4, ease: 'easeIn' }}
-            >
-              <DiceIdleFigure />
-            </motion.div>
-          )}
-        </AnimatePresence>
-        <AnimatePresence>
-          {lastRoll && (
-            <motion.div
-              key={lastRollIndex}
-              className="dice-tray"
-              initial={false}
-              exit={{ opacity: 0, scale: 0.75 }}
-              transition={{ duration: 0.5, ease: 'easeIn' }}
-            >
-              {lastRoll.faces.map((f, j) => (
-                <span
-                  key={j}
-                  className="die"
-                  style={scatterStyle(j, lastRollIndex * 41 + j * 17 + f * 7)}
-                >
-                  <img
-                    src={f === 0 ? kavadeBlack : kavadeWhite}
-                    className="die-face"
-                    alt={f === 0 ? t('dice.faceBlack') : t('dice.faceWhite')}
-                  />
-                </span>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-      <div className="roll-label-row">
-        {lastRoll ? (
-          <>
-            {lastRoll.label}
-            {lastRoll.isBonus ? t('dice.bonus') : ''}
-          </>
-        ) : (
-          t('dice.currentTurn', current.name)
-        )}
-      </div>
-
-      {/* 5. Cumulative list of moves still to be played */}
-      {(() => {
-        const needsChoice = game.phase === 'awaiting-selection' && game.pool.length > 1;
-        return (
-          <div className={needsChoice ? 'pool-section needs-choice' : 'pool-section'}>
-            <strong>{t('dice.movesRemaining')}</strong>
-            <div className="pool-container">
-              {game.pool.length === 0 && <span>{t('dice.none')}</span>}
-              {game.pool.map((val, i) => (
-                <button
-                  key={i}
-                  className={`val-btn${game.selectedPoolIndex === i ? ' selected' : ''}${needsChoice && game.selectedPoolIndex !== i ? ' needs-choice' : ''}`}
-                  disabled={game.phase !== 'awaiting-selection' || !isMyTurn}
-                  onClick={() => onSelectValue(i)}
-                >
-                  {val}
-                </button>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }

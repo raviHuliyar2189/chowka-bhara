@@ -9,6 +9,7 @@ import { computePlacements } from '../game/session';
 import type { PlayerId } from '../game/paths';
 import Board from '../components/Board';
 import DiceTray from '../components/DiceTray';
+import AppControlsMenu from '../components/AppControlsMenu';
 import ReportBugModal from '../components/ReportBugModal';
 import ResignModal from '../components/ResignModal';
 import {
@@ -22,6 +23,7 @@ import {
   setAnnouncerEnabled,
 } from '../audio/announcer';
 import { useT } from '../i18n/strings';
+import { setChromeHidden } from '../ui/appChrome';
 
 interface Props {
   gameId: string;
@@ -90,6 +92,15 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
   // finish ahead of an earlier removal rather than always at the array's end. Initialized from the
   // rejoining state's own rankings so a mid-game rejoin doesn't replay past finishes.
   const prevRankingIds = useRef<PlayerId[]>(initialState.rankings);
+
+  // OnlinePlay only ever mounts once live play has actually started (see OnlineGamePage.tsx — the
+  // lobby/waiting-room is a separate component), so the board is on screen for this component's
+  // entire lifetime — hide the global app header the whole time, same reasoning as HotseatPage.tsx/
+  // VsComputerPage.tsx's own conditional copies of this.
+  useEffect(() => {
+    setChromeHidden(true);
+    return () => setChromeHidden(false);
+  }, []);
 
   useEffect(() => {
     const socket = connectSocket();
@@ -350,7 +361,41 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
         />
       </div>
       <div className="play-area">
-        <div className={`announcer${hint ? ' announcer-hint' : ''}`}>{hint ? hint.text : banner}</div>
+        <div className="play-area-top-row">
+          <div className={`announcer${hint ? ' announcer-hint' : ''}`}>{hint ? hint.text : banner}</div>
+          <AppControlsMenu soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)}>
+            {/* Voice call setup (§13) — join/leave, mute, and the autoplay-blocked recovery
+                button all belong here per the App Controls consolidation; the connection-failure
+                text below stays outside the (closed-by-default) panel since it's status the
+                player needs to see without an extra tap, same reasoning as the mic icon's own
+                hover title not being enough on a phone (see the "voice not heard" bug fix). */}
+            <div className="app-controls-row app-controls-voice">
+              {inVoice ? (
+                <>
+                  <button className="btn-debug-log" onClick={handleLeaveVoice} title={t('voice.leaveTitle')}>
+                    {t('voice.leave')}
+                  </button>
+                  <button
+                    className={`btn-sound in-game-sound ${muted ? 'is-off' : 'is-on'}`}
+                    onClick={handleToggleMute}
+                    title={muted ? t('voice.unmuteTitle') : t('voice.muteTitle')}
+                  >
+                    {muted ? t('voice.muted') : t('voice.unmuted')}
+                  </button>
+                </>
+              ) : (
+                <button className="btn-debug-log" onClick={handleJoinVoice} title={t('voice.joinTitle')}>
+                  {t('voice.join')}
+                </button>
+              )}
+              {inVoice && audioBlocked && (
+                <button className="btn-debug-log voice-audio-blocked" onClick={handleEnableAudioPlayback}>
+                  {t('voice.enableAudio')}
+                </button>
+              )}
+            </div>
+          </AppControlsMenu>
+        </div>
         <DiceTray
           game={game}
           onRoll={handleRoll}
@@ -358,47 +403,9 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
           showRollback={showRollback}
           onRollback={handleRollback}
           isMyTurn={isMyTurn}
+          resignAllowed={resignAllowed}
+          onResign={handleResign}
         />
-        <div className="post-dice-actions">
-          {resignAllowed && (
-            <button className="action-btn btn-abort" onClick={handleResign}>
-              {t('resign.gameButton')}
-            </button>
-          )}
-          {inVoice ? (
-            <>
-              <button className="btn-debug-log" onClick={handleLeaveVoice} title={t('voice.leaveTitle')}>
-                {t('voice.leave')}
-              </button>
-              <button
-                className={`btn-sound in-game-sound ${muted ? 'is-off' : 'is-on'}`}
-                onClick={handleToggleMute}
-                title={muted ? t('voice.unmuteTitle') : t('voice.muteTitle')}
-              >
-                {muted ? t('voice.muted') : t('voice.unmuted')}
-              </button>
-            </>
-          ) : (
-            <button className="btn-debug-log" onClick={handleJoinVoice} title={t('voice.joinTitle')}>
-              {t('voice.join')}
-            </button>
-          )}
-          {inVoice && audioBlocked && (
-            <button className="btn-debug-log voice-audio-blocked" onClick={handleEnableAudioPlayback}>
-              {t('voice.enableAudio')}
-            </button>
-          )}
-          <button className="btn-debug-log" onClick={() => setShowReportBug(true)} title={t('game.reportBugTitle')}>
-            {t('game.reportBug')}
-          </button>
-          <button
-            className={`btn-sound in-game-sound ${soundOn ? 'is-on' : 'is-off'}`}
-            onClick={toggleSound}
-            title={soundOn ? t('setup.muteTitle') : t('setup.unmuteTitle')}
-          >
-            {soundOn ? t('game.soundOn') : t('game.muted')}
-          </button>
-        </div>
         {voiceError && <p className="online-error">{voiceError}</p>}
         {/* A hover-only tooltip (the per-player mic icon's title) isn't discoverable on a phone —
             this is the same "voice connection failed" fact as plain, always-visible text instead,

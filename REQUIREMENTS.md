@@ -320,19 +320,32 @@ or in the session summary table) opens their full lifetime statistics (**hotseat
 
 ### Play Area panel
 The right-hand panel next to the board ("Play Area", chocolate-brown background, fixed footprint
-matching the board's height so it never resizes as its content changes) contains, top to bottom:
-1. A text box announcing whose turn it is, in Kannada: "<player name>, ನಿಮ್ಮ ಸರದಿ, ಕವಡೆ ಹಾಕಿ".
-2. The roll button, labeled "ಕವಡೆ ಹಾಕಿ".
-3. The round kavade-throw area: shows a shaking-hands idle animation while waiting for a roll,
-   then the scattered result (black/white ovals) of the latest throw once rolled.
-5. The cumulative list of pool values still to be played this turn, labeled in Kannada
-   "ನಡೆಸಬೇಕಾದ ಗರಗಳು" ("moves still to be made").
-6. The Resign Game button, shown only when Resignation Allowed was turned on at setup — hotseat
-   (§9), online (§13), and Vs Computer (§14) all use this same unconditional self-resign flow,
-   identical in behavior everywhere; Vs Computer's one necessary adaptation is *who* it resigns
-   (always the human, since there's no "whoever's turn it is" to pick between when only one seat is
-   ever human — see §14).
-7. The sound on/off toggle (mirrors the one on the setup screen — see below).
+close to the board's own height) contains, top to bottom:
+1. **Top row**: a text box announcing whose turn it is (in Kannada or English depending on the
+   language setting — see §16), and the **App Controls** button (labeled "App") pinned to its
+   right edge.
+2. **Dice row**: the round kavade-throw area (shows a shaking-hands idle animation while waiting
+   for a roll, then the scattered result of the latest throw once rolled) sits beside — not above
+   — **Game Controls**, a vertically-stacked group of:
+   - The roll button, plus the Roll Back Last Move button alongside it once available.
+   - The cumulative list of pool values still to be played this turn ("Moves still to play").
+   - The Resign Game button, shown only when Resignation Allowed was turned on at setup — hotseat
+     (§9), online (§13), and Vs Computer (§14) all use this same unconditional self-resign flow,
+     identical in behavior everywhere; Vs Computer's one necessary adaptation is *who* it resigns
+     (always the human, since there's no "whoever's turn it is" to pick between when only one seat
+     is ever human — see §14).
+
+   Reflows back to stacked (circle above Game Controls) on narrow/phone widths, where there isn't
+   room for both side by side.
+3. **App Controls** (the button from the top row) opens a small popover, not a fixed part of the
+   panel's layout, containing: the language toggle (§16), the sound on/off toggle, the Report Bug
+   button, and — online mode only — voice call setup (join/leave, mute, and any connection-failure
+   status; §13). Consolidates everything that used to be a wide row of buttons under the dice into
+   one small control, so the panel's fixed width goes to Game Controls/the board instead (see the
+   Decisions log for why).
+
+The app-wide title/version bar shown on every other screen (mode select, login, setup) is hidden
+entirely while a live game is on screen — see the Decisions log entry below.
 
 *(Numbering above follows the original spec as given; item 4 was not specified. Online mode's
 gameplay screen mirrors this same layout, plus a Report Bug button — see §13.)*
@@ -938,6 +951,42 @@ Resolved during requirements gathering:
      failed to reach. Verified end-to-end with two real browser instances over the actual
      WebRTC/Socket.IO stack (not mocked): both connected, the icon read "connected," and the
      hidden audio element was confirmed genuinely playing (`paused: false`), not just present.
+- **Playing-screen layout pass, plus a welcome-page and dice-odds change** (§11, §4, §1) —
+  delivered together at the user's explicit request, driven by a reference mockup image
+  (`NewLayoutPlayingArea.jpg`, saved at the repo root):
+  - **Global header loses the title/version, and disappears entirely during live play**: the app
+    name/version used to sit in an `<h1>` shown on every screen; moved to the welcome page instead
+    (`WelcomeScreen.tsx`, read from `strings.ts` via `translate()` so there's one source of truth,
+    not a duplicated literal) and the header itself trimmed to just the language toggle. That
+    slimmer header still shows on mode-select/login/setup, but is hidden completely once a game is
+    actually on screen (`app/src/ui/appChrome.ts` — a small persisted-in-memory singleton, same
+    "module + `useSyncExternalStore`" pattern `i18n/language.ts` already uses; each of
+    Hotseat/VsComputer/OnlinePlay flips it for exactly as long as the board is visible), freeing
+    that space for the board instead.
+  - **"Game Controls" and "App Controls" split**: the old single wide row under the dice (Resign,
+    Report Bug, Sound, and — online — voice buttons all mixed together) is now two purpose-built
+    groups. Game Controls (`DiceTray.tsx`) is Roll/Roll Back/Moves-still-to-play/Resign, stacked
+    beside (not above) the dice circle. App Controls (`AppControlsMenu.tsx`, a new small "App"
+    button + popover) holds everything that isn't specific to making a move: language, sound,
+    report bug, and — online only, passed as children since no other mode has any — voice call
+    setup. The voice *connection-failure* text itself stays outside the (closed-by-default) popover
+    since it's status the player needs without an extra tap, same reasoning as that fix's own mic
+    icon change just above.
+  - **Welcome page**: `Welcome_pic.jpg` (the family photo) removed; `Indira.jpg` (the dedication
+    portrait) kept. The app name + version (now homeless from the header) added underneath the
+    existing Kannada title, in the welcome panel's own light-on-dark palette (`#ecd9b3`, matching
+    `.welcome-message`) — `var(--text)`/`var(--text-muted)` (the removed header's colors) are tuned
+    for the app's normal light surfaces and were briefly unreadable against this screen's fixed
+    dark wood background before being caught in a screenshot check and fixed.
+  - **Dice odds rebalanced**: Chauka/Bhara (the two bonus rolls) raised from 6.25%/6.25% to
+    10%/8%, with 1/2/3 scaled down to fit the remaining 82% while preserving their old relative
+    shape (2:3:2). See §4 for the full mechanism (`OUTCOME_WEIGHTS` in `dice.ts`) and why this
+    couldn't be done by just biasing each shell's own coin flip.
+  - Verified via `npx tsc -b`, `oxlint`, and Playwright screenshots of the rendered pages (hotseat
+    at desktop and phone widths, online with a real 2-peer voice session, the welcome page, and the
+    trimmed mode-select header) compared directly against the reference mockup — the height
+    reduction above was itself discovered and tuned this way (the first pass left a large empty gap
+    under Game Controls that the screenshot made obvious).
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
@@ -1228,9 +1277,13 @@ needed).
 
 ### Toggle
 Two small pill buttons, "EN" / "ಕನ್ನಡ", in the shared app header — visible on every screen after
-the welcome splash, including the login/sign-up screens, so it's reachable before a game even
-starts. Each language's own button always shows in that language's own script (not translated by
-the *other* selected language), the standard convention for a language switcher.
+the welcome splash up through starting a game (mode-select, login/sign-up, setup), so it's
+reachable before a game even starts. During live gameplay itself the header is hidden (see §11's
+Decisions log entry) and the same toggle moves into that screen's App Controls popover instead —
+still reachable, just consolidated with the rest of that screen's non-gameplay controls rather than
+occupying its own persistent bar. Each language's own button always shows in that language's own
+script (not translated by the *other* selected language), the standard convention for a language
+switcher.
 
 ### Scope
 Every user-facing string in the app switches with the setting: every mode's screens (mode-select,

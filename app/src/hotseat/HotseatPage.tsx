@@ -28,8 +28,10 @@ import {
   waitForAnnouncer,
 } from '../audio/announcer';
 import { useT } from '../i18n/strings';
+import { setChromeHidden } from '../ui/appChrome';
 import Board from '../components/Board';
 import DiceTray from '../components/DiceTray';
+import AppControlsMenu from '../components/AppControlsMenu';
 import SetupModal from '../components/SetupModal';
 import ResignModal from '../components/ResignModal';
 import ReportBugModal from '../components/ReportBugModal';
@@ -104,6 +106,16 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
   // insertIntoRankings in turnEngine.ts) and can skip forfeited/eliminated players entirely (only
   // a genuine finish or the auto-ranked survivor deserves the "finished"/"won" announcement).
   const prevRankingIds = useRef<PlayerId[]>([]);
+
+  // Hides the global app header (title/lang toggle — see App.tsx's AppHeader) for as long as this
+  // page is showing the board (editor or live play), so that vertical space goes to the board
+  // instead (§11's layout pass). Setup screen keeps the header, since there's no board competing
+  // with it there. Always restored on unmount — leaving another page's header hidden after
+  // navigating away would be a real bug, not just a cosmetic one.
+  useEffect(() => {
+    setChromeHidden(!inSetup);
+    return () => setChromeHidden(false);
+  }, [inSetup]);
 
   // Narrow deps deliberately: this should reset exactly once per new hint (keyed), not re-fire
   // on unrelated renders while a hint is showing.
@@ -440,31 +452,19 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
             />
           </div>
           <div className="play-area">
-            <div className={`announcer${hint ? ' announcer-hint' : ''}`}>{hint ? hint.text : banner}</div>
+            <div className="play-area-top-row">
+              <div className={`announcer${hint ? ' announcer-hint' : ''}`}>{hint ? hint.text : banner}</div>
+              <AppControlsMenu soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)} />
+            </div>
             <DiceTray
               game={game}
               onRoll={handleRoll}
               onSelectValue={handleSelectValue}
               showRollback={rollbackEnabled && !!game.lastMoveSnapshot && game.phase !== 'game-over'}
               onRollback={handleRollback}
+              resignAllowed={resignAllowed}
+              onResign={handleResign}
             />
-            <div className="post-dice-actions">
-              {resignAllowed && (
-                <button className="action-btn btn-abort" onClick={handleResign}>
-                  {t('resign.gameButton')}
-                </button>
-              )}
-              <button className="btn-debug-log" onClick={() => setShowReportBug(true)} title={t('game.reportBugTitle')}>
-                {t('game.reportBug')}
-              </button>
-              <button
-                className={`btn-sound in-game-sound ${soundOn ? 'is-on' : 'is-off'}`}
-                onClick={toggleSound}
-                title={soundOn ? t('setup.muteTitle') : t('setup.unmuteTitle')}
-              >
-                {soundOn ? t('game.soundOn') : t('game.muted')}
-              </button>
-            </div>
           </div>
         </div>
       )}

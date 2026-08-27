@@ -150,6 +150,14 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'game.reportBugTitle': { en: 'Report a bug', kn: 'ದೋಷವನ್ನು ವರದಿ ಮಾಡಿ' },
   'game.soundOn': { en: '🔊 Sound On', kn: '🔊 ಧ್ವನಿ ಆನ್' },
   'game.muted': { en: '🔇 Muted', kn: '🔇 ಮ್ಯೂಟ್ ಮಾಡಲಾಗಿದೆ' },
+  // --- App Controls button (§11's layout pass) — sound/report-bug/language/voice, out of the
+  // playing screen's fixed layout and into one popover, so that space goes to the board instead.
+  'appControls.button': { en: 'App', kn: 'ಆ್ಯಪ್' },
+  'appControls.title': {
+    en: 'App Controls — language, sound, voice, report a bug',
+    kn: 'ಆ್ಯಪ್ ನಿಯಂತ್ರಣಗಳು — ಭಾಷೆ, ಧ್ವನಿ, ಕರೆ, ದೋಷ ವರದಿ',
+  },
+  'appControls.language': { en: 'Language', kn: 'ಭಾಷೆ' },
   // --- Voice chat (online mode only) ---
   'voice.join': { en: '🎙️ Join Voice', kn: '🎙️ ಧ್ವನಿಗೆ ಸೇರಿ' },
   'voice.joinTitle': {

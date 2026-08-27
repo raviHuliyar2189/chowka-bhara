@@ -1,0 +1,7 @@
+Remove welcome_pic.jpg from welcome page. Modify Welcome page to include the app name  "Chowka Bhara" and Version Number
+Add the version number of the app in welcome page 
+
+Remove the app title "Chowka Bhara" in all other screens to avoid wasting space for title. It is better utilized for increasing board size.
+Move the component marked "moves still to play" below "roll the dice"
+Format change:  "Roll the dice", "Roll back last move" and "resign game" one below the other as a separate component called "Game controls"
+Add a new button called "App Controls" button in the playing screen and move the buttons realted to controlling the voice call setup, sound on/off, report bug, language setting

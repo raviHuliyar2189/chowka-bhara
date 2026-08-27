@@ -9,21 +9,23 @@ import HotseatPage from './hotseat/HotseatPage';
 import VsComputerPage from './vscomputer/VsComputerPage';
 import type { PlayerInfo } from './online/api';
 import { unlockAudioOnFirstInteraction } from './audio/announcer';
-import { useT } from './i18n/strings';
 import { useLanguage } from './i18n/useLanguage';
 import { setLanguage } from './i18n/language';
+import { useChromeHidden } from './ui/appChrome';
 import './App.css';
 
-// Shared header for every screen after the welcome splash (mode-select, login, and every game
-// screen) — includes the language toggle so switching is reachable from anywhere, not buried in
-// a settings screen.
+// Shared header for every screen after the welcome splash (mode-select, login, online setup) —
+// just the language toggle now; the app name/version moved to the welcome page itself (the only
+// place a title's vertical space isn't competing with the board — see REQUIREMENTS.md's Decisions
+// log). Renders nothing at all while a live game screen has hidden it (useChromeHidden), so that
+// space goes to the board instead — those screens carry their own compact "App Controls" button
+// with the same language toggle, alongside sound/report-bug/voice controls.
 function AppHeader() {
-  const t = useT();
   const lang = useLanguage();
+  const hidden = useChromeHidden();
+  if (hidden) return null;
   return (
-    <h1>
-      <span className="app-title-main">{t('app.title')}</span>
-      <span className="app-version">{t('app.version')}</span>
+    <div className="app-header-bar">
       <span className="lang-toggle">
         <button
           className={`lang-btn${lang === 'en' ? ' active' : ''}`}
@@ -40,7 +42,7 @@ function AppHeader() {
           ಕನ್ನಡ
         </button>
       </span>
-    </h1>
+    </div>
   );
 }
 
