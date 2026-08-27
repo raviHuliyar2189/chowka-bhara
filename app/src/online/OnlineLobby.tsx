@@ -5,6 +5,7 @@ import { connectSocket } from './socket';
 import type { GameState } from '../game/turnEngine';
 import { SEATS_BY_COUNT, type PlayerId } from '../game/paths';
 import { useT } from '../i18n/strings';
+import { setChromeHidden } from '../ui/appChrome';
 
 interface Props {
   gameId: string;
@@ -17,6 +18,17 @@ type Phase = 'loading' | 'choice' | 'declined' | 'waiting';
 
 export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props) {
   const t = useT();
+
+  // Hides the global app header's own language toggle (App.tsx's AppHeader) for this component's
+  // whole lifecycle (every phase — loading/choice/declined/waiting) at the user's explicit
+  // request; same mechanism as mode-select/sign-in's own copies of this (see REQUIREMENTS.md's
+  // Decisions log). Unlike those two screens, this one doesn't show its own replacement toggle —
+  // just removed here, not relocated.
+  useEffect(() => {
+    setChromeHidden(true);
+    return () => setChromeHidden(false);
+  }, []);
+
   const [phase, setPhase] = useState<Phase>('loading');
   const [lobby, setLobby] = useState<LobbyState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -276,16 +288,12 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
 
   return (
     <div className="modal">
+      <p className="screen-app-title">{t('app.title')}</p>
       <h2>{t('lobby.waitingRoom')}</h2>
       <p>{t('lobby.startedBy', lobby.createdByName, lobby.seatCount)}</p>
-
-      {!lobby.canStart && (
-        <div className="setup-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.5rem' }}>
-          <a className="action-btn btn-start" href={whatsappLinkFor(lobby)} target="_blank" rel="noopener noreferrer">
-            {t('lobby.shareWhatsApp')}
-          </a>
-        </div>
-      )}
+      {/* Only the creator actually sent an invite (auto-opened for them at creation time) —
+          replaces the manual "Share on WhatsApp" button/link, removed at explicit request. */}
+      {isCreator && <p>{t('lobby.whatsappSentNote')}</p>}
 
       <ul className="player-list">
         {seatOrder.map((seat) => {
@@ -305,7 +313,7 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
                   title={t(isOnline ? 'presence.online' : 'presence.offline')}
                 />
               )}
-              {seat}: {label}
+              {label}
             </li>
           );
         })}

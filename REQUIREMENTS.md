@@ -1133,6 +1133,15 @@ Resolved during requirements gathering:
     and game creation, all succeeding; an obviously-invalid number correctly rejected with 400) and
     through the actual UI via Playwright (sign in → create account → reaches mode-select). Test
     rows cleaned up after each check.
+- **Waiting room (§13) decluttered**: "Waiting Room" → "Game Waiting Room"; a "Chowka Bhara" title
+  added above it (`screen-app-title`, same treatment sign-in already got) and its language toggle
+  removed entirely — not relocated inline like mode-select/sign-in, just gone, via the same
+  `setChromeHidden` mechanism covering this component's whole lifecycle. The manual "Share on
+  WhatsApp" button/link removed outright (the automatic open at lobby-creation time, §13's own
+  requirement above, already covers sending the invite) and replaced with a creator-only plain-text
+  note confirming the invite already went out and suggesting a manual follow-up if someone hasn't
+  joined. The per-seat "P1"/"P3" prefixes dropped from the player list (just the status line now);
+  "Waiting for a response…" reworded to "Waiting for other players to join the game…".
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
@@ -1175,18 +1184,19 @@ Still open / assumed defaults (flag if any of these are wrong):
   ask). A 1-player game's AI seat deliberately gets no `game_seats` row at all — that absence
   *is* how the server tells a real 2nd player apart from "this is the computer."
 - The game gets a shareable URL (`/games/:id`). **Who specifically gets invited is decided entirely
-  inside WhatsApp**, not this app — a "Share on WhatsApp" link opens `wa.me` with the invite text
-  pre-filled (who started the game, the planned player count, who's joined so far, the link), where
-  WhatsApp's own contact/forward picker is used to choose one or more recipients. **Opens
-  automatically**, in a new tab, the moment the creator's own device first reaches the waiting room
-  right after clicking "Create Game" — the very next thing they do is pick who to send it to, no
-  separate "now go invite people" step. It doesn't re-trigger on a later visit to the same lobby
-  (a refresh, a different device, coming back to check on it) — only that one first arrival — and
-  it never fires for anyone who reaches the waiting room by actually opening the invite link
-  (nothing for them to send). The button itself stays available afterward too, for inviting more
-  people later or if the auto-open didn't fire (e.g. a browser that blocks it). There's no Copy
-  Link option — the app itself never knows or needs to know the intended invitee list, only who
-  actually opens the link afterward.
+  inside WhatsApp**, not this app — `wa.me` opens with the invite text pre-filled (who started the
+  game, the planned player count, who's joined so far, the link), where WhatsApp's own contact/
+  forward picker is used to choose one or more recipients. **Opens automatically**, in a new tab,
+  the moment the creator's own device first reaches the waiting room right after clicking "Create
+  Game" — the very next thing they do is pick who to send it to, no separate "now go invite
+  people" step. It doesn't re-trigger on a later visit to the same lobby (a refresh, a different
+  device, coming back to check on it) — only that one first arrival — and it never fires for
+  anyone who reaches the waiting room by actually opening the invite link (nothing for them to
+  send). There's no manual "Share on WhatsApp" button/Copy Link option at all any more (removed at
+  explicit request, along with the per-seat "P1"/"P2" prefixes in the player list below) — just a
+  plain note to the creator confirming the invite already went out and suggesting they follow up
+  directly if someone hasn't joined; the app itself never knows or needs to know the intended
+  invitee list, only who actually opens the link afterward.
 - Opening the link for the first time (signing in first if needed) shows an explicit **Join /
   Decline** choice — naming who started the game, the planned player count, and who's joined so
   far — rather than joining automatically. Only clicking Join actually claims a seat.

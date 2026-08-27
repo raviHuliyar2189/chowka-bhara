@@ -311,19 +311,28 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'lobby.noOneYet': { en: 'no one yet', kn: 'ಇನ್ನೂ ಯಾರೂ ಇಲ್ಲ' },
   'lobby.join': { en: 'Join', kn: 'ಸೇರಿ' },
   'lobby.decline': { en: 'Decline', kn: 'ನಿರಾಕರಿಸಿ' },
-  'lobby.waitingRoom': { en: 'Waiting Room', kn: 'ಕಾಯುವ ಕೊಠಡಿ' },
+  'lobby.waitingRoom': { en: 'Game Waiting Room', kn: 'ಆಟದ ಕಾಯುವ ಕೊಠಡಿ' },
   'lobby.startedBy': {
     en: (name: string, seatCount: number) => `Started by ${name} — ${seatCount} players planned.`,
     kn: (name: string, seatCount: number) => `${name} ಪ್ರಾರಂಭಿಸಿದರು — ${seatCount} ಆಟಗಾರರು ಯೋಜಿತ.`,
   },
-  'lobby.shareWhatsApp': { en: 'Share on WhatsApp', kn: 'WhatsApp ನಲ್ಲಿ ಹಂಚಿಕೊಳ್ಳಿ' },
+  // Creator-only — only they actually have a WhatsApp invite to have sent (auto-opened for them
+  // at creation time; see justCreated's own comment in OnlineLobby.tsx). Replaces the manual
+  // "Share on WhatsApp" button/link, removed at the user's explicit request.
+  'lobby.whatsappSentNote': {
+    en: "I have sent a WhatsApp request to the selected people to join the game. You may like to remind the players if they don't join.",
+    kn: 'ಆಟಕ್ಕೆ ಸೇರಲು ಆಯ್ಕೆ ಮಾಡಿದ ಜನರಿಗೆ ನಾನು WhatsApp ವಿನಂತಿ ಕಳುಹಿಸಿದ್ದೇನೆ. ಅವರು ಸೇರದಿದ್ದರೆ ನೀವು ಅವರಿಗೆ ನೆನಪಿಸಬಹುದು.',
+  },
   'lobby.whatsappText': {
     en: (name: string, seatCount: number, joined: string, link: string) =>
       `${name} started a Chowka Bhara game for ${seatCount} players. Joined so far: ${joined}. Tap to join: ${link}`,
     kn: (name: string, seatCount: number, joined: string, link: string) =>
       `${name} ${seatCount} ಆಟಗಾರರಿಗಾಗಿ ಚೌಕಾ ಭಾರ ಆಟ ಪ್ರಾರಂಭಿಸಿದ್ದಾರೆ. ಈವರೆಗೆ ಸೇರಿದವರು: ${joined}. ಸೇರಲು ಟ್ಯಾಪ್ ಮಾಡಿ: ${link}`,
   },
-  'lobby.waitingForResponse': { en: 'Waiting for a response…', kn: 'ಪ್ರತಿಕ್ರಿಯೆಗಾಗಿ ಕಾಯಲಾಗುತ್ತಿದೆ…' },
+  'lobby.waitingForResponse': {
+    en: 'Waiting for other players to join the game…',
+    kn: 'ಇತರ ಆಟಗಾರರು ಆಟಕ್ಕೆ ಸೇರುವುದನ್ನು ಕಾಯಲಾಗುತ್ತಿದೆ…',
+  },
   'lobby.joinedLabel': { en: (name: string) => `${name} — ✅ Joined`, kn: (name: string) => `${name} — ✅ ಸೇರಿದ್ದಾರೆ` },
   'lobby.declinedLabel': { en: (name: string) => `${name} — ❌ Declined`, kn: (name: string) => `${name} — ❌ ನಿರಾಕರಿಸಿದ್ದಾರೆ` },
   'lobby.starting': { en: 'Starting…', kn: 'ಪ್ರಾರಂಭಿಸಲಾಗುತ್ತಿದೆ…' },
