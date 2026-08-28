@@ -42,6 +42,7 @@ export default function OnlineGamePage({ gameId, me, justCreated, onExit }: Prop
         me={me}
         justCreated={justCreated}
         onStart={(state, mySeat, resignAllowed) => setPlaying({ state, mySeat, resignAllowed })}
+        onExit={onExit}
       />
     </div>
   );

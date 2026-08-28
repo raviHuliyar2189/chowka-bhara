@@ -312,7 +312,8 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'onlineSetup.createGame': { en: 'Start Game', kn: 'ಆಟ ಪ್ರಾರಂಭಿಸಿ' },
 
   // --- Online: lobby ---
-  'lobby.aborted': { en: 'This game was aborted.', kn: 'ಈ ಆಟ ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ.' },
+  'lobby.aborted': { en: 'The game was cancelled.', kn: 'ಈ ಆಟ ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ.' },
+  'lobby.backToSetup': { en: 'Back to Game Setup', kn: 'ಆಟದ ಸೆಟಪ್‌ಗೆ ಹಿಂತಿರುಗಿ' },
   'lobby.notPart': {
     en: "This game has already started and you weren't part of it.",
     kn: 'ಈ ಆಟ ಈಗಾಗಲೇ ಪ್ರಾರಂಭವಾಗಿದೆ ಮತ್ತು ನೀವು ಅದರ ಭಾಗವಾಗಿರಲಿಲ್ಲ.',

@@ -13,11 +13,14 @@ interface Props {
   me: PlayerInfo;
   justCreated?: boolean;
   onStart: (state: GameState, mySeat: PlayerId, resignAllowed: boolean) => void;
+  // Cancelled-lobby screen's own way back to Mode Select (see the 'aborted' phase below) — same
+  // destination as OnlinePlay's own onExit (App.tsx's OnlineGameRoute wires both to navigate('/')).
+  onExit: () => void;
 }
 
-type Phase = 'loading' | 'choice' | 'declined' | 'waiting';
+type Phase = 'loading' | 'choice' | 'declined' | 'waiting' | 'aborted';
 
-export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props) {
+export default function OnlineLobby({ gameId, me, justCreated, onStart, onExit }: Props) {
   const t = useT();
 
   // Hides the global app header's own language toggle (App.tsx's AppHeader) for this component's
@@ -71,7 +74,8 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
         if (!ok) return;
         fetchGame(gameId)
           .then((fresh) => {
-            if (fresh.status !== 'aborted') setLobby(fresh);
+            if (fresh.status === 'aborted') setPhase('aborted');
+            else setLobby(fresh);
           })
           .catch(() => {});
       });
@@ -81,7 +85,7 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
     });
     socket.on('lobby-updated', (updated: LobbyState) => {
       if (updated.status === 'aborted') {
-        setError(t('lobby.aborted'));
+        setPhase('aborted');
         return;
       }
       setLobby(updated);
@@ -121,7 +125,7 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
       try {
         const current = await fetchGame(gameId);
         if (current.status === 'aborted') {
-          if (!cancelled) setError(t('lobby.aborted'));
+          if (!cancelled) setPhase('aborted');
           return;
         }
         const mySeat = current.seats.find((s) => s.playerId === me.id);
@@ -241,6 +245,22 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
     return (
       <div className="modal">
         <p className="online-error">{error}</p>
+      </div>
+    );
+  }
+
+  // Own phase (not lumped into the generic `error` state above) so it can offer a way back to
+  // Mode Select instead of being a dead end — at explicit request, checked before the `!lobby`
+  // guard below since this phase never needs lobby data to render.
+  if (phase === 'aborted') {
+    return (
+      <div className="modal">
+        <p className="online-error">{t('lobby.aborted')}</p>
+        <div className="actions-row">
+          <button className="action-btn btn-start" onClick={onExit}>
+            {t('lobby.backToSetup')}
+          </button>
+        </div>
       </div>
     );
   }

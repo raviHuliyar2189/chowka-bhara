@@ -1479,6 +1479,15 @@ Resolved during requirements gathering:
   the throw area is taller; `.dice-circle-col` gained `justify-content: center` so any leftover
   height on its side balances around the fixed-size throw area rather than pinning it to the top.
   Confirmed via screenshot with an empty and a populated Pending Moves list, desktop and phone.
+- **Cancelled-lobby screen offers a way back to Mode Select instead of being a dead end** (§13, at
+  explicit request): "This game was aborted." → "The game was cancelled." — same wording for both
+  the creator's own Cancel Game click and anyone else watching the lobby when it happens, since
+  both paths already shared the one `lobby.aborted` string. Previously this was folded into
+  `OnlineLobby`'s generic `error` state (a message with no escape but reloading); it's now its own
+  `'aborted'` phase with a "Back to Game Setup" button wired to the same `onExit` (→ Mode Select)
+  `OnlinePlay`'s own Exit already uses — `OnlineGamePage` now forwards that prop through, where it
+  was previously accepted but silently dropped. Confirmed via a scripted 2-player lobby: creator
+  cancels after the second player joins, sees the new message, clicks through to Mode Select.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
