@@ -524,6 +524,69 @@
   width: 300px;
 }
 
+/* Replaces the earlier native <input list>/<datalist> combo (SetupModal.tsx) — its dropdown arrow
+   was unreliable across mobile browsers, a real reported case. This wrapper is now the flex item
+   .setup-row's own input/select rule above used to size directly; position: relative anchors the
+   toggle button and suggestion list to it instead of the page. */
+.name-combo {
+  position: relative;
+  flex: 0 0 300px;
+  width: 300px;
+}
+
+.name-combo input {
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 30px;
+}
+
+.name-combo-toggle {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-muted);
+  padding: 6px 8px;
+}
+
+.name-combo-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 2px 0 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.name-combo-list li button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.name-combo-list li button:hover {
+  background: var(--surface-muted);
+}
 
 .editor-captured-list {
   display: flex;
@@ -1795,6 +1858,11 @@ th {
     flex: none;
     width: 100%;
     box-sizing: border-box;
+  }
+
+  .name-combo {
+    flex: none;
+    width: 100%;
   }
 
   .modal {

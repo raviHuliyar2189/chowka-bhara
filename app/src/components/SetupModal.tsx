@@ -43,6 +43,12 @@ export default function SetupModal({
   const [count, setCount] = useState(4);
   const [names, setNames] = useState<string[]>(['', '', '', '']);
   const seats = SEATS[count];
+  // Which seat's roster suggestion list is currently open — replaces the earlier native
+  // <input list>/<datalist> combo, whose dropdown arrow was unreliable across mobile browsers (a
+  // real reported case: tapping it did nothing on some phones). A plain button + conditionally
+  // rendered list has no such native quirks, at the cost of building the show/hide and outside-
+  // click-to-close behavior by hand below.
+  const [openFor, setOpenFor] = useState<number | null>(null);
 
   function updateName(i: number, value: string) {
     const next = [...names];
@@ -80,23 +86,54 @@ export default function SetupModal({
               {t('setup.seatName', `${id} (${t(SEAT_SIDE_KEY[id])})`)}
             </label>
             {/* One box: typing a new name and picking a roster name both happen in the same
-                input, via its native datalist suggestions, instead of a separate name field plus
-                a second roster-picker dropdown next to it. */}
-            <input
-              id={`playerName-${id}`}
-              list={roster.length > 0 ? `roster-${id}` : undefined}
-              autoComplete="off"
-              value={names[i]}
-              placeholder={t('setup.namePlaceholder', i + 1)}
-              onChange={(e) => updateName(i, e.target.value)}
-            />
-            {roster.length > 0 && (
-              <datalist id={`roster-${id}`}>
-                {roster.map((n) => (
-                  <option key={n} value={n} />
-                ))}
-              </datalist>
-            )}
+                input — a custom dropdown (not the native <input list>/<datalist> combo this
+                replaced) toggled by the arrow button, so it opens reliably on every browser. */}
+            <div className="name-combo">
+              <input
+                id={`playerName-${id}`}
+                autoComplete="off"
+                value={names[i]}
+                placeholder={t('setup.namePlaceholder', i + 1)}
+                onChange={(e) => updateName(i, e.target.value)}
+                onFocus={() => roster.length > 0 && setOpenFor(i)}
+                onBlur={() => setOpenFor(null)}
+              />
+              {roster.length > 0 && (
+                <button
+                  type="button"
+                  className="name-combo-toggle"
+                  tabIndex={-1}
+                  aria-label={t('setup.showRoster')}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setOpenFor(openFor === i ? null : i)}
+                >
+                  ▾
+                </button>
+              )}
+              {openFor === i &&
+                (() => {
+                  const matches = roster.filter((n) => n.toLowerCase().includes(names[i].trim().toLowerCase()));
+                  if (matches.length === 0) return null;
+                  return (
+                    <ul className="name-combo-list">
+                      {matches.map((n) => (
+                        <li key={n}>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              updateName(i, n);
+                              setOpenFor(null);
+                            }}
+                          >
+                            {n}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  );
+                })()}
+            </div>
           </div>
         ))}
 

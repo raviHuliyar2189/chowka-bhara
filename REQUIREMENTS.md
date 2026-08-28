@@ -1550,6 +1550,16 @@ Resolved during requirements gathering:
   `recordGameFinished` (awaited before that phase's `game-updated` broadcast is even sent) has
   already updated the row by then — confirmed via a scripted resign: the table's numbers went from
   0 games each (pre-game) to 1 each with the correct win/loss split (post-game) once refetched.
+- **Roster name picker replaced (hotseat/vs-computer setup)** (§9, a reported bug: tapping the
+  dropdown arrow in a player-name box did nothing on some phones): `SetupModal.tsx` used a native
+  `<input list>`/`<datalist>` combo for "type a new name or pick a saved one in the same box" —
+  reliable on desktop Chrome/Firefox, but that dropdown arrow is a known cross-browser weak point,
+  especially on mobile. Replaced with a plain custom combobox: the arrow is now a real button
+  (`.name-combo-toggle`) toggling a conditionally-rendered, click-to-select list
+  (`.name-combo-list`, filtered live by whatever's already typed) — no native quirks, since it's
+  just React state. `onMouseDown` + `preventDefault()` on the toggle and each option keeps the
+  input focused so selecting a name doesn't fire a blur-driven close before the click registers.
+  Confirmed via screenshot, desktop and phone width.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

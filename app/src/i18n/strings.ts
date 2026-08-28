@@ -114,6 +114,7 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   },
   'setup.seatName': { en: (seat: string) => `${seat} Name:`, kn: (seat: string) => `${seat} ಹೆಸರು:` },
   'setup.namePlaceholder': { en: (n: number) => `Player ${n}`, kn: (n: number) => `ಆಟಗಾರ ${n}` },
+  'setup.showRoster': { en: 'Show saved names', kn: 'ಉಳಿಸಿದ ಹೆಸರುಗಳನ್ನು ತೋರಿಸಿ' },
   'side.bottom': { en: 'Bottom', kn: 'ಕೆಳಗೆ' },
   'side.right': { en: 'Right', kn: 'ಬಲ' },
   'side.top': { en: 'Top', kn: 'ಮೇಲೆ' },
