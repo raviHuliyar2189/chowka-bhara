@@ -403,7 +403,6 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
           </div>
           <div className="play-area">
             <h2>{t('editor.title')}</h2>
-            <p>{t('editor.instructions')}</p>
             <div className="editor-captured-list">
               {editorState.players.map((p) => (
                 <label key={p.id} className="editor-captured-row">
@@ -424,12 +423,37 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
                 ))}
               </select>
             </div>
-            <button className="action-btn btn-start" onClick={handleResumeFromEditor}>
-              {t('editor.startFromHere')}
-            </button>
-            <button className="action-btn" onClick={handleResetPositions}>
-              {t('editor.resetPositions')}
-            </button>
+
+            <div className="sound-prompt">
+              <div className="sound-prompt-question">{t('setup.resignAllowedQuestion')}</div>
+              <button
+                className={`btn-sound ${resignAllowed ? 'is-on' : 'is-off'}`}
+                onClick={toggleResignAllowed}
+                title={resignAllowed ? t('setup.resignDisableTitle') : t('setup.resignEnableTitle')}
+              >
+                {resignAllowed ? t('setup.resignOn') : t('setup.resignOff')}
+              </button>
+            </div>
+
+            <div className="sound-prompt">
+              <div className="sound-prompt-question">{t('setup.rollbackQuestion')}</div>
+              <button
+                className={`btn-sound ${rollbackEnabled ? 'is-on' : 'is-off'}`}
+                onClick={toggleRollback}
+                title={rollbackEnabled ? t('setup.rollbackDisableTitle') : t('setup.rollbackEnableTitle')}
+              >
+                {rollbackEnabled ? t('setup.rollbackOn') : t('setup.rollbackOff')}
+              </button>
+            </div>
+
+            <div className="editor-actions">
+              <button className="action-btn btn-start" onClick={handleResumeFromEditor}>
+                {t('editor.startFromHere')}
+              </button>
+              <button className="action-btn" onClick={handleResetPositions}>
+                {t('editor.resetPositions')}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -457,7 +481,8 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
               game={game}
               onRoll={handleRoll}
               onSelectValue={handleSelectValue}
-              showRollback={rollbackEnabled && !!game.lastMoveSnapshot && game.phase !== 'game-over'}
+              showRollback={rollbackEnabled && game.phase !== 'game-over'}
+              canRollback={!!game.lastMoveSnapshot}
               onRollback={handleRollback}
               resignAllowed={resignAllowed}
               onResign={handleResign}

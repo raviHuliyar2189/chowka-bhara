@@ -9,7 +9,12 @@ interface Props {
   game: GameState;
   onRoll: () => void;
   onSelectValue: (i: number) => void;
+  // Whether roll-back is offered at all in this mode/game — kept stable across a single game
+  // (flips once at setup, once at game-over) so the button's mount/unmount doesn't itself cause
+  // layout jitter. Whether it's usable *right now* (was there actually a move to undo, is it my
+  // own) is the separate, per-move-changing canRollback below, which only toggles `disabled`.
   showRollback: boolean;
+  canRollback?: boolean;
   onRollback: () => void;
   // Online mode only: is it this device's own seat's turn? Defaults to true (hotseat mode,
   // where whoever's holding the device acting for the current player is always correct) —
@@ -99,6 +104,7 @@ export default function DiceTray({
   onRoll,
   onSelectValue,
   showRollback,
+  canRollback = true,
   onRollback,
   isMyTurn = true,
   resignAllowed,
@@ -200,7 +206,12 @@ export default function DiceTray({
           {t('dice.rollButton')}
         </button>
         {showRollback && (
-          <button className="action-btn btn-rollback" onClick={onRollback} title={t('dice.rollbackTitle')}>
+          <button
+            className="action-btn btn-rollback"
+            disabled={!canRollback}
+            onClick={onRollback}
+            title={t('dice.rollbackTitle')}
+          >
             {t('dice.rollbackButton')}
           </button>
         )}

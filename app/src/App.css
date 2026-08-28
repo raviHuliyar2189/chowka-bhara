@@ -464,30 +464,50 @@ button.app-controls-btn:active:not(:disabled) {
 
 .setup-row input,
 .setup-row select {
-  flex: 0 0 230px;
-  width: 230px;
+  flex: 0 0 300px;
+  width: 300px;
 }
 
+/* Name input and roster picker sit side by side (one line per seat) instead of stacked, and share
+   the group's fixed width evenly so every seat row's boxes line up and match size. */
 .setup-input-group {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 0 0 230px;
-  width: 230px;
+  flex-direction: row;
+  gap: 8px;
+  flex: 0 0 300px;
+  width: 300px;
 }
 
-/* Overrides the .setup-row input/select rule above: inside .setup-input-group's column-direction
-   flex context, that rule's flex-basis would size these along the COLUMN axis (i.e. as height,
-   not width) instead of the width it was written for — the group itself already carries the
-   230px width, these just need to fill it. */
+/* Overrides the .setup-row input/select rule above: inside .setup-input-group, each box takes an
+   equal share of the group's fixed width rather than the 300px meant for a lone control. */
 .setup-input-group input,
 .setup-input-group select {
-  flex: none;
-  width: 100%;
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
 }
 
 .roster-picker {
   font-size: 13px;
+}
+
+/* Board Editor's Start/Reset buttons — same width and stacked, instead of each sizing to its own
+   text and only sharing a centered x-position. */
+.editor-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 15px;
+}
+
+.editor-actions .btn-start {
+  margin: 0;
+}
+
+.editor-actions .action-btn {
+  width: 100%;
+  min-width: 0;
 }
 
 .editor-captured-list {
@@ -1623,6 +1643,16 @@ th {
     flex: none;
     width: 100%;
     box-sizing: border-box;
+  }
+
+  /* Re-overrides the .setup-row input/select rule above (same specificity, later wins by source
+     order) so the name input and roster picker keep sharing the row's width evenly instead of
+     each claiming 100% and overflowing it. */
+  .setup-input-group input,
+  .setup-input-group select {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
   }
 
   .setup-input-group {

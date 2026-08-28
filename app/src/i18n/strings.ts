@@ -114,11 +114,7 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'setup.startGame': { en: 'Start Game', kn: 'ಆಟ ಪ್ರಾರಂಭಿಸಿ' },
 
   // --- Board editor (Develop Test) ---
-  'editor.title': { en: 'Board Editor', kn: 'ಬೋರ್ಡ್ ಸಂಪಾದಕ' },
-  'editor.instructions': {
-    en: 'Drag pieces to any position on the board, then choose who resumes first.',
-    kn: 'ಬೋರ್ಡ್‌ನಲ್ಲಿ ಯಾವುದೇ ಸ್ಥಳಕ್ಕೆ ಕಾಯಿಗಳನ್ನು ಎಳೆಯಿರಿ, ನಂತರ ಯಾರು ಮೊದಲು ಮುಂದುವರಿಸಬೇಕೆಂದು ಆಯ್ಕೆಮಾಡಿ.',
-  },
+  'editor.title': { en: 'Initialize Game', kn: 'ಆಟ ಆರಂಭಿಸಿ' },
   'editor.resumeAs': { en: 'Resume as:', kn: 'ಮುಂದುವರಿಸುವವರು:' },
   'editor.startFromHere': { en: 'Start Game From Here', kn: 'ಇಲ್ಲಿಂದ ಆಟ ಪ್ರಾರಂಭಿಸಿ' },
   'editor.resetPositions': { en: 'Reset Positions', kn: 'ಸ್ಥಾನಗಳನ್ನು ಮರುಹೊಂದಿಸಿ' },
@@ -157,9 +153,9 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'resign.title': { en: 'Resign Information', kn: 'ರಾಜೀನಾಮೆ ಮಾಹಿತಿ' },
   'resign.message': {
     en: (name: string) =>
-      `${name} accepted defeat and resigned. The player pieces will be removed from the board. Do you want to continue playing with remaining players`,
+      `${name} resigned, hence lost the game. ${name}'s pieces will be removed from the board. Continue playing with other players.`,
     kn: (name: string) =>
-      `${name} ಸೋಲನ್ನು ಒಪ್ಪಿಕೊಂಡು ರಾಜೀನಾಮೆ ನೀಡಿದ್ದಾರೆ. ಆ ಆಟಗಾರನ ಕಾಯಿಗಳನ್ನು ಬೋರ್ಡ್‌ನಿಂದ ತೆಗೆದುಹಾಕಲಾಗುವುದು. ಉಳಿದ ಆಟಗಾರರೊಂದಿಗೆ ಆಟ ಮುಂದುವರಿಸಬೇಕೇ`,
+      `${name} ರಾಜೀನಾಮೆ ನೀಡಿದ್ದಾರೆ, ಆದ್ದರಿಂದ ಆಟವನ್ನು ಸೋತಿದ್ದಾರೆ. ${name} ಅವರ ಕಾಯಿಗಳನ್ನು ಬೋರ್ಡ್‌ನಿಂದ ತೆಗೆದುಹಾಕಲಾಗುವುದು. ಇತರ ಆಟಗಾರರೊಂದಿಗೆ ಆಟ ಮುಂದುವರಿಸಿ.`,
   },
   'resign.continue': { en: 'Continue', kn: 'ಮುಂದುವರಿಸಿ' },
   'resign.gameButton': { en: 'Resign Game', kn: 'ಆಟದಿಂದ ರಾಜೀನಾಮೆ' },

@@ -338,7 +338,7 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
 
   const isMyTurn = game.players[game.currentTurnIndex].id === mySeat;
   const lastMover = moverOfLastMove(game);
-  const showRollback = lastMover !== null && lastMover.id === mySeat;
+  const canRollback = lastMover !== null && lastMover.id === mySeat;
 
   return (
     <div className="container">
@@ -366,7 +366,8 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
           game={game}
           onRoll={handleRoll}
           onSelectValue={handleSelectValue}
-          showRollback={showRollback}
+          showRollback={true}
+          canRollback={canRollback}
           onRollback={handleRollback}
           isMyTurn={isMyTurn}
           resignAllowed={resignAllowed}

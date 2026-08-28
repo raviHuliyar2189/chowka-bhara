@@ -1200,6 +1200,36 @@ Resolved during requirements gathering:
     the tab — the other players see a lost connection, already handled gracefully by presence
     detection (§13) — not a new risk this introduces.
 
+- **Select Players (setup) rows collapsed to one line each** (§9/§11): the name input and the
+  roster picker used to stack vertically inside each seat row (`.setup-input-group` was
+  `flex-direction: column`), taking two lines per seat. Now they sit side by side, each taking an
+  equal share of the group's fixed width, so every seat is one line and the boxes line up/match
+  size both across seats and against the standalone "Number of Players" select above them (widened
+  to match). The mobile breakpoint needed its own explicit override for this — its generic
+  `.setup-row input, .setup-row select { width: 100% }` rule shares the same specificity as the
+  input-group-scoped rule and comes later in the file, so it was silently winning and forcing both
+  boxes to full width (overflowing the row) until re-overridden.
+- **Board Editor screen reworked** (§15): title "Board Editor" → "Initialize Game"; the
+  "Drag pieces..." instructional paragraph removed entirely (redundant with the title once it's
+  action-oriented); Resignation Allowed and Roll Back toggles added (same `.sound-prompt` controls
+  as the Setup screen, reusing the same state/handlers) so a develop-test game's rules can be set
+  without leaving this screen; "Start Game From Here" and "Reset Positions" wrapped in a new
+  `.editor-actions` column so both are full-width and the same size, instead of each sizing to its
+  own text (previously visibly mismatched widths, independently centered).
+- **Roll Back Last Move button no longer mounts/unmounts** (§11): it used to be conditionally
+  rendered only when a move existed to undo, so it popped in and out of the Game Controls column on
+  nearly every move — a layout jitter. `DiceTray` now takes the mount condition (`showRollback`,
+  stable for the whole game — the feature is offered or it isn't) and the per-move usability
+  (`canRollback`, new prop) separately: the button always renders once the feature is on, and only
+  its `disabled` attribute toggles. Online's equivalent ("did I make the last move") already
+  behaved the same way and got the same fix — it now always shows once in an active game rather
+  than appearing only after someone's first move.
+- **Resign Information message reworded** (§9): "`<name>` accepted defeat and resigned. The player
+  pieces will be removed from the board. Do you want to continue playing with remaining players" →
+  "`<name>` resigned, hence lost the game. `<name>`'s pieces will be removed from the board.
+  Continue playing with other players." — states the outcome and next step directly rather than
+  posing it as a question, since the Continue button is the only available action either way.
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has
