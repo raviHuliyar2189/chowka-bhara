@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { type CSSProperties } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { GameState } from '../game/turnEngine';
 import { useT } from '../i18n/strings';
@@ -23,16 +23,14 @@ interface Props {
   // otherwise allow them, so a player can't act out of turn on someone else's behalf.
   isMyTurn?: boolean;
   // "Game controls" (§11's layout pass): Roll the Dice / Roll Back Last Move / Moves still to play
-  // / Resign Game / App Controls are one grouped, uniformly-sized, vertically-stacked component —
-  // the game-mode page never renders any of these separately elsewhere. Resign is always shown,
-  // just disabled wherever a mode/game doesn't offer it — see the game-controls-bottom-row JSX.
+  // / Resign Game are one grouped, uniformly-sized, vertically-stacked component — the game-mode
+  // page never renders any of these separately elsewhere. Resign is always shown, just disabled
+  // wherever a mode/game doesn't offer it. App Controls used to share Resign's own row as a
+  // trigger button opening an overlay here — removed at explicit request in favor of its contents
+  // (language/sound/report bug) rendering directly in the play area instead (see each mode page's
+  // own AppControlsPanel usage), so Resign is back to a plain full-width row like the rest.
   resignAllowed?: boolean;
   onResign?: () => void;
-  // Just the App Controls panel's inner content (AppControlsMenu.tsx's AppControlsPanel) — the
-  // button and open/close state live here in DiceTray instead, since clicking it needs to overlay
-  // the dice throw area (dice-circle-col) exactly, not pop over near the button itself; see
-  // appControlsOpen below and .app-controls-overlay in App.css.
-  appControls?: ReactNode;
 }
 
 const rand = (n: number) => {
@@ -40,15 +38,15 @@ const rand = (n: number) => {
   return x - Math.floor(x);
 };
 
-// Each die gets its own angular zone around the center of the round throw area (so a throw can
-// never land two dice on top of each other), then jitters its angle/radius within that zone —
-// seeded off the roll's own (random) face data, so the scatter varies with every real throw
-// instead of a fixed pattern, while staying comfortably inside the circle rather than clipping
-// its edge. A small per-die delay staggers the throw so all four don't land in perfect unison.
+// Each die gets its own angular zone around the center of the throw area (so a throw can never
+// land two dice on top of each other), then jitters its angle/radius within that zone — seeded
+// off the roll's own (random) face data, so the scatter varies with every real throw instead of a
+// fixed pattern, while staying comfortably inside the box rather than clipping its edge. A small
+// per-die delay staggers the throw so all four don't land in perfect unison.
 function scatterStyle(dieIndex: number, seed: number): CSSProperties {
   const baseAngles = [45, 135, 225, 315];
   const angle = ((baseAngles[dieIndex] + (rand(seed) - 0.5) * 55) * Math.PI) / 180;
-  const radius = 15 + rand(seed + 1) * 16; // % of the circle's size, from its center
+  const radius = 15 + rand(seed + 1) * 16; // % of the box's own width/height, from its center
   const left = 50 + Math.cos(angle) * radius;
   const top = 50 + Math.sin(angle) * radius;
   const rotate = -32 + rand(seed + 2) * 64;
@@ -110,7 +108,6 @@ export default function DiceTray({
   isMyTurn = true,
   resignAllowed,
   onResign,
-  appControls,
 }: Props) {
   const t = useT();
   const canRoll = game.phase === 'awaiting-roll' && isMyTurn;
@@ -120,28 +117,9 @@ export default function DiceTray({
   const lastRollIndex = game.rollHistory.length - 1;
   const lastRoll = lastRollIndex >= 0 ? game.rollHistory[lastRollIndex] : null;
 
-  const [appControlsOpen, setAppControlsOpen] = useState(false);
-  // The button and the overlay it opens live in two different branches of this same render (game-
-  // controls-col vs dice-circle-col — see below), so a single wrapping ref can't catch outside
-  // clicks the way a plain popover would; both are tracked here instead.
-  const appControlsBtnRef = useRef<HTMLButtonElement>(null);
-  const appControlsOverlayRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!appControlsOpen) return;
-    function onDocPointerDown(e: PointerEvent) {
-      const target = e.target as Node;
-      if (appControlsBtnRef.current?.contains(target)) return;
-      if (appControlsOverlayRef.current?.contains(target)) return;
-      setAppControlsOpen(false);
-    }
-    document.addEventListener('pointerdown', onDocPointerDown);
-    return () => document.removeEventListener('pointerdown', onDocPointerDown);
-  }, [appControlsOpen]);
-
   return (
     <div className="dice-section">
-      {/* Round throw area: shake (idle) or the latest throw's scattered result — sits beside
+      {/* Throw area: shake (idle) or the latest throw's scattered result — sits beside
          "Game controls" (roll/rollback, moves-still-to-play, resign) rather than above it, per
          the playing-screen layout pass (see REQUIREMENTS.md's Decisions log). */}
       <div className="dice-circle-col">
@@ -188,22 +166,25 @@ export default function DiceTray({
 
       </div>
 
-      {/* "Game controls" (§11's layout pass): Roll the Dice, Roll Back Last Move, Moves still to
-         play, Resign Game, and App Controls — one grouped, uniformly-sized, vertically-stacked
-         component (each direct child the same width/height via .game-controls-col's own CSS, not
-         per-button rules). */}
+      {/* "Game controls" (§11's layout pass): Roll Dice, Roll back, Moves still to play, and
+         Resign Game — one grouped, uniformly-sized, vertically-stacked component (each direct
+         child the same width/height via .game-controls-col's own CSS, not per-button rules).
+         Roll Dice and Roll back share one row (at explicit request) rather than each stacking
+         full-width. */}
       <div className="game-controls-col">
-        <button className="action-btn btn-roll" disabled={!canRoll} onClick={onRoll}>
-          {t('dice.rollButton')}
-        </button>
-        <button
-          className="action-btn btn-rollback"
-          disabled={!showRollback || !canRollback}
-          onClick={onRollback}
-          title={t('dice.rollbackTitle')}
-        >
-          {t('dice.rollbackButton')}
-        </button>
+        <div className="game-controls-roll-row">
+          <button className="action-btn btn-roll" disabled={!canRoll} onClick={onRoll}>
+            {t('dice.rollButton')}
+          </button>
+          <button
+            className="action-btn btn-rollback"
+            disabled={!showRollback || !canRollback}
+            onClick={onRollback}
+            title={t('dice.rollbackTitle')}
+          >
+            {t('dice.rollbackButton')}
+          </button>
+        </div>
 
         {(() => {
           const needsChoice = game.phase === 'awaiting-selection' && game.pool.length > 1;
@@ -227,44 +208,17 @@ export default function DiceTray({
           );
         })()}
 
-        {/* Resign Game and App Control share one row (at the user's explicit request) rather than
-           each being its own full-width row like the rest of Game Controls — both still the same
-           height/style, just side by side. Resign is always shown, disabled when this game
-           doesn't allow it, rather than being removed from the row — same reasoning as Roll Back
-           above: a button that disappears/reappears as settings or turn state change is itself a
-           layout jitter. */}
-        <div className="game-controls-bottom-row">
-          <button className="action-btn btn-abort" disabled={!resignAllowed} onClick={onResign}>
-            {t('resign.gameButton')}
-          </button>
-
-          <button
-            type="button"
-            className="action-btn app-controls-btn"
-            ref={appControlsBtnRef}
-            onClick={() => setAppControlsOpen((v) => !v)}
-            title={t('appControls.title')}
-            aria-expanded={appControlsOpen}
-          >
-            {t('appControls.button')}
-          </button>
-        </div>
+        {/* Resign is always shown, disabled when this game doesn't allow it, rather than being
+           removed from the layout — a button that disappears/reappears as settings or turn state
+           change is itself a layout jitter (same reasoning as Roll Back above). Used to share a
+           row with the App Controls trigger button; that button (and the overlay it opened) is
+           gone now — App Controls' own contents render directly in the play area instead, see
+           each mode page's own AppControlsPanel usage — so this is back to a plain full-width row
+           like the rest of the column. */}
+        <button className="action-btn btn-abort" disabled={!resignAllowed} onClick={onResign}>
+          {t('resign.gameButton')}
+        </button>
       </div>
-
-      {/* App Controls opens covering this whole row (dice throw area + Game Controls), not just
-         the throw area alone — on a narrow phone the throw area's own footprint (an ellipse
-         narrower than the circle it replaces, see .dice-stage's phone-width override) isn't wide
-         enough to hold the panel's rows without them feeling cramped, and Game Controls'
-         own buttons aren't meant to stay usable while this is open anyway. inset: 0 against
-         .dice-section itself (position: relative, see App.css) rather than .dice-circle-col
-         specifically, so this automatically matches the full row's footprint on any screen size
-         with no duplicated pixel dimensions to keep in sync. Content scrolls internally
-         (.app-controls-overlay's own overflow-y) if it doesn't all fit at once. */}
-      {appControlsOpen && (
-        <div className="app-controls-overlay" ref={appControlsOverlayRef}>
-          {appControls}
-        </div>
-      )}
     </div>
   );
 }

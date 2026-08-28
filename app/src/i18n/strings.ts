@@ -160,13 +160,13 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   },
 
   // --- Dice tray ---
-  'dice.rollButton': { en: 'Roll the Dice', kn: 'ಕವಡೆ ಹಾಕಿ' },
+  'dice.rollButton': { en: 'Roll Dice', kn: 'ಕವಡೆ ಹಾಕಿ' },
   'dice.rollbackTitle': {
     en: 'Undo the last move and restore the pending dice value/piece choice',
     kn: 'ಕೊನೆಯ ನಡೆಯನ್ನು ರದ್ದುಗೊಳಿಸಿ ಮತ್ತು ಬಾಕಿ ಇರುವ ಗರ/ಕಾಯಿ ಆಯ್ಕೆಯನ್ನು ಮರುಸ್ಥಾಪಿಸಿ',
   },
-  'dice.rollbackButton': { en: '⟲ Roll Back Last Move', kn: '⟲ ಕೊನೆಯ ನಡೆ ಹಿಂತೆಗೆದುಕೊಳ್ಳಿ' },
-  'dice.movesRemaining': { en: 'Moves still to play:', kn: 'ನಡೆಸಬೇಕಾದ ಗರಗಳು:' },
+  'dice.rollbackButton': { en: '⟲ Roll back', kn: '⟲ ಹಿಂತೆಗೆತ' },
+  'dice.movesRemaining': { en: 'Pending Moves', kn: 'ಬಾಕಿ ಇರುವ ನಡೆಗಳು' },
   'dice.none': { en: 'None', kn: 'ಯಾವುದೂ ಇಲ್ಲ' },
   'dice.faceBlack': { en: 'Black', kn: 'ಕಪ್ಪು' },
   'dice.faceWhite': { en: 'White', kn: 'ಬಿಳಿ' },
@@ -187,13 +187,8 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'game.reportBugTitle': { en: 'Report a bug', kn: 'ದೋಷವನ್ನು ವರದಿ ಮಾಡಿ' },
   'game.soundOn': { en: '🔊 Sound On', kn: '🔊 ಧ್ವನಿ ಆನ್' },
   'game.muted': { en: '🔇 Muted', kn: '🔇 ಮ್ಯೂಟ್ ಮಾಡಲಾಗಿದೆ' },
-  // --- App Controls button (§11's layout pass) — sound/report-bug/language/voice, out of the
-  // playing screen's fixed layout and into one popover, so that space goes to the board instead.
-  'appControls.button': { en: 'App Control', kn: 'ಆ್ಯಪ್ ನಿಯಂತ್ರಣ' },
-  'appControls.title': {
-    en: 'App Controls — language, sound, voice, report a bug',
-    kn: 'ಆ್ಯಪ್ ನಿಯಂತ್ರಣಗಳು — ಭಾಷೆ, ಧ್ವನಿ, ಕರೆ, ದೋಷ ವರದಿ',
-  },
+  // --- App Controls (§11's layout pass) — sound/report-bug/language, rendered directly in the
+  // play area (no longer a separate button opening an overlay — removed at explicit request).
   'appControls.language': { en: 'Language', kn: 'ಭಾಷೆ' },
   // --- Voice chat (online mode only) ---
   'voice.join': { en: '🎙️ Join Voice', kn: '🎙️ ಧ್ವನಿಗೆ ಸೇರಿ' },
@@ -383,6 +378,14 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'online.starting': { en: 'Starting…', kn: 'ಪ್ರಾರಂಭಿಸಲಾಗುತ್ತಿದೆ…' },
   'online.rematch': { en: 'Rematch', kn: 'ಮರುಪಂದ್ಯ' },
   'online.exit': { en: 'Exit', kn: 'ನಿರ್ಗಮಿಸಿ' },
+  // Shown once a player who resigned has dismissed the acknowledgment modal, if the game is still
+  // going on for everyone else — they have no more moves left in this game, so unlike the other
+  // players they need a way out that isn't just "wait for it to end."
+  'online.resignedStillWatching': {
+    en: 'You resigned from this game. You can leave now to start or join another.',
+    kn: 'ನೀವು ಈ ಆಟದಿಂದ ರಾಜೀನಾಮೆ ನೀಡಿದ್ದೀರಿ. ಈಗ ಮತ್ತೊಂದು ಆಟ ಪ್ರಾರಂಭಿಸಲು ಅಥವಾ ಸೇರಲು ನೀವು ಹೊರಡಬಹುದು.',
+  },
+  'online.leaveGame': { en: 'Leave Game', kn: 'ಆಟದಿಂದ ಹೊರಡಿ' },
 
   // --- Online: abort modal ---
   'onlineAbort.title': { en: 'Abort Game?', kn: 'ಆಟ ರದ್ದುಗೊಳಿಸುವುದೇ?' },

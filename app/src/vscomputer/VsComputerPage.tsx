@@ -352,10 +352,8 @@ export default function VsComputerPage() {
             isMyTurn={game.players[game.currentTurnIndex].id === HUMAN_SEAT}
             resignAllowed={resignAllowed}
             onResign={handleResign}
-            appControls={
-              <AppControlsPanel soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)} />
-            }
           />
+          <AppControlsPanel soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)} />
         </div>
       </div>
 

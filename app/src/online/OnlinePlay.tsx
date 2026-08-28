@@ -60,6 +60,13 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
   // Purely informational — resigning is unconditional (the resigning player is already out by the
   // time the server's resign:notice broadcast arrives), same as hotseat's own copy of this state.
   const [resignedPlayerName, setResignedPlayerName] = useState<string | null>(null);
+  // Set locally, right when this device's own Resign Game click fires — distinct from
+  // resignedPlayerName above, which the resign:notice broadcast sets for *any* player's
+  // resignation (everyone sees the same acknowledgment). This one specifically means "it was me,"
+  // so a "Leave Game" option can be offered once the game keeps going without this seat — see the
+  // resignedStillWatching notice below for why that's needed here but not in hotseat/Vs Computer
+  // (there, resigning doesn't strand anyone on a separate device with nothing left to do).
+  const [iResigned, setIResigned] = useState(false);
   const [rematching, setRematching] = useState(false);
   const [rematchError, setRematchError] = useState<string | null>(null);
   // Which seats currently have a live connection — a per-player online/offline indicator (§13).
@@ -288,6 +295,7 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
     setHint({ text, key: Date.now() });
   }
   function handleResign() {
+    setIResigned(true);
     socketRef.current?.emit('game:resign', { gameId });
   }
   async function handleJoinVoice() {
@@ -392,6 +400,18 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
       </div>
       <div className="play-area">
         <div className={`announcer${hint ? ' announcer-hint' : ''}`}>{hint ? hint.text : banner}</div>
+        {/* This seat has no moves left in a game that's still going for everyone else — offer a
+           way out instead of leaving them stuck spectating with nothing to do. Not shown once the
+           acknowledgment modal (resignedPlayerName) is still up, so it doesn't compete for
+           attention before that's been dismissed. */}
+        {iResigned && !resignedPlayerName && (
+          <div className="online-notice">
+            <p>{t('online.resignedStillWatching')}</p>
+            <button className="action-btn btn-abort" onClick={onExit}>
+              {t('online.leaveGame')}
+            </button>
+          </div>
+        )}
         <DiceTray
           game={game}
           onRoll={handleRoll}
@@ -402,44 +422,42 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
           isMyTurn={isMyTurn}
           resignAllowed={resignAllowed}
           onResign={handleResign}
-          appControls={
-            <AppControlsPanel soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)}>
-              {/* Voice call setup (§13) — join/leave, mute, and the autoplay-blocked recovery
-                  button all belong here per the App Controls consolidation; the connection-failure
-                  text below stays outside the (closed-by-default) panel since it's status the
-                  player needs to see without an extra tap, same reasoning as the mic icon's own
-                  hover title not being enough on a phone (see the "voice not heard" bug fix).
-                  Disabled — see VOICE_CHAT_ENABLED's own comment at the top of this file. */}
-              {VOICE_CHAT_ENABLED && (
-                <div className="app-controls-row app-controls-voice">
-                  {inVoice ? (
-                    <>
-                      <button className="btn-debug-log" onClick={handleLeaveVoice} title={t('voice.leaveTitle')}>
-                        {t('voice.leave')}
-                      </button>
-                      <button
-                        className={`btn-sound in-game-sound ${muted ? 'is-off' : 'is-on'}`}
-                        onClick={handleToggleMute}
-                        title={muted ? t('voice.unmuteTitle') : t('voice.muteTitle')}
-                      >
-                        {muted ? t('voice.muted') : t('voice.unmuted')}
-                      </button>
-                    </>
-                  ) : (
-                    <button className="btn-debug-log" onClick={handleJoinVoice} title={t('voice.joinTitle')}>
-                      {t('voice.join')}
-                    </button>
-                  )}
-                  {inVoice && audioBlocked && (
-                    <button className="btn-debug-log voice-audio-blocked" onClick={handleEnableAudioPlayback}>
-                      {t('voice.enableAudio')}
-                    </button>
-                  )}
-                </div>
-              )}
-            </AppControlsPanel>
-          }
         />
+        <AppControlsPanel soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)}>
+          {/* Voice call setup (§13) — join/leave, mute, and the autoplay-blocked recovery button
+              all belong here per the App Controls consolidation; the connection-failure text below
+              stays outside this section since it's status the player needs to see without
+              scrolling past it, same reasoning as the mic icon's own hover title not being enough
+              on a phone (see the "voice not heard" bug fix). Disabled — see VOICE_CHAT_ENABLED's
+              own comment at the top of this file. */}
+          {VOICE_CHAT_ENABLED && (
+            <div className="app-controls-row app-controls-voice">
+              {inVoice ? (
+                <>
+                  <button className="btn-debug-log" onClick={handleLeaveVoice} title={t('voice.leaveTitle')}>
+                    {t('voice.leave')}
+                  </button>
+                  <button
+                    className={`btn-sound in-game-sound ${muted ? 'is-off' : 'is-on'}`}
+                    onClick={handleToggleMute}
+                    title={muted ? t('voice.unmuteTitle') : t('voice.muteTitle')}
+                  >
+                    {muted ? t('voice.muted') : t('voice.unmuted')}
+                  </button>
+                </>
+              ) : (
+                <button className="btn-debug-log" onClick={handleJoinVoice} title={t('voice.joinTitle')}>
+                  {t('voice.join')}
+                </button>
+              )}
+              {inVoice && audioBlocked && (
+                <button className="btn-debug-log voice-audio-blocked" onClick={handleEnableAudioPlayback}>
+                  {t('voice.enableAudio')}
+                </button>
+              )}
+            </div>
+          )}
+        </AppControlsPanel>
         {VOICE_CHAT_ENABLED && voiceError && <p className="online-error">{voiceError}</p>}
         {/* A hover-only tooltip (the per-player mic icon's title) isn't discoverable on a phone —
             this is the same "voice connection failed" fact as plain, always-visible text instead,

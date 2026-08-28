@@ -68,8 +68,11 @@ function OnlineGameRoute({ me }: { me: PlayerInfo }) {
   // or a different device never carries it) — the signal the lobby uses to auto-open WhatsApp
   // exactly once, right when there's actually a fresh invite to send.
   const justCreated = Boolean((location.state as { justCreated?: boolean } | null)?.justCreated);
+  // Back to mode select (the "Game Option selection screen"), not online setup — matches
+  // hotseat/Vs Computer's own "end session"/exit, which already lands there too, and it's where
+  // Sign Out/Exit now live now that they're gone from the in-game App Controls panel.
   return (
-    <OnlineGamePage gameId={gameId!} me={me} justCreated={justCreated} onExit={() => navigate('/online')} />
+    <OnlineGamePage gameId={gameId!} me={me} justCreated={justCreated} onExit={() => navigate('/')} />
   );
 }
 

@@ -1412,6 +1412,50 @@ Resolved during requirements gathering:
   removed as redundant once this covered it too). `ReportBugModal.tsx`'s own action row and
   `AccountControls`' Sign Out/Exit row were already horizontal and needed no change.
 
+- **Resign, then Exit is the normal way to leave a game — Sign Out/Exit dropped from the in-game
+  App Controls entirely, and Exit now lands on mode select, not online setup** (§13, at explicit
+  request): `AccountControls` no longer renders inside `AppControlsMenu.tsx` at all — Game Controls
+  itself doesn't offer a way to leave any more, matching the intent that leaving happens through
+  Resign (§9). `App.tsx`'s `OnlineGameRoute` now sends `onExit` to `/` (mode select — where Sign
+  Out/Exit still live) instead of `/online` (online setup), matching hotseat/Vs Computer's own
+  "end session" which already landed there.
+  - **New: a resigned online player gets an explicit way out if the game keeps going without
+    them.** Resigning while other seats are still active used to leave that player's own screen
+    just spectating the live board with no route elsewhere. `OnlinePlay.tsx` now tracks `iResigned`
+    (set locally the moment *this* device's own Resign click fires — distinct from
+    `resignedPlayerName`, which the server's `resign:notice` broadcast sets for *any* player's
+    resignation) and shows a persistent `.online-notice` ("You resigned from this game. You can
+    leave now to start or join another.") with a Leave Game button once the acknowledgment modal
+    is dismissed, for as long as the game continues. Not applicable to hotseat/Vs Computer — those
+    modes don't strand anyone on a separate device with nothing left to do.
+- **App Controls' own "App Control" trigger button and overlay removed — its contents (language,
+  sound, report bug) render directly in the play area instead** (§11, at explicit request):
+  `DiceTray.tsx` no longer owns any open/close state, ref-tracking, or outside-click handling for
+  this — `AppControlsPanel` (`AppControlsMenu.tsx`) is just rendered as a normal sibling of
+  `DiceTray` in each mode page's own `.play-area`, always visible, no extra tap needed. Resign Game
+  is back to its own full-width row (previously shared one with the now-gone trigger button). The
+  panel's own CSS (`.app-controls-overlay` → renamed `.app-controls-section`) dropped every
+  absolute-positioning property, keeping the same wood-gradient card look as a visual grouping cue.
+- **Dice throw area: rounded rectangle instead of circle/ellipse** (§11, at explicit request): a
+  circular or elliptical shape wastes its own bounding box's corners — visually (background/border
+  never reach them) and for the scatter algorithm (dice never land there either, since it computes
+  positions as a percentage of the box's width/height around its center). `.dice-stage`'s
+  `border-radius: 50%` became a fixed `20px` on both the desktop (200×200) and phone (100×190,
+  unchanged from the earlier ellipse-era sizing) versions — the scatter math in `DiceTray.tsx`
+  needed no change, since it was already just "percentage of this box's own dimensions," shape-
+  agnostic. Comments referencing "circle"/"round throw area" updated to match.
+- **Roll Dice and Roll back share one line; both relabeled; Sound/Report Bug shrink to content
+  width** (§11, at explicit request): a new `.game-controls-roll-row` (mirrors `.actions-row`'s
+  shape, without its `margin-top` since this is the column's first row) puts the two on one line.
+  "Roll the Dice" → "Roll Dice", "⟲ Roll Back Last Move" → "⟲ Roll back" — both shortened partly to
+  fit their new half-width row comfortably. Sound On/Report Bug (`.app-controls-section`) dropped
+  their `width: 100%` for `align-self: flex-start`, sizing to their own label instead of stretching
+  — the Language row above them keeps the section's default full-width stretch, unaffected. Phone
+  media query gained matching trims (`.app-controls-section` padding/gap, its buttons' vertical
+  padding, `.dice-stage` height 190px → 165px) to offset the mobile-overflow fix from earlier in
+  this same section being always-visible now costs some of that fixed space back.
+- **"Moves still to play:" → "Pending Moves"** (§11, at explicit request).
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has

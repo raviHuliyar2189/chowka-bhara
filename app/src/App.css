@@ -378,47 +378,16 @@
   transform: scale(0.97);
 }
 
-/* Same gradient/shadow "keycap" treatment as .action-btn (Roll/Resign/Roll Back — inherited via
-   the shared class, see AppControlsMenu.tsx), just its own neutral gold/tan palette rather than
-   green/red — it isn't a game move, so it reads as a distinct kind of button while still matching
-   every other button in Game Controls in size and depth. */
-button.app-controls-btn {
-  width: 100%;
-  background: linear-gradient(180deg, #c9963f 0%, #a8792c 55%, #8a6224 100%);
-  box-shadow:
-    0 3px 0 #5c4013,
-    0 5px 8px rgba(0, 0, 0, 0.35);
-}
-
-button.app-controls-btn:hover:not(:disabled) {
-  box-shadow:
-    0 4px 0 #5c4013,
-    0 7px 10px rgba(0, 0, 0, 0.4);
-}
-
-button.app-controls-btn:active:not(:disabled) {
-  box-shadow:
-    0 1px 0 #5c4013,
-    0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-/* Opens right on top of the whole dice-section row (throw area + Game Controls) — inset: 0
-   against .dice-section (position: relative, see below), so this automatically matches that row's
-   full footprint with no duplicated pixel dimensions to keep in sync. Used to size against just
-   the throw area's own .dice-circle-col, but a phone-width throw area is now a narrow ellipse (see
-   .dice-stage's own phone override) too small on its own to hold this panel's rows comfortably —
-   covering the full row fixes that on every screen size, not just phones. Not circular/elliptical
-   like the dice tray itself — a panel shaped like the throw area would clip its own text
-   unreadably at the top/bottom — just a plain rectangular bounding box. Scrolls internally if its
-   content doesn't all fit at this size, rather than overflowing or clipping. */
-.app-controls-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
+/* Sits directly in the play area's own flow now (no longer a floating overlay opened by a
+   trigger button — removed at explicit request), right below the dice-section row. Keeps the same
+   card treatment (wood gradient, border, shadow) as a visual grouping cue distinguishing "app
+   settings" from Game Controls above it, just without any of the absolute-positioning machinery
+   that used to size it against the dice throw area/row. */
+.app-controls-section {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  overflow-y: auto;
+  margin-top: 10px;
   background: linear-gradient(165deg, var(--wood-mid), var(--wood-dark) 70%);
   color: #ecd9b3;
   border: 1px solid var(--wood-dark);
@@ -439,28 +408,33 @@ button.app-controls-btn:active:not(:disabled) {
   font-weight: bold;
 }
 
-/* Online only, inside the overlay — join/leave/mute/audio-blocked-recovery can be more than one
-   button at once, so this wraps rather than trying to force everything onto one line. */
+/* Online only — join/leave/mute/audio-blocked-recovery can be more than one button at once, so
+   this wraps rather than trying to force everything onto one line. */
 .app-controls-voice {
   flex-wrap: wrap;
   justify-content: flex-start;
 }
 
-.app-controls-overlay .btn-debug-log,
-.app-controls-overlay .btn-sound {
-  width: 100%;
+/* Minimal width (just what the label needs), not stretched to fill the section — at explicit
+   request. align-self: flex-start opts out of .app-controls-section's own column-direction
+   stretch (the default for a flex child with no size set), which is what .app-controls-row above
+   still uses to stay full-width for its own label-left/toggle-right layout. */
+.app-controls-section .btn-debug-log,
+.app-controls-section .btn-sound {
+  width: auto;
+  align-self: flex-start;
   box-sizing: border-box;
   text-align: center;
   font-size: 11px;
 }
 
-.app-controls-overlay .btn-debug-log {
+.app-controls-section .btn-debug-log {
   padding: 5px 6px;
 }
 
 /* Keep the left padding wide enough for the toggle-switch track drawn via ::before/::after (see
-   the base .btn-sound rule) — only trim the rest to fit the overlay's tight space budget. */
-.app-controls-overlay .btn-sound {
+   the base .btn-sound rule) — only trim the rest to fit this section's tight space budget. */
+.app-controls-section .btn-sound {
   padding: 5px 6px 5px 40px;
 }
 
@@ -473,19 +447,6 @@ button.app-controls-btn:active:not(:disabled) {
    component's own margin-top would double up) and its dark wood background — var(--text-muted)
    (this class's default, tuned for the app's normal light surfaces) would be low-contrast here,
    the same class of bug the welcome page's title once had. */
-.app-controls-overlay .account-controls {
-  margin-top: 0;
-}
-
-.app-controls-overlay .account-btn {
-  border-color: #ecd9b3;
-  color: #ecd9b3;
-}
-
-.app-controls-overlay .account-exit-note {
-  color: #ecd9b3;
-}
-
 .in-game-sound {
   align-self: center;
 }
@@ -984,6 +945,27 @@ button.app-controls-btn:active:not(:disabled) {
   align-items: center;
 }
 
+/* A resigned player's own "you're not part of this game any more" notice (OnlinePlay.tsx) —
+   same light-box treatment as .announcer above (this sits right next to it) rather than the dark
+   play-area background directly, for the same readability reason; the red-brown border/button
+   mark it as something to act on, not routine status. */
+.online-notice {
+  width: 100%;
+  box-sizing: border-box;
+  background-color: var(--surface-muted);
+  border-left: 5px solid #96402f;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.online-notice p {
+  margin: 0;
+  font-weight: bold;
+  color: var(--text);
+}
+
 /* A transient nudge (e.g. "select a value first") briefly replaces the normal message —
    flash the border so it reads as a correction, not just routine status text. */
 .announcer-hint {
@@ -1005,10 +987,8 @@ button.app-controls-btn:active:not(:disabled) {
    inside one more nested card. Side by side (circle | controls) rather than stacked — see
    .dice-circle-col / .game-controls-col below — matching the playing-screen layout pass; stays
    side by side on phones too now (see the max-width: 640px override), just with a narrower throw
-   area. Positioned so .app-controls-overlay's inset: 0 sizes/positions against this whole row
-   (dice area + Game Controls) when App Controls is open — see that rule for why. */
+   area. */
 .dice-section {
-  position: relative;
   display: flex;
   flex-direction: row;
   align-items: flex-start;
@@ -1035,35 +1015,35 @@ button.app-controls-btn:active:not(:disabled) {
   min-width: 0;
 }
 
-/* Resign Game and App Control share this one row (see DiceTray.tsx) instead of each being its
-   own full-width row like the rest of Game Controls — both stretch to share the row equally via
-   flex: 1 on each button, rather than the column's own stretch (which only sizes direct block-
-   level children, not a nested row's own items). Resign is always rendered (just disabled when
-   not applicable — see DiceTray.tsx), so this row never has to redistribute space for a missing
-   button. */
-.game-controls-bottom-row {
+/* Roll Dice and Roll back (DiceTray.tsx) share one line instead of each stacking full-width —
+   same "two on one row" shape as .actions-row elsewhere, just without that class's own margin-top
+   (this is the column's first row, so .game-controls-col's own gap already spaces it correctly
+   from whatever's below). */
+.game-controls-roll-row {
   display: flex;
-  flex-direction: row;
   gap: 10px;
   width: 100%;
 }
 
-.game-controls-bottom-row > button {
+.game-controls-roll-row .action-btn {
   flex: 1;
   min-width: 0;
 }
 
-/* The round throw area: a fixed-size felt/parchment disc, not a flex-filled rectangle — a
-   physical dice bowl doesn't resize to fit its container, and a fixed size sidesteps the
-   collapse bug a flex-grow + all-absolutely-positioned-children region is prone to (see git
-   history) when its parent doesn't have a definite height to hand it. The idle figure and the
-   latest throw overlay the exact same absolutely-positioned box inside it. */
+/* The throw area: a fixed-size felt/parchment tile, not a flex-filled box — a physical dice bowl
+   doesn't resize to fit its container, and a fixed size sidesteps the collapse bug a flex-grow +
+   all-absolutely-positioned-children region is prone to (see git history) when its parent doesn't
+   have a definite height to hand it. A rounded rectangle rather than a circle/oval (at explicit
+   request) — a circular or elliptical shape wastes its own bounding box's corners, both visually
+   (background/border never reach them) and for the scatter below (dice never land there either);
+   a rectangle uses the full footprint. The idle figure and the latest throw overlay the exact
+   same absolutely-positioned box inside it. */
 .dice-stage {
   position: relative;
   width: 200px;
   height: 200px;
   flex-shrink: 0;
-  border-radius: 50%;
+  border-radius: 20px;
   overflow: hidden;
   background: radial-gradient(circle at 35% 30%, var(--parchment), #dcc79a 85%);
   border: 5px solid var(--wood-dark);
@@ -1665,15 +1645,15 @@ th {
     gap: 5px;
   }
 
-  /* A tall ellipse (border-radius: 50% on a non-square box), not a circle — narrower than the
-     circle this replaced so it fits beside Game Controls' text-heavy buttons on a narrow phone,
-     taller to use the vertical room a same-width circle would leave empty and keep the dice
-     comfortably spaced. The scatter math in DiceTray.tsx positions each die by percentage of this
-     box's own width/height, so it automatically spreads across the new elliptical shape without
-     any change there. */
+  /* A tall rounded rectangle (border-radius comes from the base rule above, unchanged here) —
+     narrower than the desktop size so it fits beside Game Controls' text-heavy buttons on a
+     narrow phone, taller to use the vertical room a same-width square would leave empty and keep
+     the dice comfortably spaced. The scatter math in DiceTray.tsx positions each die by
+     percentage of this box's own width/height, so it automatically spreads across whatever this
+     box's actual shape is without any change there. */
   .dice-stage {
     width: 100px;
-    height: 190px;
+    height: 165px;
   }
 
   .dice-idle-figure {
@@ -1694,6 +1674,21 @@ th {
      desktop 10px 16px so five stacked rows fit without needing to scroll. */
   .game-controls-col button.action-btn {
     padding: 7px 14px;
+  }
+
+  /* App Controls' own section (language/sound/report bug) always being visible now, instead of
+     tucked behind a button, reintroduced some of the mobile overflow the play-area pass above
+     fixed — trimmed back down the same way. */
+  .app-controls-section {
+    gap: 5px;
+    padding: 8px;
+    margin-top: 6px;
+  }
+
+  .app-controls-section .btn-debug-log,
+  .app-controls-section .btn-sound {
+    padding-top: 4px;
+    padding-bottom: 4px;
   }
 
   /* Label above input instead of beside it — the desktop's fixed 170px label + 230px input

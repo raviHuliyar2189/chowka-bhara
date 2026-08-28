@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { useT } from '../i18n/strings';
 import { useLanguage } from '../i18n/useLanguage';
 import { setLanguage } from '../i18n/language';
-import AccountControls from './AccountControls';
 
 interface Props {
   soundOn: boolean;
@@ -14,19 +13,18 @@ interface Props {
   children?: ReactNode;
 }
 
-// The App Controls panel's actual content — everything that isn't a Game Control (roll/rollback/
-// resign — see DiceTray.tsx) but also isn't part of the board/dice themselves: sound, report bug,
-// language, and (online) voice call setup. A "dumb" content-only component now, not a self-
-// contained button+popover: DiceTray owns the App Control button and the open/close state, and
-// renders this as an overlay exactly covering the dice throw area (rather than a popover anchored
-// to the button) — see .dice-circle-col/.app-controls-overlay in App.css for why, and
-// REQUIREMENTS.md's Decisions log for the full reasoning.
+// Everything that isn't a Game Control (roll/rollback/resign — see DiceTray.tsx) but also isn't
+// part of the board/dice themselves: sound, report bug, language, and (online) voice call setup.
+// Renders directly in the play area, right below the dice/Game Controls row — used to be tucked
+// behind a separate "App Control" trigger button and overlay; removed at explicit request in
+// favor of these controls always being visible instead of needing an extra tap to reach. See
+// REQUIREMENTS.md's Decisions log for the fuller history.
 export default function AppControlsPanel({ soundOn, onToggleSound, onReportBug, children }: Props) {
   const t = useT();
   const lang = useLanguage();
 
   return (
-    <>
+    <div className="app-controls-section">
       <div className="app-controls-row">
         <span className="app-controls-label">{t('appControls.language')}</span>
         <span className="lang-toggle">
@@ -57,10 +55,6 @@ export default function AppControlsPanel({ soundOn, onToggleSound, onReportBug, 
         {t('game.reportBug')}
       </button>
       {children}
-      {/* Same Sign Out / Exit as every other screen — mid-game, this has the same practical
-         effect as closing the tab (the other players see it as a lost connection, already handled
-         gracefully by presence detection — see §13), not a new risk this introduces. */}
-      <AccountControls />
-    </>
+    </div>
   );
 }

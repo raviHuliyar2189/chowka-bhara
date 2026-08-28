@@ -516,10 +516,8 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
               onRollback={handleRollback}
               resignAllowed={resignAllowed}
               onResign={handleResign}
-              appControls={
-                <AppControlsPanel soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)} />
-              }
             />
+            <AppControlsPanel soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)} />
           </div>
         </div>
       )}
