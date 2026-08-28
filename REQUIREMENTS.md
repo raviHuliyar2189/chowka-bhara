@@ -1464,6 +1464,11 @@ Resolved during requirements gathering:
   because their `max-width: 70px` (sized for short names, bounding the container's own `gap`) would
   just clip the much-longer combined text rather than actually fit it; confirmed via screenshot
   that a first, uniform attempt across all four labels did exactly that before scoping it back.
+- **Language, Sound, and Report Bug share one row in App Controls** (§11, at explicit request, "use
+  the width of the component effectively"): these three used to each take their own stacked line
+  even though there was unused horizontal space beside the Language toggle. A new
+  `.app-controls-main-row` (row-direction flex, `flex-wrap: wrap`) holds all three; on phone widths
+  Report Bug wraps to its own line rather than overflowing, confirmed via screenshot at 375px.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

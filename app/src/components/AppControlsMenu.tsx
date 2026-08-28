@@ -25,35 +25,39 @@ export default function AppControlsPanel({ soundOn, onToggleSound, onReportBug, 
 
   return (
     <div className="app-controls-section">
-      <div className="app-controls-row">
-        <span className="app-controls-label">{t('appControls.language')}</span>
-        <span className="lang-toggle">
-          <button
-            className={`lang-btn${lang === 'en' ? ' active' : ''}`}
-            onClick={() => setLanguage('en')}
-            disabled={lang === 'en'}
-          >
-            EN
-          </button>
-          <button
-            className={`lang-btn${lang === 'kn' ? ' active' : ''}`}
-            onClick={() => setLanguage('kn')}
-            disabled={lang === 'kn'}
-          >
-            ಕನ್ನಡ
-          </button>
-        </span>
+      {/* Language, Sound, and Report Bug share one row — at explicit request, to use the
+         section's full width instead of each taking its own stacked line. */}
+      <div className="app-controls-main-row">
+        <div className="app-controls-row">
+          <span className="app-controls-label">{t('appControls.language')}</span>
+          <span className="lang-toggle">
+            <button
+              className={`lang-btn${lang === 'en' ? ' active' : ''}`}
+              onClick={() => setLanguage('en')}
+              disabled={lang === 'en'}
+            >
+              EN
+            </button>
+            <button
+              className={`lang-btn${lang === 'kn' ? ' active' : ''}`}
+              onClick={() => setLanguage('kn')}
+              disabled={lang === 'kn'}
+            >
+              ಕನ್ನಡ
+            </button>
+          </span>
+        </div>
+        <button
+          className={`btn-sound in-game-sound ${soundOn ? 'is-on' : 'is-off'}`}
+          onClick={onToggleSound}
+          title={soundOn ? t('setup.muteTitle') : t('setup.unmuteTitle')}
+        >
+          {soundOn ? t('game.soundOn') : t('game.muted')}
+        </button>
+        <button className="btn-debug-log" onClick={onReportBug} title={t('game.reportBugTitle')}>
+          {t('game.reportBug')}
+        </button>
       </div>
-      <button
-        className={`btn-sound in-game-sound ${soundOn ? 'is-on' : 'is-off'}`}
-        onClick={onToggleSound}
-        title={soundOn ? t('setup.muteTitle') : t('setup.unmuteTitle')}
-      >
-        {soundOn ? t('game.soundOn') : t('game.muted')}
-      </button>
-      <button className="btn-debug-log" onClick={onReportBug} title={t('game.reportBugTitle')}>
-        {t('game.reportBug')}
-      </button>
       {children}
     </div>
   );

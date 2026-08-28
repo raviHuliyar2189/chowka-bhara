@@ -403,6 +403,25 @@
   gap: 8px;
 }
 
+/* Language, Sound, and Report Bug used to each take their own stacked row even though there was
+   plenty of unused horizontal space beside the Language toggle — at explicit request, they now
+   share one row instead. flex-wrap is a safety net for narrow phones where the three don't fit;
+   .app-controls-row nested here drops its own space-between stretch (that was for filling the
+   section's full width on its own line) in favor of sizing to its content like its row-mates. */
+.app-controls-main-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.app-controls-main-row .app-controls-row {
+  justify-content: flex-start;
+  gap: 6px;
+  width: auto;
+}
+
 .app-controls-label {
   font-size: 12px;
   font-weight: bold;
@@ -441,6 +460,14 @@
 .app-controls-voice .btn-debug-log,
 .app-controls-voice .btn-sound {
   width: auto;
+}
+
+/* Overrides the flex-start above: in .app-controls-main-row the parent is row-direction, so
+   align-self controls vertical position — center keeps Sound/Report Bug level with the taller
+   Language toggle instead of hugging the row's top edge. */
+.app-controls-main-row .btn-debug-log,
+.app-controls-main-row .btn-sound {
+  align-self: center;
 }
 
 /* Fits the overlay's own tight vertical rhythm (its flex gap already spaces every row — the
