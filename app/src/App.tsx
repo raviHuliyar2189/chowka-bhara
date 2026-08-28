@@ -11,21 +11,25 @@ import type { PlayerInfo } from './online/api';
 import { unlockAudioOnFirstInteraction } from './audio/announcer';
 import { useChromeHidden } from './ui/appChrome';
 import LanguageToggle from './components/LanguageToggle';
+import AccountControls from './components/AccountControls';
 import './App.css';
 
 // Shared header for every screen after the welcome splash (login, hotseat/vs-computer/online
-// setup, the online lobby) — just the language toggle now; the app name/version moved to the
-// welcome page itself (the only place a title's vertical space isn't competing with the board —
-// see REQUIREMENTS.md's Decisions log). Renders nothing while a screen has hidden it via
-// useChromeHidden: live gameplay screens (their own compact "App Controls" button carries the same
-// toggle alongside sound/report-bug/voice controls) and mode-select (which shows its own copy
-// right-aligned next to its own heading instead of this standalone bar).
-function AppHeader() {
+// setup, the online lobby) — the language toggle, plus Sign Out/Exit once actually signed in
+// (showAccount — meaningless, and not shown, on the login screen itself: there's no account yet
+// to sign out of). The app name/version moved to the welcome page itself (the only place a
+// title's vertical space isn't competing with the board — see REQUIREMENTS.md's Decisions log).
+// Renders nothing while a screen has hidden it via useChromeHidden: live gameplay screens (their
+// own compact "App Controls" button carries the same toggle and Sign Out/Exit alongside sound/
+// report-bug/voice controls) and mode-select (which shows its own copies of both instead of this
+// standalone bar).
+function AppHeader({ showAccount }: { showAccount?: boolean }) {
   const hidden = useChromeHidden();
   if (hidden) return null;
   return (
     <div className="app-header-bar">
       <LanguageToggle />
+      {showAccount && <AccountControls />}
     </div>
   );
 }
@@ -103,7 +107,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <AppHeader />
+      <AppHeader showAccount />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<ModeSelectRoute />} />

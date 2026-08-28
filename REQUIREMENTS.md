@@ -1181,6 +1181,24 @@ Resolved during requirements gathering:
   players and inviting you to join" on its own line, then "Tap the link to join: <link>" on the
   next — the "Joined so far" clause dropped entirely. `whatsappLinkFor`'s own `joined` names
   computation removed along with it, now genuinely unused.
+- **Sign Out / Exit consolidated into one shared component, styled properly, and rolled out to
+  every screen** (§13): originally added ad hoc on mode-select alone (using `.btn-debug-log`'s
+  diagnostic-tool look); at explicit follow-up request, extracted into `AccountControls.tsx` — a
+  small rounded-pill button pair matching `.lang-btn`'s visual language, since these are
+  app-wide secondary controls, not a debugging tool — and placed everywhere a player can be
+  signed in: the shared app header (`AppHeader`, now gated behind a `showAccount` prop so the
+  login screen itself — nothing to sign out of yet — doesn't get it), mode-select, online setup,
+  every phase of the online lobby (choice/declined/waiting), and the in-game App Controls overlay
+  (with its own color override — the component's default `var(--text-muted)` styling is tuned for
+  light surfaces and was unreadable against that overlay's dark wood background, the same class of
+  bug the welcome page's title once had; caught before shipping this time).
+  - **Exit**: `window.close()` only actually works when script opened the tab in the first place —
+    true for essentially none of this app's real visitors (typed URL, bookmark, invite link) — so
+    it's always paired with a plain visible note ("You can now close this tab") for when it
+    silently does nothing, rather than a button that looks broken.
+  - **Sign Out mid-game** (via the App Controls overlay) has the same practical effect as closing
+    the tab — the other players see a lost connection, already handled gracefully by presence
+    detection (§13) — not a new risk this introduces.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

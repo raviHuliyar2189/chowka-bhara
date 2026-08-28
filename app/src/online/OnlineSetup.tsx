@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createGame } from './api';
 import { useT } from '../i18n/strings';
 import { setChromeHidden } from '../ui/appChrome';
+import AccountControls from '../components/AccountControls';
 
 interface Props {
   onCreated: (gameId: string) => void;
@@ -76,6 +77,7 @@ export default function OnlineSetup({ onCreated }: Props) {
       <button className="action-btn btn-start" onClick={handleCreate} disabled={creating}>
         {creating ? t('onlineSetup.creating') : t('onlineSetup.createGame')}
       </button>
+      <AccountControls />
     </div>
   );
 }

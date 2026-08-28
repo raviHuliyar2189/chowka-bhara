@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useT } from '../i18n/strings';
 import { setChromeHidden } from '../ui/appChrome';
 import LanguageToggle from '../components/LanguageToggle';
-import { clearToken } from './api';
+import AccountControls from '../components/AccountControls';
 
 interface Props {
   onChoose: (mode: 'hotseat' | 'online' | 'vs-computer' | 'develop-test') => void;
@@ -38,17 +38,6 @@ export default function ModeSelect({ onChoose }: Props) {
     return () => setChromeHidden(false);
   }, []);
 
-  // No prop plumbing back up to App.tsx's own `player` state — clearing the token and reloading
-  // forces AuthGate's fetchMe() to re-run from scratch on a clean slate, the same natural
-  // "signed out" landing a stale/deleted token already produces elsewhere (see requireAuth's own
-  // comment in the server). Added specifically so a player who needs a fresh account (e.g. after
-  // an account-identifier change) has a real, self-service way to do it, instead of the DevTools
-  // localStorage workaround this session otherwise had to walk through by hand.
-  function handleSignOut() {
-    clearToken();
-    window.location.reload();
-  }
-
   return (
     <div className="setup-inline">
       <div className="modal">
@@ -72,9 +61,7 @@ export default function ModeSelect({ onChoose }: Props) {
             </button>
           )}
         </div>
-        <button className="btn-debug-log mode-select-sign-out" onClick={handleSignOut}>
-          {t('modeSelect.signOut')}
-        </button>
+        <AccountControls />
       </div>
     </div>
   );

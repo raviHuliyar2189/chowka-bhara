@@ -6,6 +6,7 @@ import type { GameState } from '../game/turnEngine';
 import { SEATS_BY_COUNT, type PlayerId } from '../game/paths';
 import { useT } from '../i18n/strings';
 import { setChromeHidden } from '../ui/appChrome';
+import AccountControls from '../components/AccountControls';
 
 interface Props {
   gameId: string;
@@ -259,6 +260,7 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
     return (
       <div className="modal">
         <h2>{t('lobby.declinedTitle')}</h2>
+        <AccountControls />
       </div>
     );
   }
@@ -275,6 +277,7 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
         <button className="action-btn btn-abort" style={{ marginTop: 8 }} onClick={handleDeclineClick}>
           {t('lobby.decline')}
         </button>
+        <AccountControls />
       </div>
     );
   }
@@ -330,6 +333,7 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
           {cancelling ? t('lobby.cancelling') : t('lobby.cancelGame')}
         </button>
       )}
+      <AccountControls />
     </div>
   );
 }

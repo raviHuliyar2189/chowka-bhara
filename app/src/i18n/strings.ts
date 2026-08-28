@@ -68,7 +68,19 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   },
   'modeSelect.multiOnline': { en: '🌐 Multiple Players (Online)', kn: '🌐 ಅನೇಕ ಆಟಗಾರರು (ಆನ್‌ಲೈನ್)' },
   'modeSelect.developTest': { en: '🛠️ Developer Mode', kn: '🛠️ ಡೆವಲಪರ್ ಮೋಡ್' },
-  'modeSelect.signOut': { en: 'Sign Out', kn: 'ಸೈನ್ ಔಟ್' },
+  // --- Account controls (Sign Out / Exit) — AccountControls.tsx, shared across the app header,
+  // mode-select, and the in-game App Controls panel (see REQUIREMENTS.md's Decisions log). ---
+  'account.signOut': { en: '🚪 Sign Out', kn: '🚪 ಸೈನ್ ಔಟ್' },
+  'account.signOutTitle': {
+    en: 'Sign out and return to the sign-in screen',
+    kn: 'ಸೈನ್ ಔಟ್ ಆಗಿ ಸೈನ್ ಇನ್ ಪರದೆಗೆ ಹಿಂತಿರುಗಿ',
+  },
+  'account.exit': { en: '✖️ Exit', kn: '✖️ ನಿರ್ಗಮಿಸಿ' },
+  'account.exitTitle': { en: 'Exit the app', kn: 'ಆ್ಯಪ್‌ನಿಂದ ನಿರ್ಗಮಿಸಿ' },
+  'account.exitNote': {
+    en: 'You can now close this tab.',
+    kn: 'ನೀವು ಈಗ ಈ ಟ್ಯಾಬ್ ಅನ್ನು ಮುಚ್ಚಬಹುದು.',
+  },
 
   // --- Setup (hotseat / develop test) ---
   'setup.title': { en: 'Select Players', kn: 'ಆಟಗಾರರನ್ನು ಆಯ್ಕೆಮಾಡಿ' },

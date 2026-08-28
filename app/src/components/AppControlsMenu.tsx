@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useT } from '../i18n/strings';
 import { useLanguage } from '../i18n/useLanguage';
 import { setLanguage } from '../i18n/language';
+import AccountControls from './AccountControls';
 
 interface Props {
   soundOn: boolean;
@@ -56,6 +57,10 @@ export default function AppControlsPanel({ soundOn, onToggleSound, onReportBug, 
         {t('game.reportBug')}
       </button>
       {children}
+      {/* Same Sign Out / Exit as every other screen — mid-game, this has the same practical
+         effect as closing the tab (the other players see it as a lost connection, already handled
+         gracefully by presence detection — see §13), not a new risk this introduces. */}
+      <AccountControls />
     </>
   );
 }

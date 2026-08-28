@@ -12,11 +12,51 @@
   margin-top: 16px;
 }
 
-/* Understated on purpose (same treatment as .btn-debug-log) — a fallback/reset action, not
-   something most players ever need to reach for. */
-.mode-select-sign-out {
-  display: block;
-  margin: 16px auto 0;
+/* Sign Out / Exit (AccountControls.tsx) — a small pill-button pair, deliberately more polished
+   than .btn-debug-log's diagnostic-tool treatment (that styling was really meant for Report Bug
+   specifically) since these appear across the whole app: the shared header, mode-select, and the
+   in-game App Controls panel. Same rounded-pill language as .lang-btn so the two read as one
+   family of secondary controls rather than two different button languages. */
+.account-controls {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.account-controls-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.account-btn {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 0.3px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--text-muted);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    filter 0.15s,
+    box-shadow 0.15s;
+}
+
+.account-btn:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 0 0 3px rgba(201, 150, 44, 0.2);
+}
+
+.account-exit-note {
+  margin: 0;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-muted);
 }
 
 /* A screen's own heading on the left, language toggle right-aligned on the same row — used by
@@ -359,6 +399,23 @@ button.app-controls-btn:active:not(:disabled) {
 .app-controls-voice .btn-debug-log,
 .app-controls-voice .btn-sound {
   width: auto;
+}
+
+/* Fits the overlay's own tight vertical rhythm (its flex gap already spaces every row — the
+   component's own margin-top would double up) and its dark wood background — var(--text-muted)
+   (this class's default, tuned for the app's normal light surfaces) would be low-contrast here,
+   the same class of bug the welcome page's title once had. */
+.app-controls-overlay .account-controls {
+  margin-top: 0;
+}
+
+.app-controls-overlay .account-btn {
+  border-color: #ecd9b3;
+  color: #ecd9b3;
+}
+
+.app-controls-overlay .account-exit-note {
+  color: #ecd9b3;
 }
 
 .in-game-sound {
