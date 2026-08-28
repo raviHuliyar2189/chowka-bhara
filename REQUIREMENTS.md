@@ -1363,6 +1363,16 @@ Resolved during requirements gathering:
   down to 0px of overflow at 375×667 and comfortably clear at wider phone widths; only genuinely
   narrow ~320px-wide phones (now rare) still have some.
 
+- **Online lobby ("choice" and "waiting" phases) tightened up** (§13): "Joined so far: `<names>`"
+  removed from the choice ("Game Invite" — Join/Decline) screen — redundant once seen alongside the
+  waiting room's own per-seat list, and not something a player deciding whether to join needs.
+  Join/Decline (choice phase) and Start Game/Cancel Game (waiting phase, creator only) each moved
+  into one shared row (`lobby-actions-row`) instead of stacking full-width. The creator's own note
+  above the player list now changes once everyone required has joined: the WhatsApp-sent reminder
+  ("...you may like to remind the players if they don't join") no longer applies once there's no
+  one left to remind, so it's replaced with "Required number of players have joined the game. Start
+  the game whenever you're ready."
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has

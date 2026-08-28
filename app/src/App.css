@@ -1422,6 +1422,22 @@ button.btn-abort:active:not(:disabled) {
   gap: 4px;
 }
 
+/* Join / Decline (OnlineLobby.tsx's "choice" phase) and Start Game / Cancel Game (its "waiting"
+   phase) — one line, splitting the width evenly, instead of each stacked full-width on its own
+   row. */
+.lobby-actions-row {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  width: 100%;
+  margin-top: 15px;
+}
+
+.lobby-actions-row .action-btn {
+  flex: 1;
+  margin: 0;
+}
+
 /* Modals */
 .overlay {
   position: fixed;

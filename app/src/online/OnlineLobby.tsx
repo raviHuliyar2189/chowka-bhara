@@ -253,9 +253,6 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
     );
   }
 
-  const joinedNames = lobby.seats.filter((s) => s.status === 'joined').map((s) => s.displayName).join(', ');
-  const joinedNamesOrNone = joinedNames || t('lobby.noOneYet');
-
   if (phase === 'declined') {
     return (
       <div className="modal">
@@ -270,13 +267,14 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
       <div className="modal">
         <h2>{t('lobby.inviteTitle')}</h2>
         <p>{t('lobby.inviteBody', lobby.createdByName, lobby.seatCount)}</p>
-        <p>{t('lobby.joinedSoFar', joinedNamesOrNone)}</p>
-        <button className="action-btn btn-start" onClick={handleJoinClick}>
-          {t('lobby.join')}
-        </button>
-        <button className="action-btn btn-abort" style={{ marginTop: 8 }} onClick={handleDeclineClick}>
-          {t('lobby.decline')}
-        </button>
+        <div className="lobby-actions-row">
+          <button className="action-btn btn-start" onClick={handleJoinClick}>
+            {t('lobby.join')}
+          </button>
+          <button className="action-btn btn-abort" onClick={handleDeclineClick}>
+            {t('lobby.decline')}
+          </button>
+        </div>
         <AccountControls />
       </div>
     );
@@ -292,8 +290,10 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
       <h2>{t('lobby.waitingRoom')}</h2>
       <p>{t('lobby.startedBy', lobby.createdByName, lobby.seatCount)}</p>
       {/* Only the creator actually sent an invite (auto-opened for them at creation time) —
-          replaces the manual "Share on WhatsApp" button/link, removed at explicit request. */}
-      {isCreator && <p>{t('lobby.whatsappSentNote')}</p>}
+          replaces the manual "Share on WhatsApp" button/link, removed at explicit request. Once
+          everyone required has joined, this switches from "remind them if they haven't joined"
+          (no longer relevant) to prompting the creator to actually start. */}
+      {isCreator && <p>{lobby.canStart ? t('lobby.readyToStart') : t('lobby.whatsappSentNote')}</p>}
 
       <ul className="player-list">
         {seatOrder.map((seat) => {
@@ -319,19 +319,18 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
         })}
       </ul>
       {isCreator ? (
-        <button className="action-btn btn-start" disabled={!lobby.canStart || starting} onClick={handleStart}>
-          {starting ? t('lobby.starting') : lobby.canStart ? t('lobby.startGame') : t('lobby.waitingForTwo')}
-        </button>
+        <div className="lobby-actions-row">
+          <button className="action-btn btn-start" disabled={!lobby.canStart || starting} onClick={handleStart}>
+            {starting ? t('lobby.starting') : lobby.canStart ? t('lobby.startGame') : t('lobby.waitingForTwo')}
+          </button>
+          <button className="action-btn btn-abort" onClick={handleCancelGame} disabled={cancelling}>
+            {cancelling ? t('lobby.cancelling') : t('lobby.cancelGame')}
+          </button>
+        </div>
       ) : (
         <p className="lobby-waiting-note">
           {lobby.canStart ? t('lobby.waitingForCreatorToStart', lobby.createdByName) : t('lobby.waitingForTwo')}
         </p>
-      )}
-
-      {isCreator && (
-        <button className="action-btn btn-abort" style={{ marginTop: 8 }} onClick={handleCancelGame} disabled={cancelling}>
-          {cancelling ? t('lobby.cancelling') : t('lobby.cancelGame')}
-        </button>
       )}
       <AccountControls />
     </div>

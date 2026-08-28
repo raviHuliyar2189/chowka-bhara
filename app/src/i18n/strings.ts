@@ -335,11 +335,6 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
     en: (name: string, seatCount: number) => `${name} invited you to a ${seatCount}-player Chowka Bhara game.`,
     kn: (name: string, seatCount: number) => `${name} ನಿಮ್ಮನ್ನು ${seatCount} ಆಟಗಾರರ ಚೌಕಾ ಭಾರ ಆಟಕ್ಕೆ ಆಹ್ವಾನಿಸಿದ್ದಾರೆ.`,
   },
-  'lobby.joinedSoFar': {
-    en: (names: string) => `Joined so far: ${names}.`,
-    kn: (names: string) => `ಈವರೆಗೆ ಸೇರಿದವರು: ${names}.`,
-  },
-  'lobby.noOneYet': { en: 'no one yet', kn: 'ಇನ್ನೂ ಯಾರೂ ಇಲ್ಲ' },
   'lobby.join': { en: 'Join', kn: 'ಸೇರಿ' },
   'lobby.decline': { en: 'Decline', kn: 'ನಿರಾಕರಿಸಿ' },
   'lobby.waitingRoom': { en: 'Game Waiting Room', kn: 'ಆಟದ ಕಾಯುವ ಕೊಠಡಿ' },
@@ -353,6 +348,12 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'lobby.whatsappSentNote': {
     en: "I have sent a WhatsApp request to the selected people to join the game. You may like to remind the players if they don't join.",
     kn: 'ಆಟಕ್ಕೆ ಸೇರಲು ಆಯ್ಕೆ ಮಾಡಿದ ಜನರಿಗೆ ನಾನು WhatsApp ವಿನಂತಿ ಕಳುಹಿಸಿದ್ದೇನೆ. ಅವರು ಸೇರದಿದ್ದರೆ ನೀವು ಅವರಿಗೆ ನೆನಪಿಸಬಹುದು.',
+  },
+  // Replaces whatsappSentNote above once every required seat has joined — reminding the creator
+  // to nudge stragglers no longer applies once there aren't any.
+  'lobby.readyToStart': {
+    en: 'Required number of players have joined the game. Start the game whenever you’re ready.',
+    kn: 'ಅಗತ್ಯವಿರುವ ಸಂಖ್ಯೆಯ ಆಟಗಾರರು ಆಟಕ್ಕೆ ಸೇರಿದ್ದಾರೆ. ನೀವು ಸಿದ್ಧರಾದಾಗ ಆಟ ಪ್ರಾರಂಭಿಸಿ.',
   },
   'lobby.whatsappText': {
     en: (name: string, seatCount: number, link: string) =>
