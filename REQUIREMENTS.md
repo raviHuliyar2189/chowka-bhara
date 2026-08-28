@@ -1501,6 +1501,16 @@ Resolved during requirements gathering:
   socket-drop case the existing fix already covered. Confirmed with a scripted visibility toggle:
   a join that happened while "hidden" is reflected the moment the tab reports "visible" again, with
   no reload needed.
+- **Exit hides itself (and Sign Out) instead of leaving both clickable after "exiting"** (§11, a
+  reported bug: Sign Out still worked right after Exit showed "You can now close this tab" —
+  visually incoherent, since the app kept responding normally as if nothing had happened).
+  `AccountControls.tsx`'s `handleExit` also stopped unconditionally calling `window.close()` —
+  that only ever works when `window.opener` is set (this app opened its own tab), true for
+  essentially none of this app's real visitors (typed URL, bookmark, invite link), so it's now only
+  attempted when there's a real chance of succeeding. Either way, clicking Exit now replaces the
+  Sign Out/Exit row itself with the "you can close this tab" note, rather than leaving both buttons
+  live beside it — once a player has said they're done, the app stops inviting further clicks from
+  this control (the rest of the page, e.g. Mode Select's own game-mode buttons, is unaffected).
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

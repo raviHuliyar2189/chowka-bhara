@@ -28,28 +28,32 @@ export default function AccountControls({ showSignOut = true }: Props) {
   }
 
   // A web page can't force-close its own tab in the general case — window.close() only actually
-  // works when script (this app) opened the window/tab in the first place, which is true for
-  // essentially none of this app's real visitors (they typed a URL, tapped a bookmark, or opened
-  // an invite link). Still worth trying — it's a real no-op if blocked, and does work in a few
-  // genuine cases (a PWA's own last tab in some browsers) — but always paired with a plain,
-  // visible note for when it silently doesn't, rather than a button that looks broken.
+  // works when script (this app) opened the window/tab in the first place (window.opener is set),
+  // which is true for essentially none of this app's real visitors (they typed a URL, tapped a
+  // bookmark, or opened an invite link) — calling it otherwise is a guaranteed silent no-op, so
+  // it's only attempted when there's a real chance of it working. Either way, this is treated as
+  // "the session is over": the buttons themselves disappear below (see the render below), so the
+  // app stops responding as if nothing happened — Sign Out no longer clickable right after telling
+  // the player they're done.
   function handleExit() {
-    window.close();
+    if (window.opener) window.close();
     setExitAttempted(true);
   }
 
   return (
     <div className="account-controls">
-      <div className="account-controls-row">
-        {showSignOut && (
-          <button className="account-btn" onClick={handleSignOut} title={t('account.signOutTitle')}>
-            {t('account.signOut')}
+      {!exitAttempted && (
+        <div className="account-controls-row">
+          {showSignOut && (
+            <button className="account-btn" onClick={handleSignOut} title={t('account.signOutTitle')}>
+              {t('account.signOut')}
+            </button>
+          )}
+          <button className="account-btn" onClick={handleExit} title={t('account.exitTitle')}>
+            {t('account.exit')}
           </button>
-        )}
-        <button className="account-btn" onClick={handleExit} title={t('account.exitTitle')}>
-          {t('account.exit')}
-        </button>
-      </div>
+        </div>
+      )}
       {exitAttempted && <p className="account-exit-note">{t('account.exitNote')}</p>}
     </div>
   );
