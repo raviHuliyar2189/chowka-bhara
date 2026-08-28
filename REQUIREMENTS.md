@@ -1297,9 +1297,11 @@ Resolved during requirements gathering:
 - **Welcome splash shortened to 3s (was 5s), loading screen reworded** (§11): `WelcomeScreen`'s
   fixed display timer cut from 5000ms to 3000ms. The auth-check "Loading…" screen right after it
   (`AuthGate`, waiting on `fetchMe()`) now shows the app title plus "Chowka Bhara is loading… It
-  may take a few seconds." instead of a bare "Loading…" — reassures a returning visitor (one with
-  a saved token, so this screen actually makes a network call) that something is happening rather
-  than reading as stuck. **Flagged, not fixed**: the underlying slowness this responds to is almost
+  may take about a minute in case of cold start of the application." (revised from an initial "a
+  few seconds" once the actual cause — see below — was named explicitly) instead of a bare
+  "Loading…" — reassures a returning visitor (one with a saved token, so this screen actually makes
+  a network call) that something is happening rather than reading as stuck. **Flagged, not
+  fixed**: the underlying slowness this responds to is almost
   certainly Render's free-tier cold start (the backend service spins down after ~15 minutes idle
   and can take 30-60s+ to wake on the next request) — not something a front-end change can shrink
   to a guaranteed "within 2 seconds." Fixing that for real means either an external keep-alive

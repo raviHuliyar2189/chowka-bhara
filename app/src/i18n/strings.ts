@@ -32,8 +32,8 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
 
   // --- Auth (AuthGate / OnlineLogin / NeedsProfile) ---
   'auth.loading': {
-    en: 'Chowka Bhara is loading… It may take a few seconds.',
-    kn: 'ಚೌಕಾ ಭಾರ ಲೋಡ್ ಆಗುತ್ತಿದೆ… ಇದಕ್ಕೆ ಕೆಲವು ಸೆಕೆಂಡುಗಳು ಬೇಕಾಗಬಹುದು.',
+    en: 'Chowka Bhara is loading… It may take about a minute in case of cold start of the application.',
+    kn: 'ಚೌಕಾ ಭಾರ ಲೋಡ್ ಆಗುತ್ತಿದೆ… ಅಪ್ಲಿಕೇಶನ್ ಕೋಲ್ಡ್ ಸ್ಟಾರ್ಟ್ ಆಗಿದ್ದರೆ ಇದಕ್ಕೆ ಸುಮಾರು ಒಂದು ನಿಮಿಷ ಬೇಕಾಗಬಹುದು.',
   },
   'auth.signInTitle': { en: 'Sign In', kn: 'ಸೈನ್ ಇನ್' },
   'auth.signInPrompt': {
