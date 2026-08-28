@@ -1284,6 +1284,10 @@ Resolved during requirements gathering:
   Resign/App Control row, just disabled. Confirmed via user clarification this should NOT move
   these into the App Controls overlay — they stay exactly where they were in Game Controls.
 
+- **"Single player" mode-select label reworded to "Alone against Computer"** (§11): clearer about
+  what it actually is (playing solo against Indramma, the built-in AI) than the generic "Single
+  player."
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has
