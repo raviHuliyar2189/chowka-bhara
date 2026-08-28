@@ -1560,6 +1560,16 @@ Resolved during requirements gathering:
   just React state. `onMouseDown` + `preventDefault()` on the toggle and each option keeps the
   input focused so selecting a name doesn't fire a blur-driven close before the click registers.
   Confirmed via screenshot, desktop and phone width.
+- **Sign Out landed back on the welcome splash instead of Sign In** (§11, a reported bug):
+  `AccountControls.tsx`'s `handleSignOut` does a full `window.location.reload()` (to guarantee a
+  clean slate), which reset `App.tsx`'s `showWelcome` state back to its default `true` — re-showing
+  the splash before Sign In. Fixed by making `showWelcome`'s initial value "have I already shown
+  the splash in this browser tab" (a `sessionStorage` flag, set once `WelcomeScreen`'s `onDone`
+  fires) rather than always `true` — a genuinely fresh tab/session (including a game-invite link
+  opened in a new tab) still sees it first, unchanged from the earlier "always shown first, even
+  for invite links" decision; only a same-tab reload after already having seen it skips it now.
+  Confirmed both ways: a fresh tab still shows the splash, and Sign Out from Mode Select now lands
+  directly on Sign In.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

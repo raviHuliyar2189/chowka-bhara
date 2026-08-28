@@ -76,11 +76,37 @@ function OnlineGameRoute({ me }: { me: PlayerInfo }) {
   );
 }
 
+// Once per browser tab, not once per page load — AccountControls.tsx's handleSignOut does a full
+// window.location.reload() to guarantee a clean slate, which would otherwise reset showWelcome
+// below back to true and re-show the splash before Sign In, a real reported bug (Sign Out from
+// Mode Select landed back on the welcome page instead of Sign In). sessionStorage (not
+// localStorage) is exactly "per tab, cleared when the tab closes" — a genuinely fresh tab/session
+// (including a game-invite link opened in a new tab) still sees the splash, unchanged from the
+// explicit "always shown first" decision below; only a same-tab reload after already having seen
+// it skips it. Guarded the same way api.ts's own token storage is — some in-app browsers (e.g.
+// WhatsApp's link-opening webview) throw on storage access rather than just being unavailable.
+function hasSeenWelcomeThisTab(): boolean {
+  try {
+    return sessionStorage.getItem('chowka:welcomeShown') === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markWelcomeSeenThisTab(): void {
+  try {
+    sessionStorage.setItem('chowka:welcomeShown', '1');
+  } catch {
+    // Best-effort — worst case the splash just shows again next reload, same as before this fix.
+  }
+}
+
 export default function App() {
   // Always shown first now, even for a game-invite link opened fresh from WhatsApp — the earlier
   // "skip it for invite links" behavior was a deliberate choice, reversed at explicit request (see
-  // REQUIREMENTS.md's Decisions log).
-  const [showWelcome, setShowWelcome] = useState(true);
+  // REQUIREMENTS.md's Decisions log). Still true for the first render of a given tab — only a
+  // same-tab reload after that (see hasSeenWelcomeThisTab's own comment) skips it.
+  const [showWelcome, setShowWelcome] = useState(() => !hasSeenWelcomeThisTab());
   const [player, setPlayer] = useState<PlayerInfo | null>(null);
 
   useEffect(() => {
@@ -94,7 +120,12 @@ export default function App() {
   if (showWelcome) {
     return (
       <div className="app">
-        <WelcomeScreen onDone={() => setShowWelcome(false)} />
+        <WelcomeScreen
+          onDone={() => {
+            markWelcomeSeenThisTab();
+            setShowWelcome(false);
+          }}
+        />
       </div>
     );
   }
