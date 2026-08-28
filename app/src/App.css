@@ -586,6 +586,27 @@
   text-decoration: none;
 }
 
+/* Top/bottom labels only (P1/P3 in a 2-player game): name, status, and capture read as one line,
+   comma-separated, instead of three stacked lines — at explicit request, to use less vertical
+   space around the board. Left/right labels keep the stacked layout: their available width is
+   deliberately capped (see .home-label.side-left/right's own max-width comment) to keep the
+   container's required gap bounded, so the same one-line text there would just get clipped by
+   that cap rather than actually fitting — three short lines read better than one truncated one.
+   white-space: nowrap on .home-label itself is what keeps this from wrapping mid-word. */
+.home-label.side-top .status-line,
+.home-label.side-bottom .status-line,
+.home-label.side-top .capture-status,
+.home-label.side-bottom .capture-status {
+  display: inline;
+}
+
+.home-label.side-top .status-line::before,
+.home-label.side-bottom .status-line::before,
+.home-label.side-top .capture-status::before,
+.home-label.side-bottom .capture-status::before {
+  content: ', ';
+}
+
 .home-label:hover {
   filter: brightness(1.15);
 }
@@ -595,8 +616,9 @@
 }
 
 /* Online mode only — a small connected/disconnected dot pinned to the label's corner, distinct
-   from the status/capture text lines below the name so it reads at a glance without adding a
-   third line. Green pulses gently while connected (a quiet "still here" cue); gray is still. */
+   from the name/status/capture text (all one line now, see .status-line/.capture-status above) so
+   it reads at a glance without adding to that line. Green pulses gently while connected (a quiet
+   "still here" cue); gray is still. */
 .presence-dot {
   position: absolute;
   top: -3px;

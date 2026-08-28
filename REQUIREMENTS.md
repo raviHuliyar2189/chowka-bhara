@@ -1455,6 +1455,15 @@ Resolved during requirements gathering:
   padding, `.dice-stage` height 190px → 165px) to offset the mobile-overflow fix from earlier in
   this same section being always-visible now costs some of that fixed space back.
 - **"Moves still to play:" → "Pending Moves"** (§11, at explicit request).
+- **Top/bottom player labels (P1/P3) collapse to one comma-separated line** (§11, at explicit
+  request, "optimize the space required for R1 and R3 players"): name/status/capture-status used
+  to always stack as three lines; `.home-label.side-top`/`.side-bottom`'s `.status-line`/
+  `.capture-status` spans switch to `display: inline` with a `::before { content: ', '; }` for the
+  comma, so they read as "Name, Status, Capture" on one line. Deliberately scoped to top/bottom
+  only — left/right labels (`.side-left`/`.side-right`) keep the original 3-line stacked form,
+  because their `max-width: 70px` (sized for short names, bounding the container's own `gap`) would
+  just clip the much-longer combined text rather than actually fit it; confirmed via screenshot
+  that a first, uniform attempt across all four labels did exactly that before scoping it back.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
