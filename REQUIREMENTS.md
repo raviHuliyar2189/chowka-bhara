@@ -1312,6 +1312,15 @@ Resolved during requirements gathering:
   wraps to two lines inside the fixed-width options column — harmless given the info button's
   `align-self: center` fix already keeps it a circle regardless of row height.
 
+- **Capture announcement no longer says "roll again"** was actually a real gap, now fixed: §14's
+  own text already documented that a capture's spoken announcement should include the "roll
+  again" instruction (a capture always grants a bonus roll, §5.6), but `announceCapture` had been
+  pointed at `banner.captured` — the same terse string used for the on-screen banner ("Ravi
+  captured 2") — ever since that banner was shortened, so the spoken cue silently lost its
+  instruction along with it. Fixed with a dedicated `announce.captured` string ("Ravi captured 2.
+  Roll again!") used only by the spoken announcement; `banner.captured` itself is untouched, so the
+  on-screen banner stays exactly as terse as before.
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has

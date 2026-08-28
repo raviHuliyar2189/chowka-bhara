@@ -441,6 +441,14 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
     en: (name: string, count: number) => `${name} captured${count > 1 ? ` ${count}` : ''}`,
     kn: (name: string, count: number) => `${name} ${count > 1 ? `${count} ` : ''}ಸೆರೆ ಹಿಡಿದರು`,
   },
+  // Spoken-only variant of banner.captured — a capture always grants a bonus roll (§5.6), so the
+  // announcement says so as a complete instruction, same as a bonus-roll announcement does. Kept
+  // separate from banner.captured (which stays terse for the on-screen banner) rather than making
+  // that shared string longer.
+  'announce.captured': {
+    en: (name: string, count: number) => `${name} captured${count > 1 ? ` ${count}` : ''}. Roll again!`,
+    kn: (name: string, count: number) => `${name} ${count > 1 ? `${count} ` : ''}ಸೆರೆ ಹಿಡಿದರು. ಮತ್ತೆ ಕವಡೆ ಹಾಕಿ!`,
+  },
   'banner.finished': {
     en: (name: string, place: number) => `${name} finished ${ordinalEn(place)}`,
     kn: (name: string, place: number) => `${name} ${place}ನೇ ಸ್ಥಾನ`,

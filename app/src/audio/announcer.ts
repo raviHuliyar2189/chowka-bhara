@@ -248,7 +248,7 @@ export function announceTurnReverted(revertedPlayerName: string, nextPlayerName:
 // announcement is a complete instruction like the others.
 export function announceCapture(playerName: string, count: number): void {
   chime('capture');
-  speakLocalized('banner.captured', [playerName, count], 1.1, 1.15);
+  speakLocalized('announce.captured', [playerName, count], 1.1, 1.15);
 }
 
 // Gatti-tollu requirement: spoken when a tollu is bonded into a permanent gatti (and nothing was
