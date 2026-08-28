@@ -1054,8 +1054,9 @@ button.app-controls-btn:active:not(:disabled) {
 /* Resign Game and App Control share this one row (see DiceTray.tsx) instead of each being its
    own full-width row like the rest of Game Controls — both stretch to share the row equally via
    flex: 1 on each button, rather than the column's own stretch (which only sizes direct block-
-   level children, not a nested row's own items). When Resign isn't rendered at all, App Control's
-   own flex: 1 still fills the whole row on its own — no extra conditional needed here. */
+   level children, not a nested row's own items). Resign is always rendered (just disabled when
+   not applicable — see DiceTray.tsx), so this row never has to redistribute space for a missing
+   button. */
 .game-controls-bottom-row {
   display: flex;
   flex-direction: row;

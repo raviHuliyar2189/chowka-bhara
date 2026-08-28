@@ -9,10 +9,11 @@ interface Props {
   game: GameState;
   onRoll: () => void;
   onSelectValue: (i: number) => void;
-  // Whether roll-back is offered at all in this mode/game — kept stable across a single game
-  // (flips once at setup, once at game-over) so the button's mount/unmount doesn't itself cause
-  // layout jitter. Whether it's usable *right now* (was there actually a move to undo, is it my
-  // own) is the separate, per-move-changing canRollback below, which only toggles `disabled`.
+  // Whether roll-back is offered at all in this mode/game (a per-game setting) and whether it's
+  // usable *right now* (was there actually a move to undo, is it my own — changes every move).
+  // The button itself is always shown (see the game-controls-col JSX below) — both of these only
+  // ever affect its `disabled` state, never whether it's mounted, so neither one changing can
+  // itself cause layout jitter.
   showRollback: boolean;
   canRollback?: boolean;
   onRollback: () => void;
@@ -23,8 +24,8 @@ interface Props {
   isMyTurn?: boolean;
   // "Game controls" (§11's layout pass): Roll the Dice / Roll Back Last Move / Moves still to play
   // / Resign Game / App Controls are one grouped, uniformly-sized, vertically-stacked component —
-  // the game-mode page never renders any of these separately elsewhere. Resign is omitted (the
-  // default) wherever a mode never offers it at all.
+  // the game-mode page never renders any of these separately elsewhere. Resign is always shown,
+  // just disabled wherever a mode/game doesn't offer it — see the game-controls-bottom-row JSX.
   resignAllowed?: boolean;
   onResign?: () => void;
   // Just the App Controls panel's inner content (AppControlsMenu.tsx's AppControlsPanel) — the
@@ -205,16 +206,14 @@ export default function DiceTray({
         <button className="action-btn btn-roll" disabled={!canRoll} onClick={onRoll}>
           {t('dice.rollButton')}
         </button>
-        {showRollback && (
-          <button
-            className="action-btn btn-rollback"
-            disabled={!canRollback}
-            onClick={onRollback}
-            title={t('dice.rollbackTitle')}
-          >
-            {t('dice.rollbackButton')}
-          </button>
-        )}
+        <button
+          className="action-btn btn-rollback"
+          disabled={!showRollback || !canRollback}
+          onClick={onRollback}
+          title={t('dice.rollbackTitle')}
+        >
+          {t('dice.rollbackButton')}
+        </button>
 
         {(() => {
           const needsChoice = game.phase === 'awaiting-selection' && game.pool.length > 1;
@@ -240,14 +239,14 @@ export default function DiceTray({
 
         {/* Resign Game and App Control share one row (at the user's explicit request) rather than
            each being its own full-width row like the rest of Game Controls — both still the same
-           height/style, just side by side. When Resign isn't offered at all, App Control simply
-           takes the full row alone (.game-controls-bottom-row's own CSS, not a conditional here). */}
+           height/style, just side by side. Resign is always shown, disabled when this game
+           doesn't allow it, rather than being removed from the row — same reasoning as Roll Back
+           above: a button that disappears/reappears as settings or turn state change is itself a
+           layout jitter. */}
         <div className="game-controls-bottom-row">
-          {resignAllowed && (
-            <button className="action-btn btn-abort" onClick={onResign}>
-              {t('resign.gameButton')}
-            </button>
-          )}
+          <button className="action-btn btn-abort" disabled={!resignAllowed} onClick={onResign}>
+            {t('resign.gameButton')}
+          </button>
 
           <button
             type="button"

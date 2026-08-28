@@ -1275,6 +1275,15 @@ Resolved during requirements gathering:
   column a constant `420px` width (`max-width: 100%` for narrower screens) instead of deriving it
   from content, so opening/closing a description never changes anything's size.
 
+- **Roll Back Last Move and Resign Game always shown in Game Controls, disabled instead of
+  removed, in every mode** (§11): Roll Back already stayed mounted across a single game (the
+  earlier jitter fix); now it's mounted unconditionally, and its `disabled` state itself absorbs
+  both "not offered in this mode/game at all" (e.g. Vs Computer, which never offers it) and "no
+  move to undo right now." Resign gets the identical treatment — previously removed from the row
+  entirely whenever a game didn't have Resignation Allowed turned on, it now always renders in the
+  Resign/App Control row, just disabled. Confirmed via user clarification this should NOT move
+  these into the App Controls overlay — they stay exactly where they were in Game Controls.
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has
