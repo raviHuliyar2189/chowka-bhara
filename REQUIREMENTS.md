@@ -343,16 +343,18 @@ close to the board's own height) contains, top to bottom:
 
    Every button in this column shares the same size (height, padding, and the same gradient/shadow
    "keycap" styling, just its own color per button) rather than each having its own dimensions —
-   reads as one deliberate, cohesive control group. Reflows back to stacked (circle above Game
-   Controls) on narrow/phone widths, where there isn't room for both side by side.
-3. **App Controls** opens right on top of the dice throw area — not a popover anchored to the
-   button, but a full overlay at exactly that area's own position and size (same width, height,
-   and screen position as the round kavade-throw circle it replaces while open) — containing: the
-   language toggle (§16), the sound on/off toggle, the Report Bug button, and — online mode only —
-   voice call setup (join/leave, mute, and any connection-failure status; §13). Scrolls internally
-   if its content doesn't all fit at that size rather than overflowing. Consolidates everything
-   that used to be a wide row of buttons under the dice into one small control, so the panel's
-   fixed width goes to Game Controls/the board instead (see the Decisions log for why).
+   reads as one deliberate, cohesive control group. Stays side by side with the dice circle at
+   phone widths too (the circle becomes a tall ellipse there instead of reflowing to stacked — see
+   the Decisions log for why).
+3. **App Controls** opens right on top of the whole dice-section row (throw area *and* Game
+   Controls together, not just the throw area alone) — not a popover anchored to the button, but a
+   full overlay at exactly that row's own position and size. Scrolls internally if its content
+   doesn't all fit at that size rather than overflowing. Contains: the language toggle (§16), the
+   sound on/off toggle, the Report Bug button, Sign Out/Exit, and — online mode only, currently
+   absent while voice chat is disabled app-wide (see the Decisions log) — voice call setup
+   (join/leave, mute, and any connection-failure status; §13). Consolidates everything that used
+   to be a wide row of buttons under the dice into one small control, so the panel's fixed width
+   goes to Game Controls/the board instead (see the Decisions log for why).
 
 The app-wide title/version bar shown on every other screen (mode select, login, setup) is hidden
 entirely while a live game is on screen — see the Decisions log entry below.
