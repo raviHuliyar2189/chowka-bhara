@@ -155,3 +155,16 @@ export function startGame(gameId: string): Promise<GameState> {
 export function rematchGame(gameId: string): Promise<GameState> {
   return request<{ game: GameState }>(`/games/${gameId}/rematch`, { method: 'POST' }).then((r) => r.game);
 }
+
+export interface BugReportPayload {
+  mode: 'hotseat' | 'vs-computer' | 'online' | 'develop-test';
+  gameId: string | null;
+  observation: string;
+  expected: string;
+  suggestion: string;
+  debugLog: string[];
+}
+
+export function submitBugReport(payload: BugReportPayload): Promise<void> {
+  return request<void>('/bug-reports', { method: 'POST', body: JSON.stringify(payload) });
+}

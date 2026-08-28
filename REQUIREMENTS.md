@@ -1511,6 +1511,16 @@ Resolved during requirements gathering:
   Sign Out/Exit row itself with the "you can close this tab" note, rather than leaving both buttons
   live beside it — once a player has said they're done, the app stops inviting further clicks from
   this control (the rest of the page, e.g. Mode Select's own game-mode buttons, is unaffected).
+- **Report Bug submits to the backend, saved for later analysis** (§11, at explicit request): a
+  new `bug_reports` table (migration `009_bug_reports.sql`: reporter, mode, an optional `game_id`
+  — only online has a server-side game row to attach it to, every other mode always sends null —
+  observation/expected/suggestion, and the debug log joined into one text column) plus an
+  authenticated `POST /bug-reports` route. `ReportBugModal.tsx`'s existing "Report Bug Details"
+  button still collates the same text for the player's own copy/paste use (the modal was originally
+  built for pasting into Claude directly — see `bug.copyPrompt`'s own wording, unchanged), but now
+  also submits it in parallel, showing a Sending/Sent/failed-please-copy-instead status above the
+  collated text. Verified end-to-end: the submitted row was confirmed present in the database with
+  the correct reporter, mode, and debug log.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

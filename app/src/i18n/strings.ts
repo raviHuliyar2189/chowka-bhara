@@ -289,6 +289,12 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   },
   'bug.reportDetails': { en: 'Report Bug Details', kn: 'ದೋಷ ವಿವರಗಳನ್ನು ವರದಿ ಮಾಡಿ' },
   'bug.cancel': { en: 'Cancel', kn: 'ರದ್ದುಮಾಡಿ' },
+  'bug.submitting': { en: 'Sending to the developer…', kn: 'ಡೆವಲಪರ್‌ಗೆ ಕಳುಹಿಸಲಾಗುತ್ತಿದೆ…' },
+  'bug.submitted': { en: 'Sent — thank you for the report!', kn: 'ಕಳುಹಿಸಲಾಗಿದೆ — ವರದಿಗಾಗಿ ಧನ್ಯವಾದಗಳು!' },
+  'bug.submitFailed': {
+    en: "Couldn't send this automatically — please copy it and share it another way.",
+    kn: 'ಇದನ್ನು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಕಳುಹಿಸಲಾಗಲಿಲ್ಲ — ದಯವಿಟ್ಟು ನಕಲಿಸಿ ಬೇರೆ ರೀತಿಯಲ್ಲಿ ಹಂಚಿಕೊಳ್ಳಿ.',
+  },
   'bug.copyPrompt': { en: 'Copy this and paste it to Claude for debugging:', kn: 'ಇದನ್ನು ನಕಲಿಸಿ ಡೀಬಗ್ ಮಾಡಲು Claude ಗೆ ಅಂಟಿಸಿ:' },
   'bug.copyToClipboard': { en: 'Copy to Clipboard', kn: 'ಕ್ಲಿಪ್‌ಬೋರ್ಡ್‌ಗೆ ನಕಲಿಸಿ' },
   'bug.copied': { en: 'Copied!', kn: 'ನಕಲಿಸಲಾಗಿದೆ!' },

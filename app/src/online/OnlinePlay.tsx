@@ -524,7 +524,9 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
       {resignedPlayerName && (
         <ResignModal playerName={resignedPlayerName} onDismiss={() => setResignedPlayerName(null)} />
       )}
-      {showReportBug && <ReportBugModal debugLog={game.debugLog} onClose={() => setShowReportBug(false)} />}
+      {showReportBug && (
+        <ReportBugModal mode="online" gameId={gameId} debugLog={game.debugLog} onClose={() => setShowReportBug(false)} />
+      )}
     </div>
   );
 }

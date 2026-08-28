@@ -5,6 +5,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { env } from './env';
 import { authRouter } from './auth/routes';
 import { gamesRouter } from './games/routes';
+import { bugReportsRouter } from './bugReports/routes';
 import { setIo } from './realtime/io';
 import { registerConnectionHandlers } from './realtime/connection';
 
@@ -20,6 +21,7 @@ app.get('/health', (_req, res) => {
 
 app.use('/auth', authRouter);
 app.use(gamesRouter);
+app.use(bugReportsRouter);
 
 // Express 5 forwards rejected promises from async route handlers here automatically — this is
 // just the final safety net so a thrown/rejected error becomes a clean 500 instead of hanging

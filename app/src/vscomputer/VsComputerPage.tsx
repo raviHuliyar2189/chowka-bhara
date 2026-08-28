@@ -361,7 +361,9 @@ export default function VsComputerPage() {
         <ResignModal playerName={resignedPlayerName} onDismiss={() => setResignedPlayerName(null)} />
       )}
 
-      {showReportBug && <ReportBugModal debugLog={game.debugLog} onClose={() => setShowReportBug(false)} />}
+      {showReportBug && (
+        <ReportBugModal mode="vs-computer" gameId={null} debugLog={game.debugLog} onClose={() => setShowReportBug(false)} />
+      )}
 
       {statsFor && <StatsModal name={statsFor} stats={stats[statsFor]} onClose={() => setStatsFor(null)} />}
 

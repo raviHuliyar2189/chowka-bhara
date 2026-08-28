@@ -527,7 +527,12 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
       )}
 
       {showReportBug && game && (
-        <ReportBugModal debugLog={game.debugLog} onClose={() => setShowReportBug(false)} />
+        <ReportBugModal
+          mode={allowCustomSetup ? 'develop-test' : 'hotseat'}
+          gameId={null}
+          debugLog={game.debugLog}
+          onClose={() => setShowReportBug(false)}
+        />
       )}
 
       {statsFor && <StatsModal name={statsFor} stats={stats[statsFor]} onClose={() => setStatsFor(null)} />}

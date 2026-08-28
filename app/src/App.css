@@ -1514,6 +1514,21 @@ button.btn-abort:active:not(:disabled) {
   margin-top: 12px;
 }
 
+.bug-submit-status {
+  font-size: 13px;
+  font-weight: bold;
+  margin: 0 0 8px;
+  color: var(--text-muted);
+}
+
+.bug-submit-ok {
+  color: #3f7d3f;
+}
+
+.bug-submit-error {
+  color: #96402f;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
