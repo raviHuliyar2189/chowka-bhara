@@ -1469,6 +1469,16 @@ Resolved during requirements gathering:
   even though there was unused horizontal space beside the Language toggle. A new
   `.app-controls-main-row` (row-direction flex, `flex-wrap: wrap`) holds all three; on phone widths
   Report Bug wraps to its own line rather than overflowing, confirmed via screenshot at 375px.
+- **Dice throw area and Game Controls column top/bottom-align, Game Controls' rows spread evenly**
+  (§11, at explicit request): `.dice-section`'s `align-items` changed from `flex-start` to
+  `stretch` (desktop and phone) so `.dice-circle-col`/`.game-controls-col` always share the taller
+  side's height instead of the throw area (fixed-size, never grows) and the controls column
+  (content-driven height) drifting out of alignment at the bottom. `.game-controls-col` gained
+  `justify-content: space-between` so its three rows (Roll/Roll back, Pending Moves, Resign Game)
+  spread across that shared height instead of leaving unclaimed space below Resign Game whenever
+  the throw area is taller; `.dice-circle-col` gained `justify-content: center` so any leftover
+  height on its side balances around the fixed-size throw area rather than pinning it to the top.
+  Confirmed via screenshot with an empty and a populated Pending Moves list, desktop and phone.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

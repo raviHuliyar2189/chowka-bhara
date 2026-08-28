@@ -1036,29 +1036,39 @@
    inside one more nested card. Side by side (circle | controls) rather than stacked — see
    .dice-circle-col / .game-controls-col below — matching the playing-screen layout pass; stays
    side by side on phones too now (see the max-width: 640px override), just with a narrower throw
-   area. */
+   area. align-items: stretch (rather than flex-start) makes .dice-circle-col and .game-controls-col
+   match heights — whichever side's content is naturally taller sets the shared height, and the
+   other stretches to it — so their tops and bottoms both line up, at explicit request. */
 .dice-section {
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 16px;
   width: 100%;
 }
 
+/* justify-content: center balances any leftover height from the stretch above evenly around the
+   fixed-size .dice-stage (which itself never grows — see its own comment), instead of pinning it
+   to the top with dead space below. */
 .dice-circle-col {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   gap: 8px;
 }
 
 /* "Game controls" (§11's layout pass): Roll the Dice / Roll Back Last Move, Moves still to play,
    and Resign Game — one grouped, vertically-stacked component next to the dice circle. See
-   DiceTray.tsx for why Resign moved in here from the old post-dice-actions row. */
+   DiceTray.tsx for why Resign moved in here from the old post-dice-actions row.
+   justify-content: space-between spreads the three rows evenly across the column's full (now
+   stretched, see .dice-section) height, at explicit request, instead of leaving unclaimed space
+   below Resign Game whenever the dice throw area is the taller side. */
 .game-controls-col {
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 10px;
   flex: 1;
   min-width: 0;
@@ -1677,7 +1687,7 @@ th {
      ellipse can use the spare vertical room a circle at that width couldn't. */
   .dice-section {
     flex-direction: row;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 10px;
   }
 
