@@ -11,7 +11,9 @@ import {
   removePlayers,
   rematch,
   rollbackLastMove,
+  checkStuckPool,
 } from '../game/turnEngine';
+import { hasAnyLegalMove } from '../game/rules';
 import { computePlacements, applyPlacementsToStats, type PlacementEntry } from '../game/session';
 import { loadRoster, saveRoster, loadStats, saveStats, type PlayerStats } from '../game/storage';
 import { chooseAiMove } from '../game/ai';
@@ -24,6 +26,7 @@ import {
   announceFinish,
   announceGattiFormed,
   announceHint,
+  announceStuckPool,
   setAnnouncerEnabled,
   waitForAnnouncer,
 } from '../audio/announcer';
@@ -48,6 +51,12 @@ const COLORS: Record<PlayerId, string> = {
 // Same pacing as VsComputerPage.tsx's own AI turn — see that file's comment for why it's "whichever
 // is longer of this and the announcement actually finishing," not just a fixed delay.
 const AI_MOVE_DELAY_MS = 2000;
+// How long a stuck pool (no legal move for anyone left to play — e.g. one piece or one gatti left
+// and the rolled/remaining value can't move it) stays visible, banner and all, before the turn
+// actually reverts and passes to the next player. This used to happen instantly, bundled into the
+// same reducer call as the roll/move that caused it — too fast to actually register (a real
+// reported bug) — see checkStuckPool's own comment in turnEngine.ts for the full reasoning.
+const STUCK_POOL_DELAY_MS = 2000;
 
 export interface SetupPlayer {
   id: PlayerId;
@@ -138,6 +147,26 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
     setBanner(last.isBonus ? t('banner.rollBonus', name, last.label) : t('banner.rollResult', name, last.label));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.rollHistory.length]);
+
+  // Fires whenever the pool (just rolled, or just left over after a move) turns out to have no
+  // legal move for anyone left to play it — immediately swaps the banner to say so, then actually
+  // reverts the turn after a deliberate pause (see STUCK_POOL_DELAY_MS above) so a player can
+  // register what happened instead of the turn instantly passing on. Re-checked on every relevant
+  // change (not just once) so it always reflects the current stuck/not-stuck state; the cleanup
+  // cancels a pending revert if something else (there normally isn't anything that can, since nothing
+  // is clickable while stuck — but the effect re-running itself always tears down its own prior timer).
+  useEffect(() => {
+    if (!game || game.phase !== 'awaiting-selection' || game.pool.length === 0) return;
+    const player = game.players[game.currentTurnIndex];
+    if (hasAnyLegalMove(game.players, player, game.pool)) return;
+    announceStuckPool(player.name);
+    setBanner(t('banner.noLegalMove', player.name));
+    const timer = setTimeout(() => {
+      endGameIfOver(checkStuckPool(game));
+    }, STUCK_POOL_DELAY_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.phase, game?.pool.length, game?.currentTurnIndex]);
 
   // Spoken immediately when a new turn begins (not just after the 5s idle nudge) — keyed on
   // currentTurnIndex so it fires once per turn change, including the very first turn on mount.

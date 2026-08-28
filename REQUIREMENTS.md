@@ -1321,6 +1321,46 @@ Resolved during requirements gathering:
   Roll again!") used only by the spoken announcement; `banner.captured` itself is untouched, so the
   on-screen banner stays exactly as terse as before.
 
+- **Stuck-pool revert made visible, with an explanatory announcement, in every mode** (§5.5): a
+  stuck pool (no legal move left for anyone to play it) used to revert the whole turn instantly,
+  bundled into the very same reducer call as the roll/move that exposed it — too fast to actually
+  register before the screen already showed the next player's turn (a real reported bug). `roll()`
+  and `finalizeMove()` in `turnEngine.ts` no longer call the revert logic automatically; it's now
+  `checkStuckPool`, an exported function each mode's own UI calls itself after a deliberate
+  `STUCK_POOL_DELAY_MS` (2s) pause, during which the affected player's name and the reason stay on
+  screen and get spoken (`announceStuckPool`, new): "`<name>`'s moves this turn are rolled back —
+  not all moves could be made" — not just "no legal move," since a stuck pool undoes every move and
+  capture already made this turn (§5.5), not only the current unplayable dice value.
+  - **Hotseat / Vs Computer** (client-driven): a `useEffect` watches for the stuck condition,
+    shows the banner/announcement immediately, then calls `checkStuckPool` itself after the delay.
+    `chooseAiMove` already returns `null` gracefully with no legal move, so this coexists safely
+    with the AI-turn-driving effect in both modes.
+  - **Online** (server-authoritative): the server needs its own copy of the delay, since it — not
+    any client — owns the actual state. `server/src/realtime/gameplay.ts` gained
+    `maybeScheduleStuckPoolRevert`, called from `applyAndBroadcast` right alongside the existing
+    `maybeScheduleAiTurn`: it notices the same stuck condition on the just-broadcast state and, if
+    found, schedules a delayed `checkStuckPool` + broadcast of its own. Harmlessly races with
+    `maybeScheduleAiTurn` when the AI itself is the stuck player (both scheduled off the same
+    roll/move) — `chooseAiMove`'s own null-on-no-move return makes `runAiTurn`'s mutator a no-op in
+    that case, so whichever timer actually changes the state "wins," the other just declines
+    against the already-reverted row. Every connected client detects the identical stuck condition
+    off the state it already has (`OnlinePlay.tsx`, display-only — it shows the banner/announcement
+    but never calls `checkStuckPool` itself, only the server does that) and shows the same banner
+    while waiting for the server's broadcast to actually arrive.
+- **Capture banner and announcement merged back into one string**: a capture always grants a bonus
+  roll (§5.6); "Roll again!" is now part of `banner.captured` itself ("Ravi captured 2. Roll
+  again!"), not a spoken-only variant — a player with sound off was seeing "Ravi captured 2" with
+  no indication of what happens next, on-screen. `announceCapture` reads that same string, so the
+  banner and the spoken announcement always match.
+- **`.play-area` shrunk on phones to stop overflowing the screen** (§11): measured ~120px of
+  unwanted scroll on a 375×667 viewport (a plain hotseat game, board above a stacked play-area)
+  before this pass — the round dice-throw circle, button padding, and the gaps between Game
+  Controls' now-five stacked rows (Roll/Roll Back — always shown now, see above/Moves/Resign+App
+  Control) all added up past one screenful. Every one of those got a little smaller specifically
+  in the phone media query (dice circle 150px → 95px, tighter padding/gaps throughout) — verified
+  down to 0px of overflow at 375×667 and comfortably clear at wider phone widths; only genuinely
+  narrow ~320px-wide phones (now rare) still have some.
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has

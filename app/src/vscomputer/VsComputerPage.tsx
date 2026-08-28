@@ -10,7 +10,9 @@ import {
   formGattiMove,
   removePlayers,
   rematch,
+  checkStuckPool,
 } from '../game/turnEngine';
+import { hasAnyLegalMove } from '../game/rules';
 import { computePlacements, applyPlacementsToStats, type PlacementEntry } from '../game/session';
 import { loadStats, saveStats, type PlayerStats } from '../game/storage';
 import { AI_SEAT, AI_NAME } from '../game/aiOpponent';
@@ -23,6 +25,7 @@ import {
   announceFinish,
   announceGattiFormed,
   announceHint,
+  announceStuckPool,
   setAnnouncerEnabled,
   waitForAnnouncer,
 } from '../audio/announcer';
@@ -48,6 +51,10 @@ const COLORS: Record<PlayerId, string> = { P1: '#b03a2e', P2: '#2e5f8a', P3: '#3
 // and a longer one (e.g. a bonus-roll or capture sentence) is never cut off by firing the next
 // action too early.
 const AI_MOVE_DELAY_MS = 2000;
+// How long a stuck pool (no legal move left for either player to play — e.g. one piece or one
+// gatti left and the value can't move it) stays visible, banner and all, before the turn actually
+// reverts. See HotseatPage.tsx's own copy of this constant/effect for the full reasoning.
+const STUCK_POOL_DELAY_MS = 2000;
 
 type SessionEntry = { players: string[]; placements: PlacementEntry[] };
 
@@ -102,6 +109,22 @@ export default function VsComputerPage() {
     setBanner(last.isBonus ? t('banner.rollBonus', name, last.label) : t('banner.rollResult', name, last.label));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.rollHistory.length]);
+
+  // Fires whenever the pool (just rolled, or just left over after a move) turns out to have no
+  // legal move for anyone left to play it — see HotseatPage.tsx's own copy of this effect for the
+  // full reasoning (same delayed-revert pattern, since this mode is also client-driven).
+  useEffect(() => {
+    if (!game || game.phase !== 'awaiting-selection' || game.pool.length === 0) return;
+    const player = game.players[game.currentTurnIndex];
+    if (hasAnyLegalMove(game.players, player, game.pool)) return;
+    announceStuckPool(player.name);
+    setBanner(t('banner.noLegalMove', player.name));
+    const timer = setTimeout(() => {
+      endGameIfOver(checkStuckPool(game));
+    }, STUCK_POOL_DELAY_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.phase, game?.pool.length, game?.currentTurnIndex]);
 
   useEffect(() => {
     if (!game || game.phase !== 'awaiting-roll') return;

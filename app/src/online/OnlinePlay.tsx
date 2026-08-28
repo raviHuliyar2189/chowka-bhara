@@ -5,6 +5,7 @@ import { rematchGame, fetchGame } from './api';
 import { VoiceChatManager } from './voiceChat';
 import type { GameState } from '../game/turnEngine';
 import { moverOfLastMove } from '../game/turnEngine';
+import { hasAnyLegalMove } from '../game/rules';
 import { computePlacements } from '../game/session';
 import type { PlayerId } from '../game/paths';
 import Board from '../components/Board';
@@ -20,6 +21,7 @@ import {
   announceFinish,
   announceGattiFormed,
   announceHint,
+  announceStuckPool,
   setAnnouncerEnabled,
 } from '../audio/announcer';
 import { useT } from '../i18n/strings';
@@ -190,6 +192,21 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
     setBanner(last.isBonus ? t('banner.rollBonus', name, last.label) : t('banner.rollResult', name, last.label));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.rollHistory.length]);
+
+  // Display-only version of HotseatPage.tsx's/VsComputerPage.tsx's own stuck-pool effect: this
+  // mode is server-authoritative, so the server (see server/src/realtime/gameplay.ts's
+  // maybeScheduleStuckPoolRevert) is the one actually holding the revert for the same delay and
+  // then broadcasting the reverted state — this effect only detects the same stuck condition off
+  // the state already received and shows the banner/announcement while waiting for that broadcast
+  // to arrive, never mutates anything itself.
+  useEffect(() => {
+    if (game.phase !== 'awaiting-selection' || game.pool.length === 0) return;
+    const player = game.players[game.currentTurnIndex];
+    if (hasAnyLegalMove(game.players, player, game.pool)) return;
+    announceStuckPool(player.name);
+    setBanner(t('banner.noLegalMove', player.name));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game.phase, game.pool.length, game.currentTurnIndex]);
 
   // Spoken immediately when a new turn begins (not just after the 5s idle nudge) — keyed on
   // currentTurnIndex so it fires once per turn change, including the very first turn on mount.

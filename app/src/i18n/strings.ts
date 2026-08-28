@@ -426,6 +426,15 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
     en: (_revertedName: string, nextName: string) => `${nextName}'s turn`,
     kn: (_revertedName: string, nextName: string) => `${nextName} ಸರದಿ`,
   },
+  // Shown the moment a rolled/remaining pool turns out to have no legal move for anyone left to
+  // play it (e.g. one piece or one gatti left and the value can't move it) — held on screen for a
+  // deliberate pause (see each mode's own "stuck pool" delay) before the turn actually reverts and
+  // passes on, so this is visible long enough to actually register, not just an instant flash.
+  'banner.noLegalMove': {
+    en: (name: string) => `${name}'s moves this turn are rolled back — not all moves could be made`,
+    kn: (name: string) =>
+      `${name} ಈ ಸರದಿಯ ನಡೆಗಳನ್ನು ಹಿಂತೆಗೆದುಕೊಳ್ಳಲಾಗಿದೆ — ಎಲ್ಲಾ ನಡೆಗಳನ್ನು ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ`,
+  },
   // rollResult and rollBonus share this exact same form — label alone already distinguishes a
   // bonus roll (dice.ts's label is 'Bhara'/'Chauka' there, a plain number otherwise), so there's
   // nothing a separate bonus phrasing would add.
@@ -437,15 +446,10 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
     en: (name: string, label: string) => `${name} rolled ${label}`,
     kn: (name: string, label: string) => `${name} ${label} ಎಸೆದರು`,
   },
+  // A capture always grants a bonus roll (§5.6) — "Roll again!" is part of the on-screen banner
+  // itself now, not just the spoken announcement, so a player with sound off still sees the
+  // instruction, not just "Ravi captured 2" with no indication what happens next.
   'banner.captured': {
-    en: (name: string, count: number) => `${name} captured${count > 1 ? ` ${count}` : ''}`,
-    kn: (name: string, count: number) => `${name} ${count > 1 ? `${count} ` : ''}ಸೆರೆ ಹಿಡಿದರು`,
-  },
-  // Spoken-only variant of banner.captured — a capture always grants a bonus roll (§5.6), so the
-  // announcement says so as a complete instruction, same as a bonus-roll announcement does. Kept
-  // separate from banner.captured (which stays terse for the on-screen banner) rather than making
-  // that shared string longer.
-  'announce.captured': {
     en: (name: string, count: number) => `${name} captured${count > 1 ? ` ${count}` : ''}. Roll again!`,
     kn: (name: string, count: number) => `${name} ${count > 1 ? `${count} ` : ''}ಸೆರೆ ಹಿಡಿದರು. ಮತ್ತೆ ಕವಡೆ ಹಾಕಿ!`,
   },

@@ -244,11 +244,23 @@ export function announceTurnReverted(revertedPlayerName: string, nextPlayerName:
   speakLocalized('banner.turnReverted', [revertedPlayerName, nextPlayerName]);
 }
 
+// Fired the moment a stuck pool is detected — during the pause before the turn actually reverts
+// (see each mode's own delayed-revert effect), not after. Distinct from announceTurnReverted
+// above (which fires once the revert has already happened, combined with the next turn's own
+// start): this one explains *why* a revert is about to happen — a stuck pool rolls back every
+// move and capture made so far this turn (§5.5), not just the current unplayable dice value, so
+// saying only "no legal move" would understate what the player is about to lose.
+export function announceStuckPool(playerName: string): void {
+  speakLocalized('banner.noLegalMove', [playerName]);
+}
+
 // Capturing always grants a bonus roll (§5.6) — say so, not just the capture itself, so this
-// announcement is a complete instruction like the others.
+// announcement is a complete instruction like the others. banner.captured itself now carries
+// "Roll again!" (not a separate spoken-only string), so the on-screen banner and the spoken
+// announcement always say the same thing.
 export function announceCapture(playerName: string, count: number): void {
   chime('capture');
-  speakLocalized('announce.captured', [playerName, count], 1.1, 1.15);
+  speakLocalized('banner.captured', [playerName, count], 1.1, 1.15);
 }
 
 // Gatti-tollu requirement: spoken when a tollu is bonded into a permanent gatti (and nothing was

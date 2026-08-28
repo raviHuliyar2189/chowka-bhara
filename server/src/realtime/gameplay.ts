@@ -7,8 +7,10 @@ import {
   formGattiMove,
   rollbackLastMove,
   moverOfLastMove,
+  checkStuckPool,
 } from '@chowka/game-core/turnEngine';
 import type { GameState } from '@chowka/game-core/turnEngine';
+import { hasAnyLegalMove } from '@chowka/game-core/rules';
 import { chooseAiMove } from '@chowka/game-core/ai';
 import { AI_SEAT } from '@chowka/game-core/paths';
 import type { SessionPayload } from '../auth/tokens';
@@ -18,6 +20,10 @@ import { recordGameFinished } from '../games/stats';
 // Same pacing as the client-driven AI's own delay (VsComputerPage.tsx/HotseatPage.tsx) — long
 // enough that a spoken announcement has time to actually play before the next action fires.
 const AI_MOVE_DELAY_MS = 2000;
+// Same pacing as the client-driven modes' own stuck-pool delay (HotseatPage.tsx/
+// VsComputerPage.tsx) — see maybeScheduleStuckPoolRevert below for why this mode needs its own
+// server-side copy of that same held-then-revert behavior.
+const STUCK_POOL_DELAY_MS = 2000;
 
 interface GameRow {
   status: string;
@@ -70,7 +76,34 @@ export async function applyAndBroadcast(
 
   io.to(lobbyRoom(gameId)).emit('game-updated', next);
 
-  if (!justFinished) await maybeScheduleAiTurn(io, gameId, next);
+  if (!justFinished) {
+    await maybeScheduleAiTurn(io, gameId, next);
+    maybeScheduleStuckPoolRevert(io, gameId, next);
+  }
+}
+
+// Same delayed-reveal behavior as the client-driven modes' own stuck-pool effect (see
+// HotseatPage.tsx/VsComputerPage.tsx) — just server-side: game-core's roll()/selectPiece()/
+// formGattiMove() no longer auto-revert a stuck pool inline (see checkStuckPool's own comment in
+// turnEngine.ts), so this mode's server has to independently notice the same stuck condition and
+// hold it for the same delay before actually reverting and broadcasting the result. Every
+// connected client detects the same stuck condition off the state it already has and shows its
+// own banner/announcement while waiting (see OnlinePlay.tsx) — this is only what actually performs
+// and broadcasts the revert once the delay is up.
+//
+// Harmlessly races with maybeScheduleAiTurn when the AI itself is the one stuck (both get
+// scheduled off the same roll/move): chooseAiMove already returns null with no legal move, so
+// runAiTurn's own mutator is a no-op in that case — whichever of the two timers actually changes
+// the state first "wins," the other just sees checkStuckPool decline against the now-already-
+// reverted row and does nothing.
+function maybeScheduleStuckPoolRevert(io: Server, gameId: string, state: GameState): void {
+  if (state.phase !== 'awaiting-selection' || state.pool.length === 0) return;
+  const player = state.players[state.currentTurnIndex];
+  if (hasAnyLegalMove(state.players, player, state.pool)) return;
+
+  setTimeout(() => {
+    void applyAndBroadcast(io, gameId, (s) => checkStuckPool(s));
+  }, STUCK_POOL_DELAY_MS);
 }
 
 // Online's "1 player" option (see games/routes.ts's /start) secretly plays against the same AI

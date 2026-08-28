@@ -121,15 +121,15 @@ export function roll(state: GameState, rng?: () => number): GameState {
     };
   }
 
-  return autoSelectIfSingle(
-    passIfNoLegalMove({
-      ...rolled,
-      rollHistory,
-      pool,
-      phase: 'awaiting-selection',
-      message: `${player.name}, ನಿಮಗೆ ಈಗ ಬಿದ್ದ ಗರ ${result.label}. ನಿಮ್ಮ ಗರ ನಡೆಸಿ.`,
-    })
-  );
+  return autoSelectIfSingle({
+    ...rolled,
+    rollHistory,
+    pool,
+    phase: 'awaiting-selection',
+    message: `${player.name}, ನಿಮಗೆ ಈಗ ಬಿದ್ದ ಗರ ${result.label}. ನಿಮ್ಮ ಗರ ನಡೆಸಿ.`,
+  });
+  // Deliberately NOT checking for a stuck pool here anymore — see checkStuckPool's own comment
+  // below for why that moved out of this reducer entirely.
 }
 
 // All the dice a turn produces must be played out — including finishing all 4 pieces: if a
@@ -138,9 +138,22 @@ export function roll(state: GameState, rng?: () => number): GameState {
 // piece moved, every capture made, and the finish itself — are undone, as if none of it happened,
 // exactly like getting stuck mid-turn without finishing. A finish only counts once the turn's
 // entire pool has actually been used.
-function passIfNoLegalMove(state: GameState): GameState {
+//
+// Used to run automatically, inline, in the same reducer call as whatever transition caused it
+// (a roll that leaves the whole pool stuck, or a move that leaves what's left of it stuck) — with
+// no visible gap for the player to actually register "this roll has no legal move" before the
+// screen already showed the next player's turn (reported: too fast to notice). Now a deliberately
+// separate step: roll()/selectPiece() just transition into 'awaiting-selection' as normal and
+// leave it there, and each mode's own UI (see e.g. HotseatPage.tsx's useStuckPoolRevert) watches
+// for exactly this stuck condition and calls this function itself after a short, visible delay —
+// same reducer logic, just no longer bundled into the move that exposed it.
+export function checkStuckPool(state: GameState): GameState {
   const player = currentPlayer(state);
-  if (state.pool.length === 0 || hasAnyLegalMove(state.players, player, state.pool)) {
+  if (
+    state.phase !== 'awaiting-selection' ||
+    state.pool.length === 0 ||
+    hasAnyLegalMove(state.players, player, state.pool)
+  ) {
     return state;
   }
 
@@ -233,7 +246,9 @@ function finalizeMove(
   }
 
   if (pool.length > 0) {
-    return autoSelectIfSingle(passIfNoLegalMove({ ...next, phase: 'awaiting-selection' }));
+    // No checkStuckPool call here either — see its own comment for why that's now a deliberately
+    // separate, UI-triggered step rather than automatic here.
+    return autoSelectIfSingle({ ...next, phase: 'awaiting-selection' });
   }
 
   return advanceTurn(next);
