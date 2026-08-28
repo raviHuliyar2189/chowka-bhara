@@ -34,8 +34,8 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'auth.loading': { en: 'Loading…', kn: 'ಲೋಡ್ ಆಗುತ್ತಿದೆ…' },
   'auth.signInTitle': { en: 'Sign In', kn: 'ಸೈನ್ ಇನ್' },
   'auth.signInPrompt': {
-    en: 'Enter your WhatsApp number to log in, or to create a new account.',
-    kn: 'ಲಾಗ್ ಇನ್ ಮಾಡಲು ಅಥವಾ ಹೊಸ ಖಾತೆ ರಚಿಸಲು ನಿಮ್ಮ WhatsApp ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ.',
+    en: 'Enter WhatsApp number to Sign in...',
+    kn: 'ಸೈನ್ ಇನ್ ಮಾಡಲು WhatsApp ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ...',
   },
   'auth.phoneLabel': { en: 'WhatsApp Number:', kn: 'WhatsApp ಸಂಖ್ಯೆ:' },
   'auth.phoneInvalid': {

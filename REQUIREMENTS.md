@@ -1245,6 +1245,15 @@ Resolved during requirements gathering:
   so it stays a fixed 32px circle rather than stretching into an oval on narrow screens where a
   label wraps to two lines.
 
+- **`.screen-app-title` (the "Chowka Bhara" line above a screen's own heading — mode select,
+  online sign-in, online setup, online lobby) restyled**: was small (15px), muted-colored, and
+  left-aligned — smaller and less prominent than the screen's own h2 heading below it. Now 28px,
+  centered, and full-strength text color, making it the single most prominent element on every
+  screen that shows it, consistently, since it's one shared class. Sign-in's own prompt text
+  reworded: "Enter your WhatsApp number to log in, or to create a new account." → "Enter WhatsApp
+  number to Sign in..." — shorter, and drops the "or create a new account" clause since the screen
+  already explains that behavior (§13: an unrecognized number offers sign-up next).
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has
