@@ -108,7 +108,6 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   },
   'setup.seatName': { en: (seat: string) => `${seat} Name:`, kn: (seat: string) => `${seat} ಹೆಸರು:` },
   'setup.namePlaceholder': { en: (n: number) => `Player ${n}`, kn: (n: number) => `ಆಟಗಾರ ${n}` },
-  'setup.pickFromRoster': { en: '— choose from roster —', kn: '— ಪಟ್ಟಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ —' },
   'side.bottom': { en: 'Bottom', kn: 'ಕೆಳಗೆ' },
   'side.right': { en: 'Right', kn: 'ಬಲ' },
   'side.top': { en: 'Top', kn: 'ಮೇಲೆ' },

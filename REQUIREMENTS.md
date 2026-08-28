@@ -1254,6 +1254,27 @@ Resolved during requirements gathering:
   number to Sign in..." — shorter, and drops the "or create a new account" clause since the screen
   already explains that behavior (§13: an unrecognized number offers sign-up next).
 
+- **Select Players (setup) screen reworked** (§9): no longer shows a language toggle at all
+  (previously the standalone `AppHeader` bar above the modal, unlike every other pre-game screen
+  which had already moved theirs inline or dropped it) — `HotseatPage` now hides that header
+  unconditionally instead of only during actual play. Each seat's name input and roster picker
+  collapsed from two separate boxes (a text field plus a `<select>` next to it) into one: a single
+  `<input list=...>` wired to a `<datalist>` of roster names, so typing a new name and picking an
+  existing one both happen in the same box via the browser's native suggestions. `roll-back last
+  move` now defaults to **on** (was off) — was easy to miss as an opt-in; still a per-session
+  toggle, just flipped the other way by default. Sign Out/Exit moved from that same top header bar
+  into the bottom of the setup modal itself (`SetupModal.tsx` now renders its own
+  `<AccountControls />`), matching where every other screen already puts them.
+- **Mode select options column: fit-content width replaced with a fixed one** (§11): shrink-
+  wrapping the options column to its widest child's natural size (added for the info-button work
+  above) turned out to also factor in each `.mode-option-info` description paragraph's *unwrapped*
+  text width whenever one was open — max-content sizing lays a block of text out on one line to
+  measure it, and that one-line width can be far wider than the paragraph ever actually renders at.
+  The whole column visibly resized depending on which description (if any) was open — real jitter,
+  same class of bug as the Roll Back button's mount/unmount jitter above. Fixed by giving the
+  column a constant `420px` width (`max-width: 100%` for narrower screens) instead of deriving it
+  from content, so opening/closing a description never changes anything's size.
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has

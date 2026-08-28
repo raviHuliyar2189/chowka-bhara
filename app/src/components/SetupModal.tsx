@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { PlayerId } from '../game/paths';
 import type { SetupPlayer } from '../hotseat/HotseatPage';
 import { useT } from '../i18n/strings';
+import AccountControls from './AccountControls';
 
 interface Props {
   roster: string[];
@@ -75,39 +76,27 @@ export default function SetupModal({
 
         {seats.map((id, i) => (
           <div key={id} className="setup-row">
-            <label className="setup-label">{t('setup.seatName', `${id} (${t(SEAT_SIDE_KEY[id])})`)}</label>
-            <div className="setup-input-group">
-              <input
-                value={names[i]}
-                placeholder={t('setup.namePlaceholder', i + 1)}
-                onChange={(e) => updateName(i, e.target.value)}
-              />
-              {/* A plain <select> rather than <input list>/<datalist>: many browsers (Chrome
-                  included) stop reopening a datalist's suggestions once the field's value exactly
-                  matches one of them, so picking a different roster name required clearing the
-                  field first. A real <select> has no such quirk — it always reopens on click,
-                  letting the same picker be used to switch players as many times as needed. Reset
-                  back to the placeholder option after every pick so choosing the same name twice
-                  in a row still fires a change event. */}
-              {roster.length > 0 && (
-                <select
-                  className="roster-picker"
-                  value=""
-                  onChange={(e) => {
-                    if (e.target.value) updateName(i, e.target.value);
-                    e.target.value = '';
-                  }}
-                  aria-label={t('setup.pickFromRoster')}
-                >
-                  <option value="">{t('setup.pickFromRoster')}</option>
-                  {roster.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
+            <label className="setup-label" htmlFor={`playerName-${id}`}>
+              {t('setup.seatName', `${id} (${t(SEAT_SIDE_KEY[id])})`)}
+            </label>
+            {/* One box: typing a new name and picking a roster name both happen in the same
+                input, via its native datalist suggestions, instead of a separate name field plus
+                a second roster-picker dropdown next to it. */}
+            <input
+              id={`playerName-${id}`}
+              list={roster.length > 0 ? `roster-${id}` : undefined}
+              autoComplete="off"
+              value={names[i]}
+              placeholder={t('setup.namePlaceholder', i + 1)}
+              onChange={(e) => updateName(i, e.target.value)}
+            />
+            {roster.length > 0 && (
+              <datalist id={`roster-${id}`}>
+                {roster.map((n) => (
+                  <option key={n} value={n} />
+                ))}
+              </datalist>
+            )}
           </div>
         ))}
 
@@ -147,6 +136,8 @@ export default function SetupModal({
         <button className="action-btn btn-start" onClick={handleStart}>
           {t('setup.startGame')}
         </button>
+
+        <AccountControls />
       </div>
     </div>
   );

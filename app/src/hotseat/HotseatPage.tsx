@@ -79,7 +79,7 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
   const [showResults, setShowResults] = useState(false);
   const [statsFor, setStatsFor] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
-  const [rollbackEnabled, setRollbackEnabled] = useState(false);
+  const [rollbackEnabled, setRollbackEnabled] = useState(true);
   const [resignAllowed, setResignAllowed] = useState(false);
   // Set only when setup was given exactly 1 human player — that seat (see handleStart) is then
   // secretly played by the same AI Vs Computer uses, reusing its exact decision logic. null for
@@ -107,15 +107,16 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
   // a genuine finish or the auto-ranked survivor deserves the "finished"/"won" announcement).
   const prevRankingIds = useRef<PlayerId[]>([]);
 
-  // Hides the global app header (title/lang toggle — see App.tsx's AppHeader) for as long as this
-  // page is showing the board (editor or live play), so that vertical space goes to the board
-  // instead (§11's layout pass). Setup screen keeps the header, since there's no board competing
-  // with it there. Always restored on unmount — leaving another page's header hidden after
-  // navigating away would be a real bug, not just a cosmetic one.
+  // Hides the global app header (App.tsx's AppHeader — language toggle + Sign Out/Exit) for this
+  // whole page, not just while the board is showing: the setup screen no longer offers a language
+  // toggle at all, and renders its own Sign Out/Exit at the bottom of the modal instead (see
+  // SetupModal.tsx) rather than the standalone bar at the very top of the page. Always restored on
+  // unmount — leaving another page's header hidden after navigating away would be a real bug, not
+  // just a cosmetic one.
   useEffect(() => {
-    setChromeHidden(!inSetup);
+    setChromeHidden(true);
     return () => setChromeHidden(false);
-  }, [inSetup]);
+  }, []);
 
   // Narrow deps deliberately: this should reset exactly once per new hint (keyed), not re-fire
   // on unrelated renders while a hint is showing.

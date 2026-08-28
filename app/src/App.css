@@ -5,17 +5,22 @@
   padding: 20px;
 }
 
-/* Sized to the widest option (not the modal's full width): width: fit-content shrink-wraps this
-   container to its widest child's natural size, margin: auto re-centers that narrower box within
-   the modal, and the default align-items: stretch then makes every .mode-option match that same
-   width — the "same size, sized to the longest label" look, achieved without measuring text in
-   JS. */
+/* Fixed width (not the modal's full width, not fit-content) so this never changes size once an
+   info panel opens — a fit-content/shrink-wrapped width was tried first, but an open .mode-option-
+   info paragraph's own natural (unwrapped, single-line) text width fed into that shrink-to-fit
+   calculation same as the buttons did, so the whole column visibly jumped wider or narrower
+   depending on which description (if any) was open — real layout jitter, the same class of bug
+   the Roll Back button had. A fixed width sidesteps that: the paragraph just wraps inside it,
+   margin: auto centers it in the modal, and the default align-items: stretch makes every
+   .mode-option (buttons included) match this same width regardless of what's open. max-width:
+   100% keeps it from overflowing a narrower phone-width modal. */
 .mode-select-options {
   display: flex;
   flex-direction: column;
   gap: 12px;
   margin: 16px auto 0;
-  width: fit-content;
+  width: 420px;
+  max-width: 100%;
 }
 
 .mode-option-row {
@@ -527,29 +532,6 @@ button.app-controls-btn:active:not(:disabled) {
 .setup-row select {
   flex: 0 0 300px;
   width: 300px;
-}
-
-/* Name input and roster picker sit side by side (one line per seat) instead of stacked, and share
-   the group's fixed width evenly so every seat row's boxes line up and match size. */
-.setup-input-group {
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-  flex: 0 0 300px;
-  width: 300px;
-}
-
-/* Overrides the .setup-row input/select rule above: inside .setup-input-group, each box takes an
-   equal share of the group's fixed width rather than the 300px meant for a lone control. */
-.setup-input-group input,
-.setup-input-group select {
-  flex: 1 1 0;
-  width: auto;
-  min-width: 0;
-}
-
-.roster-picker {
-  font-size: 13px;
 }
 
 /* Board Editor's Start/Reset buttons — same width and stacked, instead of each sizing to its own
@@ -1704,21 +1686,6 @@ th {
     flex: none;
     width: 100%;
     box-sizing: border-box;
-  }
-
-  /* Re-overrides the .setup-row input/select rule above (same specificity, later wins by source
-     order) so the name input and roster picker keep sharing the row's width evenly instead of
-     each claiming 100% and overflowing it. */
-  .setup-input-group input,
-  .setup-input-group select {
-    flex: 1 1 0;
-    width: auto;
-    min-width: 0;
-  }
-
-  .setup-input-group {
-    flex: none;
-    width: 100%;
   }
 
   .modal {
