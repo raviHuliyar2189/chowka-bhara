@@ -2,10 +2,18 @@ import { useState } from 'react';
 import { useT } from '../i18n/strings';
 import { clearToken } from '../online/api';
 
+interface Props {
+  // Off for the online lobby's choice (Join/Decline) and waiting-room screens (see
+  // REQUIREMENTS.md's Decisions log) — Sign Out there only clears this device's own session, it
+  // doesn't release the seat a joined player is actually holding, so it doesn't map to "leaving"
+  // the way it looks like it should. Exit stays available everywhere.
+  showSignOut?: boolean;
+}
+
 // Sign Out / Exit — shared markup so every place they appear (the app header on login/setup/
 // lobby screens, mode-select, and the in-game App Controls panel — see REQUIREMENTS.md's
 // Decisions log) looks and behaves identically, rather than each screen growing its own copy.
-export default function AccountControls() {
+export default function AccountControls({ showSignOut = true }: Props) {
   const t = useT();
   // Set once Exit is clicked, regardless of whether window.close() actually did anything — see
   // handleExit's own comment for why a visible fallback always has to be here.
@@ -33,9 +41,11 @@ export default function AccountControls() {
   return (
     <div className="account-controls">
       <div className="account-controls-row">
-        <button className="account-btn" onClick={handleSignOut} title={t('account.signOutTitle')}>
-          {t('account.signOut')}
-        </button>
+        {showSignOut && (
+          <button className="account-btn" onClick={handleSignOut} title={t('account.signOutTitle')}>
+            {t('account.signOut')}
+          </button>
+        )}
         <button className="account-btn" onClick={handleExit} title={t('account.exitTitle')}>
           {t('account.exit')}
         </button>

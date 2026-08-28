@@ -66,12 +66,14 @@ export default function ResultsModal({ placements, sessionResults, stats, onRema
           </table>
         </div>
 
-        <button className="action-btn" style={{ width: '100%', marginTop: 15 }} onClick={onRematch}>
-          {t('results.playAgain')}
-        </button>
-        <button className="action-btn btn-abort" style={{ width: '100%', marginTop: 8 }} onClick={onNewSession}>
-          {t('results.endSession')}
-        </button>
+        <div className="actions-row">
+          <button className="action-btn" onClick={onRematch}>
+            {t('results.playAgain')}
+          </button>
+          <button className="action-btn btn-abort" onClick={onNewSession}>
+            {t('results.endSession')}
+          </button>
+        </div>
       </div>
     </div>
   );

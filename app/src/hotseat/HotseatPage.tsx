@@ -476,7 +476,7 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
               </button>
             </div>
 
-            <div className="editor-actions">
+            <div className="actions-row">
               <button className="action-btn btn-start" onClick={handleResumeFromEditor}>
                 {t('editor.startFromHere')}
               </button>

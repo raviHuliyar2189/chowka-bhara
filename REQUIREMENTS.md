@@ -1392,6 +1392,24 @@ Resolved during requirements gathering:
     any screen size — also a genuine improvement on desktop, where the panel previously sat
     cramped into just the circle's ~200px width instead of the play-area's full ~460px.
 
+- **Sign Out dropped from the online lobby's choice and waiting-room screens** (§13):
+  `AccountControls` gained a `showSignOut` prop (default `true`); the lobby's "choice"
+  (Join/Decline) and "waiting" (after joining) phases now pass `showSignOut={false}`, keeping only
+  Exit. Reasoning: Sign Out only clears this device's own session — it doesn't release a joined
+  player's seat, so mid-lobby it doesn't actually map to "leaving" the way it looks like it should
+  (the seat stays "Joined," just showing as disconnected if the creator starts). Exit stays
+  everywhere. The "declined" phase (after clicking Decline) keeps both — no seat is held there
+  either way, so the same confusion doesn't apply.
+- **Every paired action-button group put on one line, app-wide** (§11, at explicit request): a
+  new general-purpose `.actions-row` (renamed from a lobby-specific `.lobby-actions-row` added
+  earlier the same session) now covers every "two alternatives side by side" case that used to
+  stack full-width, one button per row, with inconsistent inline margins: Join/Decline and Start
+  Game/Cancel Game (`OnlineLobby.tsx`, already using it), Play Again/End Session
+  (`ResultsModal.tsx`), Rematch/Exit (`OnlinePlay.tsx`'s own game-over screen), and Board Editor's
+  Start Game From Here/Reset Positions (`.editor-actions`, a near-identical dedicated class,
+  removed as redundant once this covered it too). `ReportBugModal.tsx`'s own action row and
+  `AccountControls`' Sign Out/Exit row were already horizontal and needed no change.
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has

@@ -267,7 +267,7 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
       <div className="modal">
         <h2>{t('lobby.inviteTitle')}</h2>
         <p>{t('lobby.inviteBody', lobby.createdByName, lobby.seatCount)}</p>
-        <div className="lobby-actions-row">
+        <div className="actions-row">
           <button className="action-btn btn-start" onClick={handleJoinClick}>
             {t('lobby.join')}
           </button>
@@ -275,7 +275,7 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
             {t('lobby.decline')}
           </button>
         </div>
-        <AccountControls />
+        <AccountControls showSignOut={false} />
       </div>
     );
   }
@@ -319,7 +319,7 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
         })}
       </ul>
       {isCreator ? (
-        <div className="lobby-actions-row">
+        <div className="actions-row">
           <button className="action-btn btn-start" disabled={!lobby.canStart || starting} onClick={handleStart}>
             {starting ? t('lobby.starting') : lobby.canStart ? t('lobby.startGame') : t('lobby.waitingForTwo')}
           </button>
@@ -332,7 +332,7 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
           {lobby.canStart ? t('lobby.waitingForCreatorToStart', lobby.createdByName) : t('lobby.waitingForTwo')}
         </p>
       )}
-      <AccountControls />
+      <AccountControls showSignOut={false} />
     </div>
   );
 }

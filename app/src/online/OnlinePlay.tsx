@@ -342,12 +342,14 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
             ))}
           </ol>
           {rematchError && <p className="online-error">{rematchError}</p>}
-          <button className="action-btn btn-start" onClick={handleRematch} disabled={rematching}>
-            {rematching ? t('online.starting') : t('online.rematch')}
-          </button>
-          <button className="action-btn btn-abort" style={{ marginTop: 8 }} onClick={onExit}>
-            {t('online.exit')}
-          </button>
+          <div className="actions-row">
+            <button className="action-btn btn-start" onClick={handleRematch} disabled={rematching}>
+              {rematching ? t('online.starting') : t('online.rematch')}
+            </button>
+            <button className="action-btn btn-abort" onClick={onExit}>
+              {t('online.exit')}
+            </button>
+          </div>
         </div>
       </div>
     );

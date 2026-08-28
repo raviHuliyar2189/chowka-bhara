@@ -536,24 +536,6 @@ button.app-controls-btn:active:not(:disabled) {
   width: 300px;
 }
 
-/* Board Editor's Start/Reset buttons — same width and stacked, instead of each sizing to its own
-   text and only sharing a centered x-position. */
-.editor-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-  margin-top: 15px;
-}
-
-.editor-actions .btn-start {
-  margin: 0;
-}
-
-.editor-actions .action-btn {
-  width: 100%;
-  min-width: 0;
-}
 
 .editor-captured-list {
   display: flex;
@@ -1424,10 +1406,12 @@ button.btn-abort:active:not(:disabled) {
   gap: 4px;
 }
 
-/* Join / Decline (OnlineLobby.tsx's "choice" phase) and Start Game / Cancel Game (its "waiting"
-   phase) — one line, splitting the width evenly, instead of each stacked full-width on its own
-   row. */
-.lobby-actions-row {
+/* General-purpose "two (or more) action buttons on one line" row, used wherever a screen offers
+   a pair of alternatives — Join/Decline and Start Game/Cancel Game (OnlineLobby.tsx), Play
+   Again/End Session (ResultsModal.tsx), Rematch/Exit (OnlinePlay.tsx's own game-over screen), and
+   so on — instead of each stacking full-width on its own row (at explicit request: buttons like
+   these should always sit on one line, not spread across several with inconsistent margins). */
+.actions-row {
   display: flex;
   flex-direction: row;
   gap: 10px;
@@ -1435,7 +1419,7 @@ button.btn-abort:active:not(:disabled) {
   margin-top: 15px;
 }
 
-.lobby-actions-row .action-btn {
+.actions-row .action-btn {
   flex: 1;
   margin: 0;
 }
