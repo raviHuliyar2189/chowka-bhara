@@ -68,6 +68,23 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   },
   'modeSelect.multiOnline': { en: '🌐 Multiple Players (Online)', kn: '🌐 ಅನೇಕ ಆಟಗಾರರು (ಆನ್‌ಲೈನ್)' },
   'modeSelect.developTest': { en: '🛠️ Developer Mode', kn: '🛠️ ಡೆವಲಪರ್ ಮೋಡ್' },
+  'modeSelect.infoLabel': { en: 'More info', kn: 'ಹೆಚ್ಚಿನ ಮಾಹಿತಿ' },
+  'modeSelect.info.singlePlayer': {
+    en: 'Play alone on this device against Indramma, the built-in computer opponent. A quick way to play or practice the rules without needing anyone else.',
+    kn: 'ಈ ಸಾಧನದಲ್ಲಿ ಒಬ್ಬರೇ, ಅಂತರ್ನಿರ್ಮಿತ ಕಂಪ್ಯೂಟರ್ ಎದುರಾಳಿ ಇಂದಿರತ್ತೆ ವಿರುದ್ಧ ಆಡಿ. ಬೇರೆಯವರ ಅಗತ್ಯವಿಲ್ಲದೆ ಬೇಗ ಆಡಲು ಅಥವಾ ನಿಯಮಗಳನ್ನು ಅಭ್ಯಾಸ ಮಾಡಲು ಸೂಕ್ತ.',
+  },
+  'modeSelect.info.multiLocal': {
+    en: '2 to 4 players take turns sharing this one device, passing it around after each turn. Everyone needs to be in the same place.',
+    kn: '2 ರಿಂದ 4 ಆಟಗಾರರು ಈ ಒಂದೇ ಸಾಧನವನ್ನು ಸರದಿಯಂತೆ ಬಳಸುತ್ತಾರೆ, ಪ್ರತಿ ಸರದಿಯ ನಂತರ ಅದನ್ನು ಮುಂದಿನವರಿಗೆ ಹಸ್ತಾಂತರಿಸುತ್ತಾರೆ. ಎಲ್ಲರೂ ಒಂದೇ ಸ್ಥಳದಲ್ಲಿರಬೇಕು.',
+  },
+  'modeSelect.info.multiOnline': {
+    en: 'Play with friends or family on their own devices, wherever they are. Start a game and invite others over WhatsApp — everyone sees moves update live.',
+    kn: 'ಸ್ನೇಹಿತರು ಅಥವಾ ಕುಟುಂಬದವರೊಂದಿಗೆ, ಅವರು ಎಲ್ಲೇ ಇದ್ದರೂ, ಅವರ ಸ್ವಂತ ಸಾಧನಗಳಲ್ಲಿ ಆಡಿ. ಆಟ ಪ್ರಾರಂಭಿಸಿ ಮತ್ತು WhatsApp ಮೂಲಕ ಇತರರನ್ನು ಆಹ್ವಾನಿಸಿ — ಎಲ್ಲರೂ ನಡೆಗಳನ್ನು ನೇರವಾಗಿ ನೋಡುತ್ತಾರೆ.',
+  },
+  'modeSelect.info.developTest': {
+    en: 'A testing tool for setting up a custom board position and resuming play from there. Not meant for normal play.',
+    kn: 'ಕಸ್ಟಮ್ ಬೋರ್ಡ್ ಸ್ಥಾನವನ್ನು ಹೊಂದಿಸಿ ಅಲ್ಲಿಂದ ಆಟ ಮುಂದುವರಿಸಲು ಇರುವ ಪರೀಕ್ಷಾ ಸಾಧನ. ಸಾಮಾನ್ಯ ಆಟಕ್ಕಾಗಿ ಅಲ್ಲ.',
+  },
   // --- Account controls (Sign Out / Exit) — AccountControls.tsx, shared across the app header,
   // mode-select, and the in-game App Controls panel (see REQUIREMENTS.md's Decisions log). ---
   'account.signOut': { en: '🚪 Sign Out', kn: '🚪 ಸೈನ್ ಔಟ್' },

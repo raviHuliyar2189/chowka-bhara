@@ -5,11 +5,69 @@
   padding: 20px;
 }
 
+/* Sized to the widest option (not the modal's full width): width: fit-content shrink-wraps this
+   container to its widest child's natural size, margin: auto re-centers that narrower box within
+   the modal, and the default align-items: stretch then makes every .mode-option match that same
+   width — the "same size, sized to the longest label" look, achieved without measuring text in
+   JS. */
 .mode-select-options {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: 16px;
+  margin: 16px auto 0;
+  width: fit-content;
+}
+
+.mode-option-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+/* Left-aligned (buttons center their label by default) and flex: 1 so it fills whatever's left
+   of the row after the fixed-size info button next to it — see .mode-select-options's own
+   comment for how that makes every option's row (and so every label button) end up the same
+   width, matching the longest label. */
+.mode-option-row .action-btn {
+  flex: 1;
+  text-align: left;
+}
+
+.mode-info-btn {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  /* Stays a fixed-size circle even when its row is taller than one line (a label wrapping on a
+     narrow screen) — align-items: stretch on .mode-option-row would otherwise stretch this into
+     an oval to match the row's full height. */
+  align-self: center;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mode-info-btn:hover {
+  background: var(--surface-muted);
+}
+
+.mode-option-info {
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 /* Sign Out / Exit (AccountControls.tsx) — a small pill-button pair, deliberately more polished

@@ -4,8 +4,10 @@ import { setChromeHidden } from '../ui/appChrome';
 import LanguageToggle from '../components/LanguageToggle';
 import AccountControls from '../components/AccountControls';
 
+type Mode = 'hotseat' | 'online' | 'vs-computer' | 'develop-test';
+
 interface Props {
-  onChoose: (mode: 'hotseat' | 'online' | 'vs-computer' | 'develop-test') => void;
+  onChoose: (mode: Mode) => void;
 }
 
 export default function ModeSelect({ onChoose }: Props) {
@@ -16,6 +18,9 @@ export default function ModeSelect({ onChoose }: Props) {
   // fresh visit always starts hidden again, same "secret until you know it" spirit as the shortcut
   // itself. Not available on-screen at all for a touch-only device, same as any keyboard shortcut.
   const [devModeVisible, setDevModeVisible] = useState(false);
+  // Which option's info panel is currently expanded, if any — at most one at a time, toggled by
+  // its own info button (clicking the open one again, or any other option's, closes/switches it).
+  const [openInfo, setOpenInfo] = useState<Mode | null>(null);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -38,28 +43,45 @@ export default function ModeSelect({ onChoose }: Props) {
     return () => setChromeHidden(false);
   }, []);
 
+  function toggleInfo(mode: Mode) {
+    setOpenInfo((prev) => (prev === mode ? null : mode));
+  }
+
+  function renderOption(mode: Mode, labelKey: string, infoKey: string) {
+    return (
+      <div className="mode-option">
+        <div className="mode-option-row">
+          <button className="action-btn" onClick={() => onChoose(mode)}>
+            {t(labelKey)}
+          </button>
+          <button
+            type="button"
+            className="mode-info-btn"
+            aria-label={t('modeSelect.infoLabel')}
+            aria-expanded={openInfo === mode}
+            onClick={() => toggleInfo(mode)}
+          >
+            ⓘ
+          </button>
+        </div>
+        {openInfo === mode && <p className="mode-option-info">{t(infoKey)}</p>}
+      </div>
+    );
+  }
+
   return (
     <div className="setup-inline">
       <div className="modal">
+        <p className="screen-app-title">{t('app.title')}</p>
         <div className="screen-heading-row">
           <h2>{t('modeSelect.heading')}</h2>
           <LanguageToggle />
         </div>
         <div className="mode-select-options">
-          <button className="action-btn" onClick={() => onChoose('vs-computer')}>
-            {t('modeSelect.singlePlayer')}
-          </button>
-          <button className="action-btn" onClick={() => onChoose('hotseat')}>
-            {t('modeSelect.multiLocal')}
-          </button>
-          <button className="action-btn" onClick={() => onChoose('online')}>
-            {t('modeSelect.multiOnline')}
-          </button>
-          {devModeVisible && (
-            <button className="action-btn" onClick={() => onChoose('develop-test')}>
-              {t('modeSelect.developTest')}
-            </button>
-          )}
+          {renderOption('vs-computer', 'modeSelect.singlePlayer', 'modeSelect.info.singlePlayer')}
+          {renderOption('hotseat', 'modeSelect.multiLocal', 'modeSelect.info.multiLocal')}
+          {renderOption('online', 'modeSelect.multiOnline', 'modeSelect.info.multiOnline')}
+          {devModeVisible && renderOption('develop-test', 'modeSelect.developTest', 'modeSelect.info.developTest')}
         </div>
         <AccountControls />
       </div>

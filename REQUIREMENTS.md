@@ -1230,6 +1230,21 @@ Resolved during requirements gathering:
   Continue playing with other players." — states the outcome and next step directly rather than
   posing it as a question, since the Continue button is the only available action either way.
 
+- **Mode select screen reworked** (§11): gained the same "Chowka Bhara" app title above its heading
+  that other screens already carry (this one was missing it). Each option button now has a small
+  circular ⓘ button beside it; clicking one expands a short plain-language description of that
+  mode below its row (at most one open at a time) — what it actually is, and what the players'
+  experience is like, e.g. "2 to 4 players take turns sharing this one device..." for hotseat.
+  The option buttons themselves are no longer stretched to the modal's full width: the options
+  column is now sized to fit-content (shrink-wraps to its widest child) and centered via
+  `margin: auto`, with the default flex `align-items: stretch` then making every option row (and
+  so every label button, via `flex: 1` against the fixed-width info button) match that same width
+  — the width of the longest label, "Multiple Players (on a single device)" — without measuring
+  text in JS. Labels are left-aligned (`<button>`'s own UA default centers text) since they no
+  longer fill a much-wider-than-needed button. The info button is pinned to `align-self: center`
+  so it stays a fixed 32px circle rather than stretching into an oval on narrow screens where a
+  label wraps to two lines.
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has
