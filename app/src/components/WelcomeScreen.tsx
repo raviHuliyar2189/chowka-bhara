@@ -5,7 +5,7 @@ interface Props {
   onDone: () => void;
 }
 
-const DISPLAY_MS = 5000;
+const DISPLAY_MS = 3000;
 
 export default function WelcomeScreen({ onDone }: Props) {
   useEffect(() => {

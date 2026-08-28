@@ -1294,6 +1294,18 @@ Resolved during requirements gathering:
   driven) and the online server (server-driven) alike, so this was a one-line rename plus updating
   the mode-select info panel's own prose mention of the name.
 
+- **Welcome splash shortened to 3s (was 5s), loading screen reworded** (§11): `WelcomeScreen`'s
+  fixed display timer cut from 5000ms to 3000ms. The auth-check "Loading…" screen right after it
+  (`AuthGate`, waiting on `fetchMe()`) now shows the app title plus "Chowka Bhara is loading… It
+  may take a few seconds." instead of a bare "Loading…" — reassures a returning visitor (one with
+  a saved token, so this screen actually makes a network call) that something is happening rather
+  than reading as stuck. **Flagged, not fixed**: the underlying slowness this responds to is almost
+  certainly Render's free-tier cold start (the backend service spins down after ~15 minutes idle
+  and can take 30-60s+ to wake on the next request) — not something a front-end change can shrink
+  to a guaranteed "within 2 seconds." Fixing that for real means either an external keep-alive
+  ping (a scheduled request to `/health` every few minutes to stop it from sleeping) or a paid
+  Render plan; neither attempted here since both are cost/infra decisions, not code ones.
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has

@@ -44,6 +44,7 @@ export default function AuthGate({ onAuthed }: Props) {
     return (
       <div className="setup-inline">
         <div className="modal">
+          <p className="screen-app-title">{t('app.title')}</p>
           <p>{t('auth.loading')}</p>
         </div>
       </div>

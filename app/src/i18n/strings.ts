@@ -31,7 +31,10 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'app.title': { en: 'Chowka Bhara', kn: 'ಚೌಕಾ ಭಾರ' },
 
   // --- Auth (AuthGate / OnlineLogin / NeedsProfile) ---
-  'auth.loading': { en: 'Loading…', kn: 'ಲೋಡ್ ಆಗುತ್ತಿದೆ…' },
+  'auth.loading': {
+    en: 'Chowka Bhara is loading… It may take a few seconds.',
+    kn: 'ಚೌಕಾ ಭಾರ ಲೋಡ್ ಆಗುತ್ತಿದೆ… ಇದಕ್ಕೆ ಕೆಲವು ಸೆಕೆಂಡುಗಳು ಬೇಕಾಗಬಹುದು.',
+  },
   'auth.signInTitle': { en: 'Sign In', kn: 'ಸೈನ್ ಇನ್' },
   'auth.signInPrompt': {
     en: 'Enter WhatsApp number to Sign in...',
