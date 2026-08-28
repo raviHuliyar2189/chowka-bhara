@@ -1415,10 +1415,24 @@ Still open / assumed defaults (flag if any of these are wrong):
   not synced across devices — this is now specifically a hotseat limitation, since online mode has
   real per-account server-side stats (§10), just not yet surfaced in any UI.
 - **No online stats UI yet**: recorded server-side but not shown anywhere in the online screens.
-- **Voice chat still has no TURN server** — seat pairs behind incompatible NATs still won't be able
-  to hear each other at all (the game itself keeps working normally); the difference after the fix
-  above is that this now shows up honestly in the UI (a stuck "connecting" or a ⚠️ + named message)
-  instead of silently looking the same as a working connection.
+- **Voice chat disabled entirely, pending a real fix** (§13): a reported case — voice working fine,
+  then failing mid-call with the internet itself confirmed fine — traced to the same root cause as
+  the incompatible-NAT case below: no TURN server, so once a mid-call network change (WiFi/
+  cellular switch, a backgrounded tab suspended and resumed, etc.) invalidates the connection's
+  original path, there's nothing to fall back to and no ICE-restart logic to renegotiate — it just
+  reports `failed` permanently. Rather than continue shipping a feature that can silently break
+  for reasons that look like the app is broken, the whole thing is switched off at
+  `VOICE_CHAT_ENABLED = false` in `OnlinePlay.tsx` (voice chat setup/join/leave/mute UI and the
+  `VoiceChatManager` connection itself, all gated behind that one constant) until one of:
+  - a TURN server (real ongoing hosting cost), or
+  - ICE-restart handling (free, but only recovers if the new network path is itself stable — won't
+    help the genuinely-incompatible-NAT case below).
+  The implementation itself is untouched and still fully wired up — flipping the constant back to
+  `true` is the entire re-enable, no other code changes needed.
+- **(superseded by the above while voice is off) No TURN server** — seat pairs behind incompatible
+  NATs can't hear each other at all even on an otherwise-stable connection; kept here for when
+  voice is re-enabled, since this is a separate, harder case than the mid-call one above (no
+  network change involved, just fundamentally incompatible NAT types on both ends).
 
 ## 13. Online Multiplayer
 

@@ -27,6 +27,15 @@ import {
 import { useT } from '../i18n/strings';
 import { setChromeHidden } from '../ui/appChrome';
 
+// Disabled at explicit request — voice relies on a STUN-only WebRTC setup with no TURN server
+// (see ICE_SERVERS in voiceChat.ts), so any mid-call network change (WiFi/cellular switch, a
+// backgrounded tab getting suspended and resumed, etc.) permanently breaks the connection with no
+// way to recover, even though the underlying internet connection is fine — a real, reported issue
+// with no cheap fix. Pending: either a TURN server (ongoing hosting cost) or ICE-restart handling
+// (free, but only helps if the new network path is itself stable). The implementation underneath
+// is untouched — flip this back to true once one of those lands, nothing else needs to change.
+const VOICE_CHAT_ENABLED = false;
+
 interface Props {
   gameId: string;
   initialState: GameState;
@@ -131,24 +140,26 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
     }
     socket.on('connect', joinRoom);
 
-    voiceRef.current = new VoiceChatManager(socket, gameId, mySeat, {
-      onRosterChange: setVoiceParticipants,
-      onRemoteStream: (seat, stream) => {
-        setRemoteStreams((prev) => {
-          const next = { ...prev };
-          if (stream) next[seat] = stream;
-          else delete next[seat];
-          return next;
-        });
-      },
-      onPeerConnectionState: (seat, state) => {
-        setPeerConnectionStates((prev) => ({ ...prev, [seat]: state }));
-      },
-      onError: (message) => {
-        setVoiceError(message);
-        setInVoice(false);
-      },
-    });
+    if (VOICE_CHAT_ENABLED) {
+      voiceRef.current = new VoiceChatManager(socket, gameId, mySeat, {
+        onRosterChange: setVoiceParticipants,
+        onRemoteStream: (seat, stream) => {
+          setRemoteStreams((prev) => {
+            const next = { ...prev };
+            if (stream) next[seat] = stream;
+            else delete next[seat];
+            return next;
+          });
+        },
+        onPeerConnectionState: (seat, state) => {
+          setPeerConnectionStates((prev) => ({ ...prev, [seat]: state }));
+        },
+        onError: (message) => {
+          setVoiceError(message);
+          setInVoice(false);
+        },
+      });
+    }
 
     socket.on('game-updated', (state: GameState) => {
       setGame(state);
@@ -397,41 +408,45 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
                   button all belong here per the App Controls consolidation; the connection-failure
                   text below stays outside the (closed-by-default) panel since it's status the
                   player needs to see without an extra tap, same reasoning as the mic icon's own
-                  hover title not being enough on a phone (see the "voice not heard" bug fix). */}
-              <div className="app-controls-row app-controls-voice">
-                {inVoice ? (
-                  <>
-                    <button className="btn-debug-log" onClick={handleLeaveVoice} title={t('voice.leaveTitle')}>
-                      {t('voice.leave')}
+                  hover title not being enough on a phone (see the "voice not heard" bug fix).
+                  Disabled — see VOICE_CHAT_ENABLED's own comment at the top of this file. */}
+              {VOICE_CHAT_ENABLED && (
+                <div className="app-controls-row app-controls-voice">
+                  {inVoice ? (
+                    <>
+                      <button className="btn-debug-log" onClick={handleLeaveVoice} title={t('voice.leaveTitle')}>
+                        {t('voice.leave')}
+                      </button>
+                      <button
+                        className={`btn-sound in-game-sound ${muted ? 'is-off' : 'is-on'}`}
+                        onClick={handleToggleMute}
+                        title={muted ? t('voice.unmuteTitle') : t('voice.muteTitle')}
+                      >
+                        {muted ? t('voice.muted') : t('voice.unmuted')}
+                      </button>
+                    </>
+                  ) : (
+                    <button className="btn-debug-log" onClick={handleJoinVoice} title={t('voice.joinTitle')}>
+                      {t('voice.join')}
                     </button>
-                    <button
-                      className={`btn-sound in-game-sound ${muted ? 'is-off' : 'is-on'}`}
-                      onClick={handleToggleMute}
-                      title={muted ? t('voice.unmuteTitle') : t('voice.muteTitle')}
-                    >
-                      {muted ? t('voice.muted') : t('voice.unmuted')}
+                  )}
+                  {inVoice && audioBlocked && (
+                    <button className="btn-debug-log voice-audio-blocked" onClick={handleEnableAudioPlayback}>
+                      {t('voice.enableAudio')}
                     </button>
-                  </>
-                ) : (
-                  <button className="btn-debug-log" onClick={handleJoinVoice} title={t('voice.joinTitle')}>
-                    {t('voice.join')}
-                  </button>
-                )}
-                {inVoice && audioBlocked && (
-                  <button className="btn-debug-log voice-audio-blocked" onClick={handleEnableAudioPlayback}>
-                    {t('voice.enableAudio')}
-                  </button>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </AppControlsPanel>
           }
         />
-        {voiceError && <p className="online-error">{voiceError}</p>}
+        {VOICE_CHAT_ENABLED && voiceError && <p className="online-error">{voiceError}</p>}
         {/* A hover-only tooltip (the per-player mic icon's title) isn't discoverable on a phone —
             this is the same "voice connection failed" fact as plain, always-visible text instead,
             since this app's players are mostly on mobile (see the "voice not heard" bug this and
             voiceConnectionStates above were both added to fix). */}
-        {inVoice &&
+        {VOICE_CHAT_ENABLED &&
+          inVoice &&
           game.players
             .filter((p) => p.id !== mySeat && peerConnectionStates[p.id] === 'failed')
             .map((p) => (
