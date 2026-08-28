@@ -1288,6 +1288,12 @@ Resolved during requirements gathering:
   what it actually is (playing solo against Indramma, the built-in AI) than the generic "Single
   player."
 
+- **AI opponent renamed "Indramma" → "Indira"**, and mode-select's "Single player" label further
+  reworded to "Play Alone with Computer" (from the earlier "Alone against Computer"). `AI_NAME`
+  lives in one place (`packages/game-core/src/paths.ts`), shared by hotseat/Vs Computer (client-
+  driven) and the online server (server-driven) alike, so this was a one-line rename plus updating
+  the mode-select info panel's own prose mention of the name.
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has

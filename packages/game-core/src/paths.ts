@@ -28,7 +28,7 @@ export const SEATS_BY_COUNT: Record<number, PlayerId[]> = {
 // server (server-driven, no client ever sitting at this seat) can never drift apart on which seat
 // or name means "this is the computer, not a real player."
 export const AI_SEAT: PlayerId = 'P3';
-export const AI_NAME = 'Indramma';
+export const AI_NAME = 'Indira';
 
 // P1's 25-step path: index 0 = home, 1-15 = outer ring, 16-23 = inner ring, 24 = center.
 const P1_PATH: Coord[] = [

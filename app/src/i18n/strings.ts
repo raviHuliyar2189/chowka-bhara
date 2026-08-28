@@ -61,7 +61,7 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
 
   // --- Mode select ---
   'modeSelect.heading': { en: 'How do you want to play?', kn: 'ಹೇಗೆ ಆಡಬೇಕೆಂದಿದ್ದೀರಿ?' },
-  'modeSelect.singlePlayer': { en: '🤖 Alone against Computer', kn: '🤖 ಕಂಪ್ಯೂಟರ್ ವಿರುದ್ಧ ಒಬ್ಬಂಟಿಯಾಗಿ' },
+  'modeSelect.singlePlayer': { en: '🤖 Play Alone with Computer', kn: '🤖 ಕಂಪ್ಯೂಟರ್ ಜೊತೆ ಒಬ್ಬಂಟಿಯಾಗಿ ಆಡಿ' },
   'modeSelect.multiLocal': {
     en: '📱 Multiple Players (on a single device)',
     kn: '📱 ಅನೇಕ ಆಟಗಾರರು (ಒಂದೇ ಸಾಧನದಲ್ಲಿ)',
@@ -70,8 +70,8 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'modeSelect.developTest': { en: '🛠️ Developer Mode', kn: '🛠️ ಡೆವಲಪರ್ ಮೋಡ್' },
   'modeSelect.infoLabel': { en: 'More info', kn: 'ಹೆಚ್ಚಿನ ಮಾಹಿತಿ' },
   'modeSelect.info.singlePlayer': {
-    en: 'Play alone on this device against Indramma, the built-in computer opponent. A quick way to play or practice the rules without needing anyone else.',
-    kn: 'ಈ ಸಾಧನದಲ್ಲಿ ಒಬ್ಬರೇ, ಅಂತರ್ನಿರ್ಮಿತ ಕಂಪ್ಯೂಟರ್ ಎದುರಾಳಿ ಇಂದಿರತ್ತೆ ವಿರುದ್ಧ ಆಡಿ. ಬೇರೆಯವರ ಅಗತ್ಯವಿಲ್ಲದೆ ಬೇಗ ಆಡಲು ಅಥವಾ ನಿಯಮಗಳನ್ನು ಅಭ್ಯಾಸ ಮಾಡಲು ಸೂಕ್ತ.',
+    en: 'Play alone on this device against Indira, the built-in computer opponent. A quick way to play or practice the rules without needing anyone else.',
+    kn: 'ಈ ಸಾಧನದಲ್ಲಿ ಒಬ್ಬರೇ, ಅಂತರ್ನಿರ್ಮಿತ ಕಂಪ್ಯೂಟರ್ ಎದುರಾಳಿ ಇಂದಿರಾ ವಿರುದ್ಧ ಆಡಿ. ಬೇರೆಯವರ ಅಗತ್ಯವಿಲ್ಲದೆ ಬೇಗ ಆಡಲು ಅಥವಾ ನಿಯಮಗಳನ್ನು ಅಭ್ಯಾಸ ಮಾಡಲು ಸೂಕ್ತ.',
   },
   'modeSelect.info.multiLocal': {
     en: '2 to 4 players take turns sharing this one device, passing it around after each turn. Everyone needs to be in the same place.',
