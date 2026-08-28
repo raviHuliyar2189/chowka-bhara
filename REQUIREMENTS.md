@@ -1306,6 +1306,12 @@ Resolved during requirements gathering:
   ping (a scheduled request to `/health` every few minutes to stop it from sleeping) or a paid
   Render plan; neither attempted here since both are cost/infra decisions, not code ones.
 
+- **Mode select's two multiplayer labels reworded** (§11): "Multiple Players (on a single device)"
+  → "Play with Multiple Players on this device locally"; "Multiple Players (Online)" → "Play with
+  Multiple Players on their devices over Internet". Longer than before and the online one now
+  wraps to two lines inside the fixed-width options column — harmless given the info button's
+  `align-self: center` fix already keeps it a circle regardless of row height.
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has
