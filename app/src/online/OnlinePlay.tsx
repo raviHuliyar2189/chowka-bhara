@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { connectSocket } from './socket';
-import { rematchGame, fetchGame } from './api';
+import { rematchGame, fetchGame, fetchGameStats } from './api';
+import { EMPTY_STATS, type PlayerStats } from '../game/storage';
 import { VoiceChatManager } from './voiceChat';
 import type { GameState } from '../game/turnEngine';
 import { moverOfLastMove } from '../game/turnEngine';
@@ -13,6 +14,7 @@ import DiceTray from '../components/DiceTray';
 import AppControlsPanel from '../components/AppControlsMenu';
 import ReportBugModal from '../components/ReportBugModal';
 import ResignModal from '../components/ResignModal';
+import StatsModal from '../components/StatsModal';
 import {
   announceRoll,
   announceTurnStart,
@@ -57,6 +59,12 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
   const [hint, setHint] = useState<{ text: string; key: number } | null>(null);
   const [soundOn, setSoundOn] = useState(true);
   const [showReportBug, setShowReportBug] = useState(false);
+  // This game's seated players' lifetime stats, keyed by seat — fetched once on mount (the
+  // participant list is fixed for the whole game) so it's ready both for the game-over screen's
+  // summary table and for clicking any player's name on the live board, same as hotseat/vs-computer
+  // already offer via StatsModal, just backed by the server's player_stats instead of localStorage.
+  const [gameStats, setGameStats] = useState<Record<PlayerId, PlayerStats>>({} as Record<PlayerId, PlayerStats>);
+  const [statsFor, setStatsFor] = useState<{ name: string; seat: PlayerId } | null>(null);
   // Purely informational — resigning is unconditional (the resigning player is already out by the
   // time the server's resign:notice broadcast arrives), same as hotseat's own copy of this state.
   const [resignedPlayerName, setResignedPlayerName] = useState<string | null>(null);
@@ -216,6 +224,25 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [gameId]);
+
+  useEffect(() => {
+    fetchGameStats(gameId)
+      .then(setGameStats)
+      .catch(() => {});
+  }, [gameId]);
+
+  // Re-fetches once the game actually ends, so the game-over screen's own Lifetime Stats table
+  // includes THIS game's just-recorded result (not just wherever things stood at mount) — matches
+  // hotseat's own ResultsModal, which likewise reads stats already updated by the game that just
+  // finished. Safe to fetch immediately on seeing 'game-over': the server's recordGameFinished
+  // (server/src/realtime/gameplay.ts's applyAndBroadcast) is awaited before the game-updated
+  // broadcast this phase change came from is even sent, so the row is already written by now.
+  useEffect(() => {
+    if (game.phase !== 'game-over') return;
+    fetchGameStats(gameId)
+      .then(setGameStats)
+      .catch(() => {});
+  }, [gameId, game.phase]);
 
   useEffect(() => {
     if (!hint) return;
@@ -382,6 +409,49 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
               </li>
             ))}
           </ol>
+
+          {/* Lifetime stats (fetched once on mount — see the gameStats effect above), not just
+             this one game's placement — at explicit request: the resign/game-over screen used to
+             show only who won/lost with no career context, unlike hotseat's own ResultsModal. */}
+          <h3>{t('results.lifetimeStats')}</h3>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>{t('results.player')}</th>
+                  <th>{t('results.games')}</th>
+                  <th>{t('results.firstWinPct')}</th>
+                  <th>{t('results.secondWinPct')}</th>
+                  <th>{t('results.thirdWinPct')}</th>
+                  <th>{t('results.lossPct')}</th>
+                  <th>{t('results.resignedPct')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {placements.map((p) => {
+                  const seat = p.playerId as PlayerId;
+                  const s: PlayerStats = { ...EMPTY_STATS, ...gameStats[seat] };
+                  const g = s.games || 1;
+                  return (
+                    <tr key={p.playerId}>
+                      <td>
+                        <span className="player-link" onClick={() => setStatsFor({ name: p.name, seat })}>
+                          {p.name}
+                        </span>
+                      </td>
+                      <td>{s.games}</td>
+                      <td>{((s.first / g) * 100).toFixed(0)}%</td>
+                      <td>{((s.second / g) * 100).toFixed(0)}%</td>
+                      <td>{((s.third / g) * 100).toFixed(0)}%</td>
+                      <td>{((s.losses / g) * 100).toFixed(0)}%</td>
+                      <td>{((s.resigned / g) * 100).toFixed(0)}%</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
           {rematchError && <p className="online-error">{rematchError}</p>}
           <div className="actions-row">
             <button className="action-btn btn-start" onClick={handleRematch} disabled={rematching}>
@@ -411,7 +481,7 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
         <Board
           game={game}
           onSelectPiece={handleSelectPiece}
-          onSelectStats={() => {}}
+          onSelectStats={(name, seat) => setStatsFor({ name, seat })}
           onPieceClickedBeforeValue={handlePieceClickedBeforeValue}
           onFormGatti={handleFormGatti}
           viewerSeat={mySeat}
@@ -526,6 +596,9 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
       )}
       {showReportBug && (
         <ReportBugModal mode="online" gameId={gameId} debugLog={game.debugLog} onClose={() => setShowReportBug(false)} />
+      )}
+      {statsFor && (
+        <StatsModal name={statsFor.name} stats={gameStats[statsFor.seat]} onClose={() => setStatsFor(null)} />
       )}
     </div>
   );

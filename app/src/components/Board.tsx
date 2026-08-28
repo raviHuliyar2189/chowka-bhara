@@ -22,7 +22,9 @@ import { useT, type T } from '../i18n/strings';
 interface Props {
   game: GameState;
   onSelectPiece: (pieceId: number) => void;
-  onSelectStats: (name: string) => void;
+  // seat is this player's PlayerId ('P1'..'P4') — online's own stats lookup is keyed by seat, not
+  // name (see OnlinePlay.tsx's use of this); hotseat/vs-computer's handlers just ignore it.
+  onSelectStats: (name: string, seat: PlayerId) => void;
   onPieceClickedBeforeValue: () => void;
   // Gatti-tollu requirement: bonds an eligible tollu (2 of the current player's own pieces sharing
   // an inner-ring cell) into a permanent gatti. Omitted in contexts with no such action available
@@ -442,7 +444,7 @@ export default function Board({
           p.hasDeclined ? ' declined' : p.hasLost ? ' lost' : ''
         }`}
         style={{ background: p.color }}
-        onClick={() => onSelectStats(p.name)}
+        onClick={() => onSelectStats(p.name, p.id)}
         title={title}
       >
         {connectedSeats && (

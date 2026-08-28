@@ -1640,11 +1640,15 @@ th {
   }
 
   /* Board above play-area instead of side by side — there's no room for both at full width on
-     a phone screen. */
+     a phone screen. margin-top clears room for .home-label.side-top (P1/P3's label, positioned
+     *above* the board's own top edge via a negative offset — see its own rule) to render fully:
+     without it, the label sits right at the viewport's top edge and gets clipped by the browser's
+     own address bar on some phones, a real reported case. */
   .container {
     flex-direction: column;
     align-items: center;
     gap: 14px;
+    margin-top: 20px;
   }
 
   /* Labels sit much closer to the board on phones (small fixed offset instead of the desktop's
@@ -1733,6 +1737,15 @@ th {
   .dice-idle-figure {
     width: 80px;
     height: 150px;
+  }
+
+  /* Scaled down to match — the scatter math positions each die's top-left corner up to ~80% of
+     the box's own width/height from center (see DiceTray.tsx's scatterStyle), so the desktop
+     24x30px size (sized for the much wider 200x200 box) could poke past this narrower box's own
+     edge; a real reported case. Kept the same ~4:5 aspect ratio. */
+  .die {
+    width: 16px;
+    height: 20px;
   }
 
   .btn-roll {

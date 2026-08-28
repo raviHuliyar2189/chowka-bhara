@@ -1515,18 +1515,48 @@ Resolved during requirements gathering:
   new `bug_reports` table (migration `009_bug_reports.sql`: reporter, mode, an optional `game_id`
   — only online has a server-side game row to attach it to, every other mode always sends null —
   observation/expected/suggestion, and the debug log joined into one text column) plus an
-  authenticated `POST /bug-reports` route. `ReportBugModal.tsx`'s existing "Report Bug Details"
-  button still collates the same text for the player's own copy/paste use (the modal was originally
-  built for pasting into Claude directly — see `bug.copyPrompt`'s own wording, unchanged), but now
-  also submits it in parallel, showing a Sending/Sent/failed-please-copy-instead status above the
-  collated text. Verified end-to-end: the submitted row was confirmed present in the database with
-  the correct reporter, mode, and debug log.
+  authenticated `POST /bug-reports` route. `ReportBugModal.tsx`'s "Report Bug Details" button now
+  submits straight to the backend instead of just collating text locally. On success, the form is
+  replaced by a plain "Sent — thank you for the report!" plus a Close button (at explicit request:
+  since submission is automatic now, there's nothing left for the player to do or copy) — the
+  collated text and Copy to Clipboard button only reappear if the submission actually fails, as a
+  manual fallback so the report isn't lost entirely. Verified end-to-end (including against the
+  live production backend): submitted rows are confirmed present in the database with the correct
+  reporter, mode, and debug log.
+- **P1/P3's home-label was clipped by the phone's own browser chrome** (§11, a reported case —
+  Player 3's name/status unreadable, cut off right at the top of the screen): `.home-label.side-top`
+  is positioned *above* the board's own top edge via a negative offset (see its own rule), which
+  left it almost no clearance when `.container` sat right at the viewport's top with only the
+  page's own 8px padding — some phones' address bars then physically overlapped it. `.container`
+  gained `margin-top: 20px` on phones to give that label room to render fully.
+- **Dice could render larger than the (phone-width) throwing area box, poking past its edge**
+  (§11, a reported case, screenshot-confirmed): the scatter algorithm (`DiceTray.tsx`'s
+  `scatterStyle`) positions each die's top-left corner up to ~80% of the box's own width/height
+  from center — fine against the desktop 200×200 box, but the fixed 24×30px `.die` size (unchanged
+  since before the box narrowed for phones) could exceed the phone-width box's own remaining
+  margin at that offset. `.die` shrinks to 16×20px (same ~4:5 aspect ratio) in the phone media
+  query, confirmed via screenshot to now stay inside the box after a real roll.
+- **Online's game-over screen gained a Lifetime Stats table** (§13, a reported gap: after a
+  resignation, online only ever showed this one game's placement — "how won and lost" — with no
+  career context, unlike hotseat's own `ResultsModal`): a new `GET /games/:id/stats` route (any of
+  this game's own participants only, not open to any signed-in player like the lobby GET) returns
+  every seated player's `player_stats` row keyed by seat (`'P1'`..`'P4'`) rather than player id, so
+  the client can look a row up directly from `GameState.players[].id` with no extra name/id
+  mapping — a player with no row yet (never finished a game) is simply absent, same "missing means
+  EMPTY_STATS" convention `StatsModal.tsx`/`ResultsModal.tsx` already use for hotseat. `OnlinePlay.tsx`
+  fetches this once on mount (so clicking any player's name mid-game — `Board.tsx`'s `onSelectStats`,
+  previously wired to a no-op in this mode — now opens the same `StatsModal.tsx` hotseat/vs-computer
+  already use) and again the moment `game.phase` becomes `'game-over'`, since the server's own
+  `recordGameFinished` (awaited before that phase's `game-updated` broadcast is even sent) has
+  already updated the row by then — confirmed via a scripted resign: the table's numbers went from
+  0 games each (pre-game) to 1 each with the correct win/loss split (post-game) once refetched.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has
-  real per-account server-side stats (§10), just not yet surfaced in any UI.
-- **No online stats UI yet**: recorded server-side but not shown anywhere in the online screens.
+  real per-account server-side stats (§10), now surfaced on the game-over screen and via clicking
+  any player's name mid-game (see the Decisions log entry below) — just not yet in any standalone
+  "my stats" screen outside an actual game.
 - **Voice chat disabled entirely, pending a real fix** (§13): a reported case — voice working fine,
   then failing mid-call with the internet itself confirmed fine — traced to the same root cause as
   the incompatible-NAT case below: no TURN server, so once a mid-call network change (WiFi/

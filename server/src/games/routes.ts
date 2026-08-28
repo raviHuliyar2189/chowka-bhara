@@ -126,6 +126,52 @@ gamesRouter.get('/games/:id', async (req, res) => {
   res.json({ game: lobby });
 });
 
+// GET /games/:id/stats — every seated player's lifetime stats, keyed by seat ('P1'..'P4') rather
+// than player id so the client can look a row up directly from GameState.players[].id with no
+// extra name/id mapping. Restricted to this game's own participants (unlike the lobby GET above,
+// which is deliberately open to any signed-in player) since stats are closer to personal data than
+// "who's in this lobby." A player who has never finished a game has no player_stats row at all
+// (only ever inserted by stats.ts's own upsert) — their seat is simply absent from the response,
+// same "missing means EMPTY_STATS" convention StatsModal.tsx/ResultsModal.tsx already use for
+// hotseat's localStorage-backed stats.
+gamesRouter.get('/games/:id/stats', async (req, res) => {
+  const gameId = req.params.id;
+  const participant = await pool.query('select 1 from game_seats where game_id = $1 and player_id = $2', [
+    gameId,
+    req.player!.playerId,
+  ]);
+  if (participant.rows.length === 0) {
+    res.status(403).json({ error: 'Not a participant in this game.' });
+    return;
+  }
+
+  const { rows } = await pool.query(
+    `select gs.seat, ps.games, ps.first, ps.second, ps.third, ps.losses, ps.resigned,
+            ps.games_1p, ps.games_2p, ps.games_3p, ps.games_4p
+     from game_seats gs
+     join player_stats ps on ps.player_id = gs.player_id
+     where gs.game_id = $1`,
+    [gameId]
+  );
+
+  const stats: Record<string, unknown> = {};
+  for (const row of rows) {
+    stats[row.seat as string] = {
+      games: row.games,
+      first: row.first,
+      second: row.second,
+      third: row.third,
+      losses: row.losses,
+      resigned: row.resigned,
+      games1p: row.games_1p,
+      games2p: row.games_2p,
+      games3p: row.games_3p,
+      games4p: row.games_4p,
+    };
+  }
+  res.json({ stats });
+});
+
 // Shared by /join and /decline — claims the next unfilled seat for the caller with the given
 // status. Idempotent if already seated (in either state).
 async function claimNextSeat(gameId: string, playerId: string, status: 'joined' | 'declined') {

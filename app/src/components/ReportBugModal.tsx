@@ -22,10 +22,10 @@ export default function ReportBugModal({ mode, gameId, debugLog, onClose }: Prop
   const [copyLabel, setCopyLabel] = useState<string | null>(null);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
 
-  // Collates the same text the player sees below (for their own copy/paste use) and, in parallel,
-  // sends it to the backend to be saved for later analysis — at explicit request, so a report
-  // survives even if the player never gets around to pasting/sending it anywhere themselves.
-  function handleCollate() {
+  // Sends straight to the backend now (see api.ts's submitBugReport) — the collated text below is
+  // only ever shown again if that submission fails, as a copy/paste fallback; on success there's
+  // nothing left for the player to do, so a plain thank-you replaces the form instead.
+  function handleSubmit() {
     const text = [
       t('bug.sectionReport'),
       '',
@@ -64,7 +64,7 @@ export default function ReportBugModal({ mode, gameId, debugLog, onClose }: Prop
     <div className="overlay">
       <div className="modal report-bug-modal">
         <h3>{t('bug.title')}</h3>
-        {collated === null ? (
+        {submitStatus === 'idle' && (
           <>
             <p>{t('bug.observePrompt')}</p>
             <textarea
@@ -92,7 +92,7 @@ export default function ReportBugModal({ mode, gameId, debugLog, onClose }: Prop
               rows={3}
             />
             <div className="report-bug-actions">
-              <button className="action-btn" onClick={handleCollate}>
+              <button className="action-btn" onClick={handleSubmit}>
                 {t('bug.reportDetails')}
               </button>
               <button className="action-btn btn-abort" onClick={onClose}>
@@ -100,13 +100,25 @@ export default function ReportBugModal({ mode, gameId, debugLog, onClose }: Prop
               </button>
             </div>
           </>
-        ) : (
+        )}
+
+        {(submitStatus === 'sending' || submitStatus === 'sent') && (
           <>
-            {submitStatus === 'sending' && <p className="bug-submit-status">{t('bug.submitting')}</p>}
-            {submitStatus === 'sent' && <p className="bug-submit-status bug-submit-ok">{t('bug.submitted')}</p>}
-            {submitStatus === 'failed' && <p className="bug-submit-status bug-submit-error">{t('bug.submitFailed')}</p>}
-            <p>{t('bug.copyPrompt')}</p>
-            <textarea className="report-bug-textarea" value={collated} readOnly rows={14} />
+            <p className="bug-submit-status bug-submit-ok">
+              {submitStatus === 'sending' ? t('bug.submitting') : t('bug.submitted')}
+            </p>
+            <div className="report-bug-actions">
+              <button className="action-btn btn-abort" onClick={onClose}>
+                {t('bug.close')}
+              </button>
+            </div>
+          </>
+        )}
+
+        {submitStatus === 'failed' && (
+          <>
+            <p className="bug-submit-status bug-submit-error">{t('bug.submitFailed')}</p>
+            <textarea className="report-bug-textarea" value={collated ?? ''} readOnly rows={14} />
             <div className="report-bug-actions">
               <button className="action-btn" onClick={handleCopy}>
                 {copyLabel ?? t('bug.copyToClipboard')}

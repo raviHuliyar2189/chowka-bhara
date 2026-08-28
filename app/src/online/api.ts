@@ -1,4 +1,6 @@
 import type { GameState } from '../game/turnEngine';
+import type { PlayerStats } from '../game/storage';
+import type { PlayerId } from '../game/paths';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
@@ -154,6 +156,16 @@ export function startGame(gameId: string): Promise<GameState> {
 
 export function rematchGame(gameId: string): Promise<GameState> {
   return request<{ game: GameState }>(`/games/${gameId}/rematch`, { method: 'POST' }).then((r) => r.game);
+}
+
+// Lifetime stats for every seated player in this game, keyed by seat ('P1'..'P4') — see the
+// server route's own comment for why keyed by seat rather than player id (matches
+// GameState.players[].id directly, no separate name/id mapping needed on this side). A player
+// with no player_stats row yet (never finished a game) is simply absent from the result — callers
+// should fall back to EMPTY_STATS the same way StatsModal.tsx/ResultsModal.tsx already do for
+// hotseat's own localStorage-backed stats.
+export function fetchGameStats(gameId: string): Promise<Record<PlayerId, PlayerStats>> {
+  return request<{ stats: Record<PlayerId, PlayerStats> }>(`/games/${gameId}/stats`).then((r) => r.stats);
 }
 
 export interface BugReportPayload {
