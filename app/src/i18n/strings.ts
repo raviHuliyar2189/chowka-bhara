@@ -80,8 +80,8 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
     kn: 'ಈ ಸಾಧನದಲ್ಲಿ ಒಬ್ಬರೇ, ಅಂತರ್ನಿರ್ಮಿತ ಕಂಪ್ಯೂಟರ್ ಆಟಗಾರ ಇಂದಿರಾ ವಿರುದ್ಧ ಆಡಿ. ಬೇರೆಯವರ ಅಗತ್ಯವಿಲ್ಲದೆ ಬೇಗ ಆಡಲು ಅಥವಾ ನಿಯಮಗಳನ್ನು ಅಭ್ಯಾಸ ಮಾಡಲು ಸೂಕ್ತ.',
   },
   'modeSelect.info.multiLocal': {
-    en: '2 to 4 players take turns sharing this one device, passing it around after each turn. Everyone needs to be in the same place.',
-    kn: '2 ರಿಂದ 4 ಆಟಗಾರರು ಈ ಒಂದೇ ಸಾಧನವನ್ನು ಸರದಿಯಂತೆ ಬಳಸುತ್ತಾರೆ, ಪ್ರತಿ ಸರದಿಯ ನಂತರ ಅದನ್ನು ಮುಂದಿನವರಿಗೆ ಹಸ್ತಾಂತರಿಸುತ್ತಾರೆ. ಎಲ್ಲರೂ ಒಂದೇ ಸ್ಥಳದಲ್ಲಿರಬೇಕು.',
+    en: '2 to 4 players are in the same place/room. Each player takes turns sharing this device, passing it around after each turn to play.',
+    kn: '2 ರಿಂದ 4 ಆಟಗಾರರು ಒಂದೇ ಸ್ಥಳ/ಕೋಣೆಯಲ್ಲಿ ಇರುತ್ತಾರೆ. ಪ್ರತಿ ಆಟಗಾರ ಈ ಸಾಧನವನ್ನು ಸರದಿಯಂತೆ ಬಳಸುತ್ತಾರೆ, ಪ್ರತಿ ಸರದಿಯ ನಂತರ ಆಡಲು ಅದನ್ನು ಮುಂದಿನವರಿಗೆ ಹಸ್ತಾಂತರಿಸುತ್ತಾರೆ.',
   },
   'modeSelect.info.multiOnline': {
     en: 'Play with friends or family on their own devices, wherever they are. Start a game and invite others over WhatsApp — everyone sees moves update live.',
