@@ -46,14 +46,11 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart }: Props)
   // triggers it can in principle re-run (StrictMode double-invoke, a fast gameId/me.id change).
   const autoOpenedRef = useRef(false);
 
-  // Single source of truth for the invite link/text, used both by the auto-open below and the
-  // manual "Share on WhatsApp" button in the render — invitee selection happens entirely inside
-  // WhatsApp's own picker (one or more contacts/groups), not in this app.
+  // Builds the invite text/link for the auto-opened WhatsApp share below — invitee selection
+  // happens entirely inside WhatsApp's own picker (one or more contacts/groups), not in this app.
   function whatsappLinkFor(state: LobbyState): string {
     const link = `${window.location.origin}/games/${gameId}`;
-    const joined =
-      state.seats.filter((s) => s.status === 'joined').map((s) => s.displayName).join(', ') || t('lobby.noOneYet');
-    const text = encodeURIComponent(t('lobby.whatsappText', state.createdByName, state.seatCount, joined, link));
+    const text = encodeURIComponent(t('lobby.whatsappText', state.createdByName, state.seatCount, link));
     return `https://wa.me/?text=${text}`;
   }
 

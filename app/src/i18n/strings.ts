@@ -325,10 +325,10 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
     kn: 'ಆಟಕ್ಕೆ ಸೇರಲು ಆಯ್ಕೆ ಮಾಡಿದ ಜನರಿಗೆ ನಾನು WhatsApp ವಿನಂತಿ ಕಳುಹಿಸಿದ್ದೇನೆ. ಅವರು ಸೇರದಿದ್ದರೆ ನೀವು ಅವರಿಗೆ ನೆನಪಿಸಬಹುದು.',
   },
   'lobby.whatsappText': {
-    en: (name: string, seatCount: number, joined: string, link: string) =>
-      `${name} started a Chowka Bhara game for ${seatCount} players. Joined so far: ${joined}. Tap to join: ${link}`,
-    kn: (name: string, seatCount: number, joined: string, link: string) =>
-      `${name} ${seatCount} ಆಟಗಾರರಿಗಾಗಿ ಚೌಕಾ ಭಾರ ಆಟ ಪ್ರಾರಂಭಿಸಿದ್ದಾರೆ. ಈವರೆಗೆ ಸೇರಿದವರು: ${joined}. ಸೇರಲು ಟ್ಯಾಪ್ ಮಾಡಿ: ${link}`,
+    en: (name: string, seatCount: number, link: string) =>
+      `${name} started Chowka Bhara game for ${seatCount} players and inviting you to join\nTap the link to join: ${link}`,
+    kn: (name: string, seatCount: number, link: string) =>
+      `${name} ${seatCount} ಆಟಗಾರರಿಗಾಗಿ ಚೌಕಾ ಭಾರ ಆಟ ಪ್ರಾರಂಭಿಸಿ ನಿಮ್ಮನ್ನು ಸೇರಲು ಆಹ್ವಾನಿಸುತ್ತಿದ್ದಾರೆ\nಸೇರಲು ಲಿಂಕ್ ಟ್ಯಾಪ್ ಮಾಡಿ: ${link}`,
   },
   'lobby.waitingForResponse': {
     en: 'Waiting for other players to join the game…',

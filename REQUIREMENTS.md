@@ -1176,6 +1176,11 @@ Resolved during requirements gathering:
   describing the actual auto-open flow (§13's own requirement) rather than the generic old
   "you'll get a link" phrasing. "Create Game" button → "Start Game" (and its "Creating…" busy state
   → "Starting…" to match).
+- **WhatsApp invite message body reworded** (§13): "<name> started a Chowka Bhara game for <N>
+  players. Joined so far: <names>. Tap to join: <link>" → "<name> started Chowka Bhara game for <N>
+  players and inviting you to join" on its own line, then "Tap the link to join: <link>" on the
+  next — the "Joined so far" clause dropped entirely. `whatsappLinkFor`'s own `joined` names
+  computation removed along with it, now genuinely unused.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
