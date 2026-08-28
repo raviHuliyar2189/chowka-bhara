@@ -70,8 +70,8 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
     kn: '📱 ಈ ಸಾಧನದಲ್ಲಿ ಸ್ಥಳೀಯವಾಗಿ ಅನೇಕ ಆಟಗಾರರೊಂದಿಗೆ ಆಡಿ',
   },
   'modeSelect.multiOnline': {
-    en: '🌐 Play with Multiple Players on their devices over Internet',
-    kn: '🌐 ಇಂಟರ್ನೆಟ್ ಮೂಲಕ ಅವರ ಸಾಧನಗಳಲ್ಲಿ ಅನೇಕ ಆಟಗಾರರೊಂದಿಗೆ ಆಡಿ',
+    en: '🌐 Play with Multiple Players over Internet',
+    kn: '🌐 ಇಂಟರ್ನೆಟ್ ಮೂಲಕ ಅನೇಕ ಆಟಗಾರರೊಂದಿಗೆ ಆಡಿ',
   },
   'modeSelect.developTest': { en: '🛠️ Developer Mode', kn: '🛠️ ಡೆವಲಪರ್ ಮೋಡ್' },
   'modeSelect.infoLabel': { en: 'More info', kn: 'ಹೆಚ್ಚಿನ ಮಾಹಿತಿ' },
