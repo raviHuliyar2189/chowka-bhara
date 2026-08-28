@@ -1164,6 +1164,18 @@ Resolved during requirements gathering:
   otherwise fully-stacked layout, at explicit request — both buttons get `flex: 1` inside a shared
   row wrapper so they split the width evenly, same height/style as before. When Resign isn't
   offered, App Control's own `flex: 1` fills the row alone with no extra conditional needed.
+- **Online setup screen (§13) reworked**: "Set Up Online Game" → "Configure Online Game", with a
+  "Chowka Bhara" title added above it and its language toggle removed entirely (not relocated —
+  same as the waiting room's own treatment, via `setChromeHidden`). Resignation Allowed moved
+  above the divider line (a real game setting, grouped with the other setup fields); the WhatsApp
+  explainer paragraph moved below it (the divider itself moved down with it — `.sound-prompt-plain`
+  drops the border/padding `.sound-prompt` normally carries here specifically, `.online-setup-note`
+  carries it instead), reworded from "You'll get a link to share with the others once the game is
+  created." to "WhatsApp will be opened to select the players from your contacts. After selecting
+  the players, send the WhatsApp message which contains the details required to join the game." —
+  describing the actual auto-open flow (§13's own requirement) rather than the generic old
+  "you'll get a link" phrasing. "Create Game" button → "Start Game" (and its "Creating…" busy state
+  → "Starting…" to match).
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

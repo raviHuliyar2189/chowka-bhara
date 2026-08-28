@@ -188,6 +188,23 @@
   border-top: 1px solid var(--border);
 }
 
+/* Online setup's own Resignation Allowed row moved above the divider (was below) — overrides
+   .sound-prompt's own top border/padding, since the divider moved down to .online-setup-note
+   instead. Other .sound-prompt uses (Vs Computer's own setup screen) are untouched. */
+.sound-prompt-plain {
+  border-top: none;
+  padding-top: 0;
+}
+
+/* The online setup screen's WhatsApp-flow explainer, moved below the divider (was above it) —
+   carries the same divider .sound-prompt used to, now that this is what sits right after it. */
+.online-setup-note {
+  margin-top: 15px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
 .sound-prompt-question {
   color: var(--text-muted);
 }

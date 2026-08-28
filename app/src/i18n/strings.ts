@@ -277,14 +277,14 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'bug.notProvided': { en: '(not provided)', kn: '(ನೀಡಿಲ್ಲ)' },
 
   // --- Online: setup ---
-  'onlineSetup.title': { en: 'Set Up Online Game', kn: 'ಆನ್‌ಲೈನ್ ಆಟ ಸಿದ್ಧಪಡಿಸಿ' },
+  'onlineSetup.title': { en: 'Configure Online Game', kn: 'ಆನ್‌ಲೈನ್ ಆಟ ಕಾನ್ಫಿಗರ್ ಮಾಡಿ' },
   'onlineSetup.linkNote': {
-    en: "You'll get a link to share with the others once the game is created.",
-    kn: 'ಆಟ ರಚಿಸಿದ ನಂತರ ಇತರರೊಂದಿಗೆ ಹಂಚಿಕೊಳ್ಳಲು ನಿಮಗೆ ಲಿಂಕ್ ಸಿಗುತ್ತದೆ.',
+    en: 'WhatsApp will be opened to select the players from your contacts. After selecting the players, send the WhatsApp message which contains the details required to join the game.',
+    kn: 'ಆಟಗಾರರನ್ನು ನಿಮ್ಮ ಸಂಪರ್ಕಗಳಿಂದ ಆಯ್ಕೆಮಾಡಲು WhatsApp ತೆರೆಯಲಾಗುತ್ತದೆ. ಆಟಗಾರರನ್ನು ಆಯ್ಕೆಮಾಡಿದ ನಂತರ, ಆಟಕ್ಕೆ ಸೇರಲು ಅಗತ್ಯವಿರುವ ವಿವರಗಳಿರುವ WhatsApp ಸಂದೇಶವನ್ನು ಕಳುಹಿಸಿ.',
   },
   'onlineSetup.createFailed': { en: 'Could not create the game.', kn: 'ಆಟ ರಚಿಸಲಾಗಲಿಲ್ಲ.' },
-  'onlineSetup.creating': { en: 'Creating…', kn: 'ರಚಿಸಲಾಗುತ್ತಿದೆ…' },
-  'onlineSetup.createGame': { en: 'Create Game', kn: 'ಆಟ ರಚಿಸಿ' },
+  'onlineSetup.creating': { en: 'Starting…', kn: 'ಪ್ರಾರಂಭಿಸಲಾಗುತ್ತಿದೆ…' },
+  'onlineSetup.createGame': { en: 'Start Game', kn: 'ಆಟ ಪ್ರಾರಂಭಿಸಿ' },
 
   // --- Online: lobby ---
   'lobby.aborted': { en: 'This game was aborted.', kn: 'ಈ ಆಟ ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ.' },
