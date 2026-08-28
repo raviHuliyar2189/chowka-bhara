@@ -1616,19 +1616,24 @@ th {
     font-size: 8px;
   }
 
+  /* Play area content shrunk across the board on phones — the board above it already takes a
+     good chunk of a phone screen, so this used to push the total page well past one screenful
+     (measured ~120px of unwanted scroll on a 375x667 viewport before this pass), forcing a scroll
+     to reach the Roll button or Game Controls below. Every reduction here (padding, gaps, the
+     dice circle, button padding) is small on its own but adds up to comfortably fit one screen. */
   .play-area {
     width: 100%;
     max-width: 420px;
     height: auto;
     max-height: none;
     flex: 0 0 auto;
-    padding: 12px;
-    gap: 10px;
+    padding: 6px 8px;
+    gap: 5px;
   }
 
   .announcer {
-    min-height: 36px;
-    padding: 8px 10px;
+    min-height: 24px;
+    padding: 5px 10px;
     font-size: 13px;
   }
 
@@ -1637,7 +1642,7 @@ th {
   .dice-section {
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 5px;
   }
 
   .dice-circle-col {
@@ -1647,27 +1652,35 @@ th {
 
   /* Deliberately no align-items: center override here — .game-controls-col's default stretch
      (see the desktop rule above) is what keeps every button the same full width on mobile too,
-     not just on wide screens. */
+     not just on wide screens. Gap tightened from the desktop 10px — five stacked rows (Roll,
+     Roll Back, Moves, Resign/App Control) at the full gap added up fast on a short screen. */
   .game-controls-col {
     width: 100%;
+    gap: 5px;
   }
 
   .dice-stage {
-    width: 150px;
-    height: 150px;
+    width: 95px;
+    height: 95px;
   }
 
   .dice-idle-figure {
-    width: 100px;
+    width: 65px;
   }
 
   .btn-roll {
     min-width: 130px;
-    padding: 8px 14px;
+    padding: 7px 14px;
   }
 
   .pool-section {
-    padding: 8px 10px;
+    padding: 5px 10px;
+  }
+
+  /* Buttons in Game Controls (Roll/Roll Back/Resign/App Control) — a touch shorter than the
+     desktop 10px 16px so five stacked rows fit without needing to scroll. */
+  .game-controls-col button.action-btn {
+    padding: 7px 14px;
   }
 
   /* Label above input instead of beside it — the desktop's fixed 170px label + 230px input
