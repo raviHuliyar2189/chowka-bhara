@@ -186,16 +186,6 @@ export default function DiceTray({
           </AnimatePresence>
         </div>
 
-        {/* App Controls opens right on top of the dice throw area, at exactly its size (see
-           .app-controls-overlay in App.css — position: absolute; inset: 0 against this column,
-           which .dice-stage alone otherwise fills, so the overlay automatically matches its
-           footprint instead of duplicating pixel dimensions). Content scrolls internally
-           (.app-controls-overlay's own overflow-y) if it doesn't all fit at once. */}
-        {appControlsOpen && (
-          <div className="app-controls-overlay" ref={appControlsOverlayRef}>
-            {appControls}
-          </div>
-        )}
       </div>
 
       {/* "Game controls" (§11's layout pass): Roll the Dice, Roll Back Last Move, Moves still to
@@ -260,6 +250,21 @@ export default function DiceTray({
           </button>
         </div>
       </div>
+
+      {/* App Controls opens covering this whole row (dice throw area + Game Controls), not just
+         the throw area alone — on a narrow phone the throw area's own footprint (an ellipse
+         narrower than the circle it replaces, see .dice-stage's phone-width override) isn't wide
+         enough to hold the panel's rows without them feeling cramped, and Game Controls'
+         own buttons aren't meant to stay usable while this is open anyway. inset: 0 against
+         .dice-section itself (position: relative, see App.css) rather than .dice-circle-col
+         specifically, so this automatically matches the full row's footprint on any screen size
+         with no duplicated pixel dimensions to keep in sync. Content scrolls internally
+         (.app-controls-overlay's own overflow-y) if it doesn't all fit at once. */}
+      {appControlsOpen && (
+        <div className="app-controls-overlay" ref={appControlsOverlayRef}>
+          {appControls}
+        </div>
+      )}
     </div>
   );
 }

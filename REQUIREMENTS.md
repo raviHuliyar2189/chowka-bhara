@@ -1373,6 +1373,25 @@ Resolved during requirements gathering:
   one left to remind, so it's replaced with "Required number of players have joined the game. Start
   the game whenever you're ready."
 
+- **Phone-width dice area back to side-by-side with Game Controls, and now an ellipse** (§11): the
+  original layout pass put the throw area beside Game Controls only on wide-enough screens,
+  reflowing to stacked (circle above the column) on phones since there wasn't room for both side
+  by side at that width — at explicit request, phones now get the side-by-side layout too. The
+  throw area itself becomes a tall ellipse there instead of a circle (`.dice-stage`'s own
+  phone-width override: 100×190 instead of a same-width circle) — narrow enough to fit beside
+  Game Controls' text-heavy buttons, tall enough to use the vertical room a circle at that width
+  would leave empty. `DiceTray.tsx`'s scatter math already positions each die by percentage of
+  `.dice-stage`'s own box, so it spreads across the new elliptical shape with no code change.
+  - **App Controls overlay moved to cover the whole row, not just the throw area**: it used to
+    open sized to `.dice-circle-col`'s own footprint (`position: absolute; inset: 0` against it) —
+    fine when that was a full circle, but the new narrower phone-width ellipse left far too little
+    room for the panel's rows (language/sound/report-bug/sign-out/exit), a real regression this
+    same change introduced and then fixed in the same pass. The overlay div moved out of
+    `.dice-circle-col` to be a direct sibling of it and `.game-controls-col` inside `.dice-section`
+    (now the `position: relative` anchor instead), so `inset: 0` naturally covers the full row on
+    any screen size — also a genuine improvement on desktop, where the panel previously sat
+    cramped into just the circle's ~200px width instead of the play-area's full ~460px.
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has

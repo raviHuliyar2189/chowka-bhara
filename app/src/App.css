@@ -402,13 +402,15 @@ button.app-controls-btn:active:not(:disabled) {
     0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-/* Opens right on top of the dice throw area, at exactly its size — inset: 0 against
-   .dice-circle-col (position: relative, see below), which .dice-stage alone otherwise fills
-   completely, so this automatically matches that area's footprint with no duplicated pixel
-   dimensions to keep in sync (mobile's smaller dice-stage, for instance, needs no override here
-   at all). Not circular like the dice tray itself — a circular settings panel would clip its own
-   text unreadably at the top/bottom — just the same rectangular bounding box and position. Scrolls
-   internally if its content doesn't all fit at this size, rather than overflowing or clipping. */
+/* Opens right on top of the whole dice-section row (throw area + Game Controls) — inset: 0
+   against .dice-section (position: relative, see below), so this automatically matches that row's
+   full footprint with no duplicated pixel dimensions to keep in sync. Used to size against just
+   the throw area's own .dice-circle-col, but a phone-width throw area is now a narrow ellipse (see
+   .dice-stage's own phone override) too small on its own to hold this panel's rows comfortably —
+   covering the full row fixes that on every screen size, not just phones. Not circular/elliptical
+   like the dice tray itself — a panel shaped like the throw area would clip its own text
+   unreadably at the top/bottom — just a plain rectangular bounding box. Scrolls internally if its
+   content doesn't all fit at this size, rather than overflowing or clipping. */
 .app-controls-overlay {
   position: absolute;
   inset: 0;
@@ -1019,9 +1021,12 @@ button.app-controls-btn:active:not(:disabled) {
 /* Just a layout container now — the play-area itself supplies the background, and each piece
    (round throw area, Game Controls) carries its own styling, rather than everything sitting
    inside one more nested card. Side by side (circle | controls) rather than stacked — see
-   .dice-circle-col / .game-controls-col below — matching the playing-screen layout pass; reflows
-   back to stacked on phones (see the max-width: 640px override) where there isn't width for both. */
+   .dice-circle-col / .game-controls-col below — matching the playing-screen layout pass; stays
+   side by side on phones too now (see the max-width: 640px override), just with a narrower throw
+   area. Positioned so .app-controls-overlay's inset: 0 sizes/positions against this whole row
+   (dice area + Game Controls) when App Controls is open — see that rule for why. */
 .dice-section {
+  position: relative;
   display: flex;
   flex-direction: row;
   align-items: flex-start;
@@ -1030,9 +1035,6 @@ button.app-controls-btn:active:not(:disabled) {
 }
 
 .dice-circle-col {
-  /* Positioned so .app-controls-overlay's inset: 0 sizes/positions against this exact box (which
-     .dice-stage alone fills completely) when App Controls is open — see that rule for why. */
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1653,35 +1655,46 @@ th {
     font-size: 13px;
   }
 
-  /* Circle beside Game Controls (see the desktop rule above) doesn't fit a phone's width — back
-     to stacked, same as this layout always was on mobile before the §11 layout pass. */
+  /* Circle beside Game Controls, same as desktop — the §11 layout pass's original phone override
+     stacked these instead, but that cost more total height than sharing a row (the stacked throw
+     area spent its own separate band of vertical space above Game Controls; side by side, it just
+     fills the same band Game Controls' five rows already need, matching their height instead of
+     adding to it). The throw area itself becomes a tall ellipse (see .dice-stage below) rather
+     than a circle, since a circle sized to fit this narrower column width would be too small; an
+     ellipse can use the spare vertical room a circle at that width couldn't. */
   .dice-section {
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
   }
 
   .dice-circle-col {
-    width: 100%;
+    width: auto;
     align-items: center;
   }
 
-  /* Deliberately no align-items: center override here — .game-controls-col's default stretch
-     (see the desktop rule above) is what keeps every button the same full width on mobile too,
-     not just on wide screens. Gap tightened from the desktop 10px — five stacked rows (Roll,
-     Roll Back, Moves, Resign/App Control) at the full gap added up fast on a short screen. */
+  /* No width: 100% override here any more — the base rule's flex: 1 (see the desktop rule above)
+     is what shares the row with .dice-circle-col correctly now that they're side by side again.
+     Gap stays tightened from the desktop 10px — five stacked rows (Roll, Roll Back, Moves,
+     Resign/App Control) at the full gap added up fast on a short screen. */
   .game-controls-col {
-    width: 100%;
     gap: 5px;
   }
 
+  /* A tall ellipse (border-radius: 50% on a non-square box), not a circle — narrower than the
+     circle this replaced so it fits beside Game Controls' text-heavy buttons on a narrow phone,
+     taller to use the vertical room a same-width circle would leave empty and keep the dice
+     comfortably spaced. The scatter math in DiceTray.tsx positions each die by percentage of this
+     box's own width/height, so it automatically spreads across the new elliptical shape without
+     any change there. */
   .dice-stage {
-    width: 95px;
-    height: 95px;
+    width: 100px;
+    height: 190px;
   }
 
   .dice-idle-figure {
-    width: 65px;
+    width: 80px;
+    height: 150px;
   }
 
   .btn-roll {
