@@ -195,6 +195,28 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId]);
 
+  // Mobile browsers can leave a backgrounded tab's socket in limbo (throttled or fully suspended)
+  // without ever firing 'disconnect', so joinRoom's own reconnect-triggered catch-up above never
+  // runs — same class of bug as OnlineLobby.tsx's own copy of this fix (see its comment for the
+  // reported case that prompted it), just here for a live game instead of the waiting room: a
+  // player who alt-tabs away mid-game could otherwise come back to a stale board, having missed
+  // an opponent's move entirely. Re-checking explicitly on every return to this tab, rather than
+  // trusting the socket to notice on its own, closes that gap regardless of why it was backgrounded.
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState !== 'visible') return;
+      const socket = socketRef.current;
+      if (socket && !socket.connected) socket.connect();
+      fetchGame(gameId)
+        .then((fresh) => {
+          if (fresh.state) setGame(fresh.state);
+        })
+        .catch(() => {});
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [gameId]);
+
   useEffect(() => {
     if (!hint) return;
     const timer = setTimeout(() => setHint(null), 2200);

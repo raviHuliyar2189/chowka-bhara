@@ -49,6 +49,13 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart, onExit }
   // Guards the WhatsApp auto-open below to exactly once per mount, even though the effect that
   // triggers it can in principle re-run (StrictMode double-invoke, a fast gameId/me.id change).
   const autoOpenedRef = useRef(false);
+  // Mirrors `phase` for the visibility-change effect below, which needs the *current* phase
+  // without itself being an effect dependency (re-subscribing on every phase change would be
+  // wasteful and racy around the exact moment phase flips).
+  const phaseRef = useRef<Phase>('loading');
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
 
   // Builds the invite text/link for the auto-opened WhatsApp share below — invitee selection
   // happens entirely inside WhatsApp's own picker (one or more contacts/groups), not in this app.
@@ -189,6 +196,29 @@ export default function OnlineLobby({ gameId, me, justCreated, onStart, onExit }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId, me.id]);
+
+  // Mobile browsers can leave a backgrounded tab's socket in limbo (throttled or fully suspended)
+  // without ever firing 'disconnect', so connectAndListen's own reconnect-triggered catch-up above
+  // never runs — a real reported bug: a creator who auto-opened WhatsApp to send the invite (see
+  // the effect above) came back to a waiting room stuck showing the state from before they left,
+  // even though the other player had joined in the meantime. Re-checking explicitly on every
+  // return to this tab, rather than trusting the socket to notice on its own, closes that gap
+  // regardless of why the tab was backgrounded (WhatsApp, phone lock, app switch).
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState !== 'visible' || phaseRef.current !== 'waiting') return;
+      const socket = socketRef.current;
+      if (socket && !socket.connected) socket.connect();
+      fetchGame(gameId)
+        .then((fresh) => {
+          if (fresh.status === 'aborted') setPhase('aborted');
+          else setLobby(fresh);
+        })
+        .catch(() => {});
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [gameId]);
 
   async function handleJoinClick() {
     setError(null);

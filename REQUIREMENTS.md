@@ -1488,6 +1488,19 @@ Resolved during requirements gathering:
   `OnlinePlay`'s own Exit already uses — `OnlineGamePage` now forwards that prop through, where it
   was previously accepted but silently dropped. Confirmed via a scripted 2-player lobby: creator
   cancels after the second player joins, sees the new message, clicks through to Mode Select.
+- **Re-sync lobby/game state on returning to a backgrounded tab** (§13, a reported bug: a game
+  creator saw a big delay before their waiting room reflected a responder's join): the existing
+  reconnect-triggered catch-up fetch (`connectAndListen`/`joinRoom`'s own `fetchGame` call on the
+  socket's `'connect'` event) only runs if the socket actually drops and reconnects, but a mobile
+  browser can leave a backgrounded tab's socket in limbo — throttled or fully suspended — without
+  ever firing `'disconnect'`, especially right as `OnlineLobby`'s own WhatsApp auto-open backgrounds
+  the creator's tab moments after they arrive. Both `OnlineLobby.tsx` and `OnlinePlay.tsx` now also
+  listen for the page's `visibilitychange` event and, on returning to `'visible'`, nudge a
+  reconnect if the socket isn't connected and re-fetch the lobby/game regardless — closing the gap
+  regardless of *why* the tab was backgrounded (WhatsApp, phone lock, app switch), not just the
+  socket-drop case the existing fix already covered. Confirmed with a scripted visibility toggle:
+  a join that happened while "hidden" is reflected the moment the tab reports "visible" again, with
+  no reload needed.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
