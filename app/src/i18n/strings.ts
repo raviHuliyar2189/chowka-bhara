@@ -191,6 +191,32 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   // --- App Controls (§11's layout pass) — sound/report-bug/language, rendered directly in the
   // play area (no longer a separate button opening an overlay — removed at explicit request).
   'appControls.language': { en: 'Language', kn: 'ಭಾಷೆ' },
+  // --- Voice commands (push-to-talk, gameplay screens only — see app/src/voice/) ---
+  'voiceCmd.on': { en: 'Voice Cmds: On', kn: 'ಧ್ವನಿ ಆಜ್ಞೆ: ಆನ್' },
+  'voiceCmd.off': { en: 'Voice Cmds: Off', kn: 'ಧ್ವನಿ ಆಜ್ಞೆ: ಆಫ್' },
+  'voiceCmd.toggleOnTitle': { en: 'Turn voice commands off', kn: 'ಧ್ವನಿ ಆಜ್ಞೆಗಳನ್ನು ಆಫ್ ಮಾಡಿ' },
+  'voiceCmd.toggleOffTitle': { en: 'Turn voice commands on', kn: 'ಧ್ವನಿ ಆಜ್ಞೆಗಳನ್ನು ಆನ್ ಮಾಡಿ' },
+  'voiceCmd.pressToTalk': { en: 'Hold to speak a command', kn: 'ಆಜ್ಞೆ ಹೇಳಲು ಒತ್ತಿ ಹಿಡಿಯಿರಿ' },
+  'voiceCmd.listening': { en: 'Listening…', kn: 'ಕೇಳುತ್ತಿದೆ…' },
+  'voiceCmd.notRecognized': { en: "Didn't catch that — try again", kn: 'ಅರ್ಥವಾಗಲಿಲ್ಲ — ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ' },
+  'voiceCmd.notYourTurn': { en: "It's not your turn", kn: 'ಇದು ನಿಮ್ಮ ಸರದಿ ಅಲ್ಲ' },
+  'voiceCmd.valueUnavailable': { en: 'That value is not available right now', kn: 'ಆ ಮೌಲ್ಯ ಈಗ ಲಭ್ಯವಿಲ್ಲ' },
+  'voiceCmd.noSuchPiece': { en: (n: number) => `No piece numbered ${n}`, kn: (n: number) => `${n} ಸಂಖ್ಯೆಯ ಕಾಯಿ ಇಲ್ಲ` },
+  'voiceCmd.pieceNoLegalMove': {
+    en: (n: number) => `Piece ${n} has no legal move`,
+    kn: (n: number) => `ಕಾಯಿ ${n} ಗೆ ಸರಿಯಾದ ನಡೆ ಇಲ್ಲ`,
+  },
+  'voiceCmd.noGattiAvailable': { en: 'No gatti can be formed right now', kn: 'ಈಗ ಗಟ್ಟಿ ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ' },
+  'voiceCmd.resignNotAllowed': { en: 'Resign is not enabled for this game', kn: 'ಈ ಆಟದಲ್ಲಿ ಸಾಕು ಆಟ ಅನುಮತಿ ಇಲ್ಲ' },
+  'voiceCmd.confirmResignPrompt': {
+    en: 'Say it again, or tap Resign Game, to confirm',
+    kn: 'ಖಚಿತಪಡಿಸಲು ಮತ್ತೆ ಹೇಳಿ, ಅಥವಾ ಆಟದಿಂದ ರಾಜೀನಾಮೆ ಒತ್ತಿ',
+  },
+  'voiceCmd.micPermissionDenied': {
+    en: 'Microphone access was denied — allow it in your browser settings to use voice commands.',
+    kn: 'ಮೈಕ್ರೊಫೋನ್ ಪ್ರವೇಶ ನಿರಾಕರಿಸಲಾಗಿದೆ — ಧ್ವನಿ ಆಜ್ಞೆಗಳಿಗಾಗಿ ಬ್ರೌಸರ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಅನುಮತಿಸಿ.',
+  },
+
   // --- Voice chat (online mode only) ---
   'voice.join': { en: '🎙️ Join Voice', kn: '🎙️ ಧ್ವನಿಗೆ ಸೇರಿ' },
   'voice.joinTitle': {

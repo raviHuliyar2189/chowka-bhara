@@ -1400,6 +1400,111 @@
   animation: needsChoicePulse 1.3s ease-in-out infinite;
 }
 
+/* Push-to-talk (app/src/voice/) — a primary gameplay control, not a settings toggle, so it's
+   sized well above a normal action-btn (at explicit request: "big size push to talk button") but
+   below .dice-stage, since the board/dice stay the primary visual anchor. Circular — unlike
+   .dice-stage, this has no scatter-animation reason to avoid a circle. */
+.ptt-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.ptt-button {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  font-size: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #75974f 0%, #5f7d3f 55%, #4f6934 100%);
+  box-shadow:
+    0 4px 0 #3d5327,
+    0 7px 12px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 0.08s ease-out,
+    box-shadow 0.08s ease-out,
+    background 0.15s;
+}
+
+.ptt-button:active {
+  transform: translateY(3px);
+  box-shadow:
+    0 1px 0 #3d5327,
+    0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Pressed and actively recording — an obvious "it's listening" state: red-tinted (distinct from
+   the idle green) plus a pulsing ring so it reads as live, not just a color swap. */
+.ptt-listening {
+  background: linear-gradient(180deg, #c0584a 0%, #96402f 55%, #7d3526 100%);
+  animation: pttPulse 1s ease-in-out infinite;
+}
+
+@keyframes pttPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 4px 0 #5c2419,
+      0 7px 12px rgba(0, 0, 0, 0.35),
+      0 0 0 0 rgba(150, 64, 47, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 4px 0 #5c2419,
+      0 7px 12px rgba(0, 0, 0, 0.35),
+      0 0 0 14px rgba(150, 64, 47, 0);
+  }
+}
+
+.ptt-confirm-resign {
+  background: linear-gradient(180deg, #c0584a 0%, #96402f 55%, #7d3526 100%);
+}
+
+.ptt-unrecognized {
+  animation: pttFlash 0.35s ease-out;
+}
+
+@keyframes pttFlash {
+  0%,
+  100% {
+    box-shadow:
+      0 4px 0 #3d5327,
+      0 7px 12px rgba(0, 0, 0, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 4px 0 #3d5327,
+      0 7px 12px rgba(0, 0, 0, 0.35),
+      0 0 0 6px rgba(150, 64, 47, 0.45);
+  }
+}
+
+.ptt-label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.ptt-feedback {
+  margin: 0;
+  font-size: 13px;
+  color: #96402f;
+  text-align: center;
+  max-width: 260px;
+}
+
+.ptt-confirm-btn {
+  padding: 6px 14px;
+}
+
 /* "Keycap" style: a gradient fill plus a solid-color bottom ledge (the box-shadow's first,
    0-blur layer) reads as physical depth, so the button looks pressable rather than a flat
    colored rectangle. Hover lifts it slightly with a taller shadow; active pushes it down onto
@@ -1824,6 +1929,19 @@ th {
      desktop 10px 16px so five stacked rows fit without needing to scroll. */
   .game-controls-col button.action-btn {
     padding: 7px 14px;
+  }
+
+  /* Smaller than the desktop 96px — still clearly the largest tappable control on the phone
+     screen (the explicit "big button" request), but full size would eat too much of the tight
+     mobile height budget alongside everything else already competing for it. */
+  .ptt-button {
+    width: 64px;
+    height: 64px;
+    font-size: 24px;
+  }
+
+  .ptt-wrap {
+    margin-top: 6px;
   }
 
   /* App Controls' own section (language/sound/report bug) always being visible now, instead of

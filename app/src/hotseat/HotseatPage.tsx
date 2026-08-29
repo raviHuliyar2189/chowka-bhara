@@ -40,6 +40,8 @@ import ResignModal from '../components/ResignModal';
 import ReportBugModal from '../components/ReportBugModal';
 import StatsModal from '../components/StatsModal';
 import ResultsModal from '../components/ResultsModal';
+import PushToTalkButton from '../components/PushToTalkButton';
+import { useVoiceCommands } from '../voice/useVoiceCommands';
 
 const COLORS: Record<PlayerId, string> = {
   P1: '#b03a2e',
@@ -88,6 +90,7 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
   const [showResults, setShowResults] = useState(false);
   const [statsFor, setStatsFor] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
+  const [voiceOn, setVoiceOn] = useState(true);
   const [rollbackEnabled, setRollbackEnabled] = useState(true);
   const [resignAllowed, setResignAllowed] = useState(false);
   // Set only when setup was given exactly 1 human player — that seat (see handleStart) is then
@@ -387,6 +390,22 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
     const resignedNames = game.players.filter((p) => updatedResignedIds.includes(p.id)).map((p) => p.name);
     endGameIfOver(removePlayers(game, [resigningPlayer.id]), resignedNames);
   }
+
+  // Hotseat has no per-device turn gating (whoever's holding the device acts for the current
+  // player), so isMyTurn is always true here — matches DiceTray's own default for this mode.
+  const voice = useVoiceCommands({
+    enabled: voiceOn,
+    game,
+    viewerSeat: game ? game.players[game.currentTurnIndex].id : 'P1',
+    isMyTurn: true,
+    resignAllowed,
+    onRoll: handleRoll,
+    onSelectValue: handleSelectValue,
+    onSelectPiece: handleSelectPiece,
+    onFormGatti: handleFormGatti,
+    onResign: handleResign,
+  });
+
   function handleRematch() {
     if (!game) return;
     setShowResults(false);
@@ -517,7 +536,15 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
               resignAllowed={resignAllowed}
               onResign={handleResign}
             />
-            <AppControlsPanel soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)} />
+            {voice.supported && voiceOn && <PushToTalkButton voice={voice} />}
+            <AppControlsPanel
+              soundOn={soundOn}
+              onToggleSound={toggleSound}
+              onReportBug={() => setShowReportBug(true)}
+              voiceCommandsAvailable={voice.supported}
+              voiceOn={voiceOn}
+              onToggleVoice={() => setVoiceOn((v) => !v)}
+            />
           </div>
         </div>
       )}

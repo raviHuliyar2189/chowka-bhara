@@ -15,6 +15,8 @@ import AppControlsPanel from '../components/AppControlsMenu';
 import ReportBugModal from '../components/ReportBugModal';
 import ResignModal from '../components/ResignModal';
 import StatsModal from '../components/StatsModal';
+import PushToTalkButton from '../components/PushToTalkButton';
+import { useVoiceCommands } from '../voice/useVoiceCommands';
 import {
   announceRoll,
   announceTurnStart,
@@ -58,6 +60,7 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
   const [game, setGame] = useState<GameState>(initialState);
   const [hint, setHint] = useState<{ text: string; key: number } | null>(null);
   const [soundOn, setSoundOn] = useState(true);
+  const [voiceOn, setVoiceOn] = useState(true);
   const [showReportBug, setShowReportBug] = useState(false);
   // This game's seated players' lifetime stats, keyed by seat — fetched once on mount (the
   // participant list is fixed for the whole game) so it's ready both for the game-over screen's
@@ -347,6 +350,23 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
     setIResigned(true);
     socketRef.current?.emit('game:resign', { gameId });
   }
+
+  // Computed here (not reusing the later `isMyTurn` const near the JSX) because this hook must
+  // be called unconditionally on every render, and that later const sits after an early `return`
+  // for the game-over screen — a hook can never be called conditionally relative to that.
+  const voice = useVoiceCommands({
+    enabled: voiceOn,
+    game,
+    viewerSeat: mySeat,
+    isMyTurn: game.players[game.currentTurnIndex].id === mySeat,
+    resignAllowed,
+    onRoll: handleRoll,
+    onSelectValue: handleSelectValue,
+    onSelectPiece: handleSelectPiece,
+    onFormGatti: handleFormGatti,
+    onResign: handleResign,
+  });
+
   async function handleJoinVoice() {
     setVoiceError(null);
     await voiceRef.current?.join();
@@ -515,7 +535,15 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
           resignAllowed={resignAllowed}
           onResign={handleResign}
         />
-        <AppControlsPanel soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)}>
+        {voice.supported && voiceOn && <PushToTalkButton voice={voice} />}
+        <AppControlsPanel
+          soundOn={soundOn}
+          onToggleSound={toggleSound}
+          onReportBug={() => setShowReportBug(true)}
+          voiceCommandsAvailable={voice.supported}
+          voiceOn={voiceOn}
+          onToggleVoice={() => setVoiceOn((v) => !v)}
+        >
           {/* Voice call setup (§13) — join/leave, mute, and the autoplay-blocked recovery button
               all belong here per the App Controls consolidation; the connection-failure text below
               stays outside this section since it's status the player needs to see without

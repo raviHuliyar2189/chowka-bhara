@@ -38,6 +38,8 @@ import ResignModal from '../components/ResignModal';
 import ReportBugModal from '../components/ReportBugModal';
 import StatsModal from '../components/StatsModal';
 import ResultsModal from '../components/ResultsModal';
+import PushToTalkButton from '../components/PushToTalkButton';
+import { useVoiceCommands } from '../voice/useVoiceCommands';
 
 // Always exactly 2 seats, opposite bases, matching the existing 2-player convention. AI_SEAT/
 // AI_NAME are shared with hotseat/Develop Test's own "1 player" option and the online server's
@@ -69,6 +71,7 @@ export default function VsComputerPage() {
   const [showResults, setShowResults] = useState(false);
   const [statsFor, setStatsFor] = useState<string | null>(null);
   const [soundOn, setSoundOn] = useState(true);
+  const [voiceOn, setVoiceOn] = useState(true);
   const [resignAllowed, setResignAllowed] = useState(false);
   // Purely informational — resigning is unconditional, same as hotseat/online's own copy of this
   // state. Gates the results screen the same way OnlinePlay.tsx does, so the notice always shows
@@ -235,6 +238,20 @@ export default function VsComputerPage() {
     endGameIfOver(removePlayers(game, [HUMAN_SEAT]), [human.name]);
   }
 
+  const isHumanTurn = !!game && game.players[game.currentTurnIndex].id === HUMAN_SEAT;
+  const voice = useVoiceCommands({
+    enabled: voiceOn,
+    game,
+    viewerSeat: HUMAN_SEAT,
+    isMyTurn: isHumanTurn,
+    resignAllowed,
+    onRoll: handleRoll,
+    onSelectValue: handleSelectValue,
+    onSelectPiece: handleSelectPiece,
+    onFormGatti: handleFormGatti,
+    onResign: handleResign,
+  });
+
   function handleRematch() {
     if (!game) return;
     setShowResults(false);
@@ -349,11 +366,19 @@ export default function VsComputerPage() {
             onSelectValue={handleSelectValue}
             showRollback={false}
             onRollback={() => {}}
-            isMyTurn={game.players[game.currentTurnIndex].id === HUMAN_SEAT}
+            isMyTurn={isHumanTurn}
             resignAllowed={resignAllowed}
             onResign={handleResign}
           />
-          <AppControlsPanel soundOn={soundOn} onToggleSound={toggleSound} onReportBug={() => setShowReportBug(true)} />
+          {voice.supported && voiceOn && <PushToTalkButton voice={voice} />}
+          <AppControlsPanel
+            soundOn={soundOn}
+            onToggleSound={toggleSound}
+            onReportBug={() => setShowReportBug(true)}
+            voiceCommandsAvailable={voice.supported}
+            voiceOn={voiceOn}
+            onToggleVoice={() => setVoiceOn((v) => !v)}
+          />
         </div>
       </div>
 

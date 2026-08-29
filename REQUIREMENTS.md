@@ -1570,6 +1570,28 @@ Resolved during requirements gathering:
   for invite links" decision; only a same-tab reload after already having seen it skips it now.
   Confirmed both ways: a fresh tab still shows the splash, and Sign Out from Mode Select now lands
   directly on Sign In.
+- **Push-to-talk voice commands added for gameplay** (§11, at explicit request, following a
+  feasibility discussion): a new `app/src/voice/` module (`capability.ts`'s runtime
+  `SpeechRecognition` check, `phrases.ts`'s keyword/regex `matchIntent`, `useVoiceCommands.ts`'s
+  shared hook) plus `PushToTalkButton.tsx`, wired identically into all three gameplay pages
+  (hotseat, vs-computer, online) since they already share the exact same
+  `handleRoll`/`handleSelectValue`/`handleSelectPiece`/`handleFormGatti`/`handleResign` signatures.
+  Deliberately scoped down from the original ask: no NLP (curated English/Kannada phrase and
+  regex matching only), Chrome/Android only (the feature hides entirely — button and toggle both
+  — when `SpeechRecognition` isn't present, rather than showing disabled), push-to-talk rather
+  than always-listening (avoids false triggers from room conversation in hotseat), and gameplay
+  screens only (no conversational Mode Select, no sign-in-screen voice). A recognized "resign"
+  does **not** resign immediately like the physical button does — it enters a `confirm-resign`
+  state (a distinct button color plus an inline "Resign Game" tap button) that only actually
+  resigns on a second spoken "resign" or a tap, and auto-cancels after 4s — decided explicitly
+  since a misheard resign is the one voice command with a hard-to-revert effect. Toggle lives in
+  `AppControlsPanel` next to Sound On/Off (unpersisted, matching Sound's own no-persistence
+  precedent); the button itself sits directly below `DiceTray`, sized well above a normal
+  `action-btn` (the "big button" request) on both desktop and phone. Verified end-to-end with a
+  mocked `SpeechRecognition` (real mic input can't be scripted headlessly): all 5 commands in
+  English and Kannada phrasing across all three modes, the resign confirm/cancel/timeout paths,
+  unrecognized-transcript and mic-permission-denied feedback, and both the toggle and the
+  capability-absent path correctly hiding the button.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
