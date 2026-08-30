@@ -1605,6 +1605,18 @@ Resolved during requirements gathering:
   phrasing is the actual fix rather than a code bug in the original matcher. Verified via a mocked
   recognizer: "peace 1" and "move the piece one" both now correctly move the intended piece, and a
   genuinely garbled transcript now shows the heard text in its feedback.
+- **The transcript-in-feedback fix above didn't actually appear** (§11, immediate follow-up to the
+  bug above): the on-screen text a player was actually hitting turned out to come from a second,
+  separate call site — `useVoiceCommands.ts`'s `recognition.onerror` handler, which shows
+  `voiceCmd.notRecognized` whenever the recognizer errors out *before ever producing a transcript*
+  (network drop, audio capture failure, etc.), as opposed to `handleTranscript`'s own copy (a
+  transcript that didn't match anything) which does have text to show. Split into three distinct,
+  now-diagnostic messages: `voiceCmd.recognitionError` shows the raw `SpeechRecognitionErrorEvent.
+  error` code (e.g. "network", "audio-capture") for anything unexpected, `voiceCmd.noSpeechDetected`
+  covers the specific `'no-speech'` case (previously silent — showed nothing at all), and `'aborted'`
+  (this device's own `release()` calling `stop()` early) still shows nothing, since that's an
+  intentional cancel, not a failure. Verified each of the four distinct feedback paths
+  independently with a mocked recognizer.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

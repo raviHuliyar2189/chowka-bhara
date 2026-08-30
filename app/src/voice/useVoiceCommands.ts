@@ -230,12 +230,19 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
     };
     recognition.onerror = (event) => {
       recognitionRef.current = null;
+      // Distinct from a transcript that didn't match anything (handleTranscript's own
+      // 'unrecognized' case, which does have text to show) — these are the recognizer failing
+      // *before* ever producing a transcript. 'aborted' is release() calling stop() early on
+      // purpose, so it gets no feedback at all — that's an intentional cancel, not a failure.
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
         setStatusBoth('error');
         showFeedback('voiceCmd.micPermissionDenied');
-      } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
+      } else if (event.error === 'no-speech') {
         setStatusBoth('unrecognized');
-        showFeedback('voiceCmd.notRecognized');
+        showFeedback('voiceCmd.noSpeechDetected');
+      } else if (event.error !== 'aborted') {
+        setStatusBoth('unrecognized');
+        showFeedback('voiceCmd.recognitionError', event.error);
       } else {
         setStatusBoth('idle');
       }

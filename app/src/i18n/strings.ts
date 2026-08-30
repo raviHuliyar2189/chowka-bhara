@@ -223,6 +223,15 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
     en: 'Microphone access was denied — allow it in your browser settings to use voice commands.',
     kn: 'ಮೈಕ್ರೊಫೋನ್ ಪ್ರವೇಶ ನಿರಾಕರಿಸಲಾಗಿದೆ — ಧ್ವನಿ ಆಜ್ಞೆಗಳಿಗಾಗಿ ಬ್ರೌಸರ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಅನುಮತಿಸಿ.',
   },
+  // Distinct from voiceCmd.notRecognized (a transcript that didn't match anything) — this is the
+  // recognizer failing before ever producing a transcript at all (network drop, audio capture
+  // issue, etc.). Shows the raw SpeechRecognitionErrorEvent.error code so a recurring failure is
+  // diagnosable instead of looking identical to a simple mismatch.
+  'voiceCmd.recognitionError': {
+    en: (code: string) => `Voice recognition error ("${code}") — try again`,
+    kn: (code: string) => `ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ ದೋಷ ("${code}") — ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ`,
+  },
+  'voiceCmd.noSpeechDetected': { en: "Didn't hear anything — try again", kn: 'ಏನೂ ಕೇಳಿಸಲಿಲ್ಲ — ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ' },
 
   // --- Voice chat (online mode only) ---
   'voice.join': { en: '🎙️ Join Voice', kn: '🎙️ ಧ್ವನಿಗೆ ಸೇರಿ' },
