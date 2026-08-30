@@ -1592,6 +1592,19 @@ Resolved during requirements gathering:
   English and Kannada phrasing across all three modes, the resign confirm/cancel/timeout paths,
   unrecognized-transcript and mic-permission-denied feedback, and both the toggle and the
   capability-absent path correctly hiding the button.
+- **Piece-selection voice commands stopped being recognized after the first few uses** (§11, a
+  reported bug — "roll" kept working every time, but "piece N"/"move piece N" stopped): the
+  "Didn't catch that" feedback (`voiceCmd.notRecognized`) now includes the actual heard transcript
+  in parentheses when there is one, since the on-screen message alone gave no way to tell *why* a
+  command was misrecognized — this is the fix for any future case too, not just this one.
+  `phrases.ts`'s `normalize()` also now converts spelled-out numbers ("one".."four", "eight") to
+  digits before matching (a recognizer transcribing a short isolated number as the word rather
+  than the digit is a documented `SpeechRecognition` quirk), and the piece patterns additionally
+  accept "peace" as a homophone of "piece" and an optional "the" ("move the piece 3") — real
+  speech-recognition drift, not something the app's own logic controls, so widening the accepted
+  phrasing is the actual fix rather than a code bug in the original matcher. Verified via a mocked
+  recognizer: "peace 1" and "move the piece one" both now correctly move the intended piece, and a
+  genuinely garbled transcript now shows the heard text in its feedback.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

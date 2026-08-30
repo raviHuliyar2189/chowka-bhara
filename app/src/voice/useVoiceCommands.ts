@@ -207,7 +207,7 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
       case 'unrecognized':
       default: {
         setStatusBoth('unrecognized');
-        showFeedback('voiceCmd.notRecognized');
+        showFeedback('voiceCmd.notRecognized', rawTranscript.trim() || undefined);
       }
     }
   }

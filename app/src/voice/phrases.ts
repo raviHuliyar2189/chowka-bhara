@@ -13,13 +13,29 @@ export type VoiceIntent =
   | { kind: 'resign' }
   | { kind: 'unrecognized' };
 
+// SpeechRecognition sometimes transcribes a spoken number as the English word rather than a
+// digit (more likely for a short, isolated number than for one embedded in a longer phrase) — a
+// real reported case where digit-only regexes silently missed an otherwise-correct utterance.
+// Converted to digits before matching so every pattern below only ever has to look for \d+.
+const NUMBER_WORDS: Record<string, string> = {
+  one: '1',
+  two: '2',
+  three: '3',
+  four: '4',
+  eight: '8',
+};
+
 function normalize(s: string): string {
-  return s
+  const cleaned = s
     .toLowerCase()
     .normalize('NFKC')
     .replace(/[^\p{L}\p{N}\s]/gu, '')
     .replace(/\s+/g, ' ')
     .trim();
+  return cleaned
+    .split(' ')
+    .map((word) => NUMBER_WORDS[word] ?? word)
+    .join(' ');
 }
 
 // Fixed phrases — substring match. Checked before the numeric patterns below so a fixed phrase
@@ -38,7 +54,17 @@ const VALUE_PATTERNS = [
   /select\s+(?:pool\s+)?(?:value\s+)?(\d+)/,
   /(?:pick|choose)\s+(\d+)/,
 ];
-const PIECE_PATTERNS = [/(\d+)\s*kayi/, /piece\s+(\d+)/, /move\s+piece\s+(\d+)/];
+// "peace" is included as a homophone of "piece" that speech recognizers commonly substitute
+// (a real reported case: "piece"/"move piece" stopped being recognized after the first few
+// tries — homophone drift is a documented SpeechRecognition quirk, not something the app
+// controls). "the" is optional since "move the piece 3" is just as natural to say as "move piece
+// 3". Checked in most-specific-first order for clarity, though substring .match() below doesn't
+// actually require anchoring.
+const PIECE_PATTERNS = [
+  /(\d+)\s*kayi/,
+  /move\s+(?:the\s+)?(?:piece|peace)\s+(\d+)/,
+  /(?:piece|peace)\s+(\d+)/,
+];
 
 export function matchIntent(rawTranscript: string): VoiceIntent {
   const t = normalize(rawTranscript);

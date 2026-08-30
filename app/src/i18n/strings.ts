@@ -198,7 +198,14 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'voiceCmd.toggleOffTitle': { en: 'Turn voice commands on', kn: 'ಧ್ವನಿ ಆಜ್ಞೆಗಳನ್ನು ಆನ್ ಮಾಡಿ' },
   'voiceCmd.pressToTalk': { en: 'Hold to speak a command', kn: 'ಆಜ್ಞೆ ಹೇಳಲು ಒತ್ತಿ ಹಿಡಿಯಿರಿ' },
   'voiceCmd.listening': { en: 'Listening…', kn: 'ಕೇಳುತ್ತಿದೆ…' },
-  'voiceCmd.notRecognized': { en: "Didn't catch that — try again", kn: 'ಅರ್ಥವಾಗಲಿಲ್ಲ — ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ' },
+  // Includes what was actually heard (when there is one) so a mismatch between speech and the
+  // app's phrase list is visible on screen, not just "it didn't work" — a real reported bug
+  // (piece-selection commands silently stopped being recognized) was hard to diagnose without
+  // seeing the raw transcript the recognizer actually produced.
+  'voiceCmd.notRecognized': {
+    en: (heard?: string) => (heard ? `Didn't catch that ("${heard}") — try again` : "Didn't catch that — try again"),
+    kn: (heard?: string) => (heard ? `ಅರ್ಥವಾಗಲಿಲ್ಲ ("${heard}") — ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ` : 'ಅರ್ಥವಾಗಲಿಲ್ಲ — ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ'),
+  },
   'voiceCmd.notYourTurn': { en: "It's not your turn", kn: 'ಇದು ನಿಮ್ಮ ಸರದಿ ಅಲ್ಲ' },
   'voiceCmd.valueUnavailable': { en: 'That value is not available right now', kn: 'ಆ ಮೌಲ್ಯ ಈಗ ಲಭ್ಯವಿಲ್ಲ' },
   'voiceCmd.noSuchPiece': { en: (n: number) => `No piece numbered ${n}`, kn: (n: number) => `${n} ಸಂಖ್ಯೆಯ ಕಾಯಿ ಇಲ್ಲ` },
