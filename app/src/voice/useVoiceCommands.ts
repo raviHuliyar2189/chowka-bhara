@@ -6,7 +6,7 @@ import { useT } from '../i18n/strings';
 import { getLanguage } from '../i18n/language';
 import { announceHint } from '../audio/announcer';
 import { isVoiceCommandsSupported } from './capability';
-import { matchIntent } from './phrases';
+import { matchIntent, type VoiceIntent } from './phrases';
 
 export type VoiceStatus = 'idle' | 'listening' | 'processing' | 'unrecognized' | 'confirm-resign' | 'error';
 
@@ -101,8 +101,24 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
 
   // `game` is narrowed non-null by press() before this is ever wired up as onresult's handler —
   // taken as a parameter (not read from the outer closure) so that narrowing is explicit here too.
-  function handleTranscript(rawTranscript: string, game: GameState) {
-    const intent = matchIntent(rawTranscript);
+  // `transcripts` is every alternative the recognizer offered (see press()'s maxAlternatives),
+  // most-confident first — tried in order, first one that actually matches something wins. This
+  // covers a real reported case where the top guess for a multi-word phrase like "piece 3" came
+  // back empty/garbled while a lower-ranked alternative had the real words.
+  function handleTranscript(transcripts: string[], game: GameState) {
+    let intent: VoiceIntent = { kind: 'unrecognized' };
+    let matchedTranscript = '';
+    for (const t of transcripts) {
+      const candidate = matchIntent(t);
+      if (candidate.kind !== 'unrecognized') {
+        intent = candidate;
+        matchedTranscript = t;
+        break;
+      }
+    }
+    // For diagnostic feedback when nothing matched — show whatever the recognizer's top,
+    // non-empty guess was, even though it didn't match anything.
+    const rawTranscript = matchedTranscript || transcripts.find((t) => t.trim()) || '';
 
     // A pending resign confirmation is resolved by hearing "resign" a second time; hearing
     // anything else cancels the pending confirmation and falls through to handle the new intent
@@ -207,7 +223,14 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
       case 'unrecognized':
       default: {
         setStatusBoth('unrecognized');
-        showFeedback('voiceCmd.notRecognized', rawTranscript.trim() || undefined);
+        // A real reported case: onresult fires (not onerror) but with a genuinely empty
+        // transcript — the recognizer's own best guess was blank rather than raising 'no-speech'.
+        // Without this check it fell into the generic notRecognized(undefined) branch, showing
+        // the same plain "Didn't catch that" as a true recognizer failure with no way to tell the
+        // two apart.
+        const heard = rawTranscript.trim();
+        if (heard) showFeedback('voiceCmd.notRecognized', heard);
+        else showFeedback('voiceCmd.noSpeechDetected');
       }
     }
   }
@@ -221,12 +244,23 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
     recognition.lang = getLanguage() === 'kn' ? 'kn-IN' : 'en-US';
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    // More than one candidate transcript — a real reported case had the recognizer's own top
+    // guess come back empty for a multi-word phrase ("piece 3") while a short one-word phrase
+    // ("roll") kept transcribing fine; checking a few alternatives costs nothing and gives the
+    // matcher a chance at whichever candidate actually has content.
+    recognition.maxAlternatives = 4;
 
     recognition.onresult = (event) => {
-      const transcript = event.results[0]?.[0]?.transcript ?? '';
+      const result = event.results[0];
+      const transcripts: string[] = [];
+      if (result) {
+        for (let i = 0; i < result.length; i++) {
+          const t = result[i]?.transcript;
+          if (t) transcripts.push(t);
+        }
+      }
       setStatusBoth('processing');
-      handleTranscript(transcript, game);
+      handleTranscript(transcripts, game);
     };
     recognition.onerror = (event) => {
       recognitionRef.current = null;

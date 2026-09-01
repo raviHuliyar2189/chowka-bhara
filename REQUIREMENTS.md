@@ -1617,6 +1617,19 @@ Resolved during requirements gathering:
   (this device's own `release()` calling `stop()` early) still shows nothing, since that's an
   intentional cancel, not a failure. Verified each of the four distinct feedback paths
   independently with a mocked recognizer.
+- **Root cause found: "piece 3"/"piece 2" specifically kept coming back with a genuinely empty
+  transcript, while "roll" kept transcribing fine** (§11, direct continuation of the two bugs
+  above): once the diagnostics landed, the actual failure turned out to be neither an error nor a
+  mismatch — `SpeechRecognition`'s own top-ranked guess for the multi-word phrase was blank, a
+  documented low-confidence-result quirk more likely on longer utterances than a short one-word
+  phrase like "roll". Two changes: (1) `handleTranscript`'s empty-string case now shows
+  `voiceCmd.noSpeechDetected` instead of falling through to the generic `voiceCmd.notRecognized`
+  with nothing to display, so this specific case reads clearly instead of looking identical to a
+  real mismatch; (2) `press()` now requests `maxAlternatives = 4` instead of `1`, and
+  `handleTranscript` tries `matchIntent` against every alternative in order (most confident
+  first), not just the top one — the actual fix, since it gives the matcher a real chance at
+  whichever candidate transcript isn't blank. Verified with a mocked recognizer returning an empty
+  top guess and a correct lower-ranked alternative ("piece 3"): the piece now moves correctly.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
