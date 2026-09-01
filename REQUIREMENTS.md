@@ -1637,6 +1637,20 @@ Resolved during requirements gathering:
   are untouched, so re-enabling later is just switching the language choice back to a
   `getLanguage()`-based one, not rebuilding the matcher. Verified: `recognition.lang` stays
   `'en-US'` even with the UI's own language set to Kannada.
+- **A transient arrow shows a piece's move, start cell to end cell** (§11, at explicit request):
+  `Board.tsx` diffs every piece's own position against what it was last render (keyed on
+  `game.actionSeq`, which bumps on every roll or move) and draws a straight gold arrow between the
+  before/after cells for whichever piece's position *increased* — a capture resets the captured
+  piece to 0 in the same update (a decrease, correctly ignored) and a rollback/stuck-pool revert
+  only ever decreases positions too, so neither draws a stray arrow. Implemented once in
+  `Board.tsx` rather than per mode, since hotseat/vs-computer/online all funnel through this one
+  shared component regardless of whether the move came from a local reducer or a server broadcast.
+  Reuses the exact same `rotateCoord`/`rotationSteps` already used for cell/piece placement, so it
+  automatically points the right direction on a rotated (online) viewer's own board, not just the
+  canonical layout. Rendered as an SVG overlay spanning the grid's own tracks (`viewBox="0 0 5 5"`,
+  one unit per cell) rather than computed pixel positions, so it stays aligned regardless of the
+  board's fluid cell size — fades out over 1.6s (`pointer-events: none`, never blocks a click).
+  Verified via screenshot on both hotseat (unrotated) and an online joiner's rotated view.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

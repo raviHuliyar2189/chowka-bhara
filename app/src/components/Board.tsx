@@ -1,4 +1,4 @@
-import type { CSSProperties, DragEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type DragEvent } from 'react';
 import { motion } from 'framer-motion';
 import {
   PATHS,
@@ -187,6 +187,52 @@ export default function Board({
   const colorOf = (id: PlayerId) => game.players.find((p) => p.id === id)?.color;
   const rotationSteps = rotationStepsFor(viewerSeat);
   const placements = computePlacements(game);
+
+  // Move arrow: a transient line from a piece's cell before this action to its cell after, shown
+  // for whichever move (or gatti move — both pieces move together, so the first found suffices)
+  // just happened. Detected by diffing every piece's own position against what it was last render
+  // — this runs identically for every mode (hotseat's local reducer, online's server broadcast),
+  // since Board.tsx only ever sees the resulting GameState either way, never how it got there.
+  // Only an *increase* counts as a move to draw — a capture resets the captured piece to 0 in the
+  // very same update (a decrease, correctly ignored), and a rollback/stuck-pool revert only ever
+  // decreases positions too, so neither ever draws a stray arrow.
+  const [arrow, setArrow] = useState<{ from: Coord; to: Coord; key: number } | null>(null);
+  const prevPositionsRef = useRef<Map<string, number> | null>(null);
+  useEffect(() => {
+    const next = new Map<string, number>();
+    for (const p of game.players) {
+      for (const piece of p.pieces) next.set(`${p.id}-${piece.id}`, piece.pos);
+    }
+    const prev = prevPositionsRef.current;
+    if (prev) {
+      for (const p of game.players) {
+        const moved = p.pieces.find((piece) => {
+          const before = prev.get(`${p.id}-${piece.id}`);
+          return before !== undefined && piece.pos > before;
+        });
+        if (moved) {
+          const before = prev.get(`${p.id}-${moved.id}`)!;
+          const from = rotateCoord(PATHS[p.id][before], rotationSteps);
+          const to = rotateCoord(PATHS[p.id][moved.pos], rotationSteps);
+          setArrow({ from, to, key: Date.now() });
+          break;
+        }
+      }
+    }
+    prevPositionsRef.current = next;
+    // Deliberately keyed on actionSeq (bumps on every roll or move — see turnEngine.ts) rather
+    // than the whole `game` object, which changes identity on every render regardless of whether
+    // anything actually moved.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game.actionSeq]);
+
+  // Same transient-timeout convention as HotseatPage.tsx's own hint/capture-toast state — cleared
+  // by key so a second move arriving before the first one fades doesn't get cancelled early.
+  useEffect(() => {
+    if (!arrow) return;
+    const timer = setTimeout(() => setArrow(null), 1600);
+    return () => clearTimeout(timer);
+  }, [arrow?.key]);
 
   // Shared by every non-editable render unit below (a lone piece, either half of a tollu, or a
   // gatti capsule as a whole) — the same selectability/legality/active-pulse logic that used to
@@ -465,6 +511,23 @@ export default function Board({
   return (
     <div className="board">
       {cells}
+      {arrow && (
+        <svg key={arrow.key} className="move-arrow-overlay" viewBox="0 0 5 5" aria-hidden="true">
+          <defs>
+            <marker id="move-arrowhead" markerWidth="4" markerHeight="4" refX="3.2" refY="2" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L4,2 L0,4 Z" className="move-arrow-head" />
+            </marker>
+          </defs>
+          <line
+            x1={arrow.from[1] + 0.5}
+            y1={arrow.from[0] + 0.5}
+            x2={arrow.to[1] + 0.5}
+            y2={arrow.to[0] + 0.5}
+            className="move-arrow-line"
+            markerEnd="url(#move-arrowhead)"
+          />
+        </svg>
+      )}
       {labels}
     </div>
   );

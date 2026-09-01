@@ -647,6 +647,46 @@
     inset 0 0 0 2px rgba(255, 255, 255, 0.08);
 }
 
+/* A transient line from a piece's cell before a move to its cell after (Board.tsx's own arrow-
+   detection effect) — spans every grid track so its 0-5 viewBox lines up with actual cell
+   centers regardless of the board's own fluid cell size (min(80px, 12vw)), without needing any
+   pixel math. Sits above pieces/cells but never intercepts clicks. */
+.move-arrow-overlay {
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 8;
+  overflow: visible;
+  animation: moveArrowFade 1.6s ease-out forwards;
+}
+
+.move-arrow-line {
+  stroke: var(--gold);
+  stroke-width: 0.09;
+  stroke-linecap: round;
+}
+
+.move-arrow-head {
+  fill: var(--gold);
+}
+
+@keyframes moveArrowFade {
+  0% {
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 /* Player name tags, hung just outside the board edge next to each home square — also a link
    through to that player's statistics. */
 .home-label {
