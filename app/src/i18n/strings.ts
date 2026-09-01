@@ -485,9 +485,8 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   // deliberate pause (see each mode's own "stuck pool" delay) before the turn actually reverts and
   // passes on, so this is visible long enough to actually register, not just an instant flash.
   'banner.noLegalMove': {
-    en: (name: string) => `${name}'s moves this turn are rolled back — not all moves could be made`,
-    kn: (name: string) =>
-      `${name} ಈ ಸರದಿಯ ನಡೆಗಳನ್ನು ಹಿಂತೆಗೆದುಕೊಳ್ಳಲಾಗಿದೆ — ಎಲ್ಲಾ ನಡೆಗಳನ್ನು ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ`,
+    en: (name: string) => `${name} — No move possible`,
+    kn: (name: string) => `${name} — ನಡೆ ಸಾಧ್ಯವಿಲ್ಲ`,
   },
   // rollResult and rollBonus share this exact same form — label alone already distinguishes a
   // bonus roll (dice.ts's label is 'Bhara'/'Chauka' there, a plain number otherwise), so there's
