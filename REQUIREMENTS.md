@@ -1630,6 +1630,13 @@ Resolved during requirements gathering:
   first), not just the top one — the actual fix, since it gives the matcher a real chance at
   whichever candidate transcript isn't blank. Verified with a mocked recognizer returning an empty
   top guess and a correct lower-ranked alternative ("piece 3"): the piece now moves correctly.
+- **Voice commands limited to English only, Kannada deferred** (§11, at explicit request, given
+  the accuracy issues above): `useVoiceCommands.ts`'s `press()` now hardcodes
+  `recognition.lang = 'en-US'` regardless of the app's own language setting, rather than switching
+  to `kn-IN` when the UI is in Kannada. `phrases.ts`'s Kannada/romanized phrase and pattern lists
+  are untouched, so re-enabling later is just switching the language choice back to a
+  `getLanguage()`-based one, not rebuilding the matcher. Verified: `recognition.lang` stays
+  `'en-US'` even with the UI's own language set to Kannada.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

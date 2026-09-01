@@ -3,7 +3,6 @@ import type { GameState } from '../game/turnEngine';
 import type { PlayerId } from '../game/paths';
 import { canFormGatti, canMovePiece } from '../game/rules';
 import { useT } from '../i18n/strings';
-import { getLanguage } from '../i18n/language';
 import { announceHint } from '../audio/announcer';
 import { isVoiceCommandsSupported } from './capability';
 import { matchIntent, type VoiceIntent } from './phrases';
@@ -241,7 +240,12 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
     if (!Ctor) return;
 
     const recognition = new Ctor();
-    recognition.lang = getLanguage() === 'kn' ? 'kn-IN' : 'en-US';
+    // Limited to English only for now, regardless of the app's own language setting — Kannada
+    // recognition (kn-IN) was unreliable enough in practice that it's being deferred rather than
+    // shipped half-working. The phrase lists in phrases.ts still include the Kannada/romanized
+    // variants unchanged, so re-enabling later is just switching this back to a getLanguage()-
+    // based choice, not rebuilding the matcher.
+    recognition.lang = 'en-US';
     recognition.continuous = false;
     recognition.interimResults = false;
     // More than one candidate transcript — a real reported case had the recognizer's own top
