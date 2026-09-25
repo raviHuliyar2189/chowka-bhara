@@ -455,6 +455,13 @@
    the base .btn-sound rule) — only trim the rest to fit this section's tight space budget. */
 .app-controls-section .btn-sound {
   padding: 5px 6px 5px 40px;
+  /* Wide enough for either state's label (Sound On / Muted, Voice Cmds: On / Off) so toggling never
+     changes this button's width — and with it how the row wraps. */
+  min-width: 134px;
+}
+
+.app-controls-section .btn-debug-log {
+  min-width: 100px;
 }
 
 .app-controls-voice .btn-debug-log,
@@ -1453,22 +1460,46 @@
    on its own row. The panel takes whatever width the button leaves (its own buttons wrap, see
    .app-controls-main-row), and both drop their own top margin since this row supplies it. */
 .ptt-controls-row {
-  display: flex;
+  display: grid;
+  /* The same two columns as .dice-section directly above (throw area | Game Controls buttons):
+     the Voice Command button is exactly as wide as the throw area and the settings panel exactly as
+     wide as the buttons beside it, so nothing here can shift when the button's label, a feedback
+     message, or a toggle's text changes — at explicit request, it must not move under any
+     condition. 210px = .dice-stage's 200px + its two 5px borders; the panel is pinned to column 2
+     even when the button isn't rendered (voice toggled off / unsupported). */
+  grid-template-columns: 210px minmax(0, 1fr);
+  column-gap: 16px;
   align-items: stretch;
-  gap: 10px;
   margin-top: 10px;
+  /* The button column's own height (96px button + 6px gap + 64px text slot) — reserved even when
+     the button isn't rendered (Voice toggled off), so the panel's size doesn't change either. */
+  min-height: 166px;
 }
 
 .ptt-controls-row .ptt-wrap {
+  grid-column: 1;
   margin-top: 0;
-  flex-shrink: 0;
+  width: 100%;
   justify-content: center;
 }
 
 .ptt-controls-row .app-controls-section {
-  flex: 1;
+  grid-column: 2;
   min-width: 0;
   margin-top: 0;
+}
+
+/* Reserved for whichever of the state label / feedback message / resign-confirm button is showing
+   — sized for the tallest combination (2 lines of text plus the confirm button) so switching
+   between them never changes this column's height. */
+.ptt-text-slot {
+  width: 100%;
+  height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
 }
 
 .ptt-button {
@@ -1544,6 +1575,15 @@
   }
 }
 
+.ptt-label,
+.ptt-feedback {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  line-height: 1.25;
+}
+
 .ptt-label {
   margin: 0;
   font-size: 13px;
@@ -1557,11 +1597,11 @@
   font-size: 13px;
   color: #96402f;
   text-align: center;
-  max-width: 260px;
 }
 
 .ptt-confirm-btn {
-  padding: 6px 14px;
+  flex-shrink: 0;
+  padding: 4px 14px;
 }
 
 /* "Keycap" style: a gradient fill plus a solid-color bottom ledge (the box-shadow's first,
@@ -2003,9 +2043,23 @@ th {
     margin-top: 6px;
   }
 
+  /* Same two columns as the phone .dice-section: .dice-stage's 100px + 2x5px border, and its 10px gap. */
   .ptt-controls-row {
     margin-top: 6px;
-    gap: 6px;
+    grid-template-columns: 110px minmax(0, 1fr);
+    column-gap: 10px;
+    /* 64px button + 6px gap + 70px text slot, rounded up to the panel's own natural phone height. */
+    min-height: 142px;
+  }
+
+  .ptt-text-slot {
+    height: 70px;
+  }
+
+  .ptt-label,
+  .ptt-feedback {
+    font-size: 11px;
+    -webkit-line-clamp: 3;
   }
 
   /* App Controls' own section (language/sound/report bug) always being visible now, instead of

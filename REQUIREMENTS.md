@@ -1674,7 +1674,20 @@ Resolved during requirements gathering:
   6. *Label* "Hold to speak a command" → "Voice Command".
   7. *Layout*: the Voice Command button and the settings panel now share one row
      (`.ptt-controls-row`), saving the button's own row of vertical space; the page fits a 360×740
-     phone with no scroll.
+     phone with no scroll. **Follow-up (reported: the panel moved whenever the button was pressed or
+     an announcement appeared, because the button column was content-sized):** `.ptt-controls-row`
+     is now a grid using the *same two columns as `.dice-section`* directly above — the button
+     column exactly as wide as the throw area (210px = its 200px + borders; 110px on phones) and the
+     panel exactly as wide as the Game Controls buttons beside it, panel pinned to column 2 even
+     when the button isn't rendered. The button's label, any feedback message, and the resign-
+     confirm button now share one fixed-height `.ptt-text-slot` (feedback replaces the label rather
+     than stacking; long text is line-clamped), the row has a `min-height` equal to the button
+     column's height so hiding the button via the Voice toggle can't resize the panel, and the
+     Sound/Voice toggles have a `min-width` covering either state's label so the panel's own rows
+     never rewrap. Verified by measuring bounding boxes across idle/listening/long feedback/
+     resign-confirm/sound toggle/voice toggle at 900px and 360px wide: x, width and height are
+     identical in every state (the panel's column matches `.game-controls-col`, the button's matches
+     `.dice-stage`, to the pixel).
   8. *"Roll back" by voice*: new `rollback` intent ("roll back", "rollback", "undo", "take back", …),
      checked *before* the bare-"roll" phrase — "roll back" contains "roll" and was being treated as a
      roll of the dice. Gated by the same rules as the button (offered in this game; only the player

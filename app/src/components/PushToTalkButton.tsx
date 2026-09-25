@@ -41,13 +41,18 @@ export default function PushToTalkButton({ voice }: Props) {
           🎙️
         </span>
       </button>
-      <p className="ptt-label">{label}</p>
-      {status === 'confirm-resign' && (
-        <button type="button" className="action-btn btn-abort ptt-confirm-btn" onClick={confirmResign}>
-          {t('resign.gameButton')}
-        </button>
-      )}
-      {feedback && <p className="ptt-feedback">{feedback}</p>}
+      {/* A fixed-size slot: the state label, a feedback message, and the resign-confirm button all
+          take turns inside it rather than stacking below the mic, so nothing here can ever change
+          the height of this column — and with it the settings panel beside it (at explicit request:
+          it must not move under any condition). Feedback takes the label's place when present. */}
+      <div className="ptt-text-slot">
+        <p className={feedback ? 'ptt-feedback' : 'ptt-label'}>{feedback ?? label}</p>
+        {status === 'confirm-resign' && (
+          <button type="button" className="action-btn btn-abort ptt-confirm-btn" onClick={confirmResign}>
+            {t('resign.gameButton')}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
