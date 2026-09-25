@@ -22,13 +22,6 @@ const SEATS: Record<number, PlayerId[]> = {
   4: ['P1', 'P2', 'P3', 'P4'],
 };
 
-const SEAT_SIDE_KEY: Record<PlayerId, string> = {
-  P1: 'side.bottom',
-  P2: 'side.right',
-  P3: 'side.top',
-  P4: 'side.left',
-};
-
 export default function SetupModal({
   roster,
   onStart,
@@ -83,7 +76,7 @@ export default function SetupModal({
         {seats.map((id, i) => (
           <div key={id} className="setup-row">
             <label className="setup-label" htmlFor={`playerName-${id}`}>
-              {t('setup.seatName', `${id} (${t(SEAT_SIDE_KEY[id])})`)}
+              {t('setup.seatName', i + 1)}
             </label>
             {/* One box: typing a new name and picking a roster name both happen in the same
                 input — a custom dropdown (not the native <input list>/<datalist> combo this

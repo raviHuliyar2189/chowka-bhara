@@ -1649,8 +1649,42 @@ Resolved during requirements gathering:
   automatically points the right direction on a rotated (online) viewer's own board, not just the
   canonical layout. Rendered as an SVG overlay spanning the grid's own tracks (`viewBox="0 0 5 5"`,
   one unit per cell) rather than computed pixel positions, so it stays aligned regardless of the
-  board's fluid cell size — fades out over 1.6s (`pointer-events: none`, never blocks a click).
+  board's fluid cell size — originally faded out over 1.6s (since changed to persist, see the
+  ten-item batch below; `pointer-events: none`, never blocks a click).
   Verified via screenshot on both hotseat (unrotated) and an online joiner's rotated view.
+- **Ten-item fix batch after staging testing** (§11, §13, reported bugs/requests, all verified in a
+  scripted browser run with a mocked recognizer):
+  1. *Setup labels*: "P1 (Bottom) Name:" → "Player N Name:" (`setup.seatName`; the `side.*` strings and
+     `SEAT_SIDE_KEY` are gone). N is the row number, not the seat id, so a 2-player game reads
+     "Player 1 / Player 2" — matching the "Player N" defaults/placeholders — rather than P1/P3.
+  2. *Roll-back announcement* — "<player> rolled back the last move", spoken and shown in the
+     banner, in every mode and on every device online. `rollbackLastMove` restores an older snapshot,
+     so no counter moves forward for it (and the deployed online server can't be changed from the
+     staging branch); instead `rolledBackBy(prev, next)` in game-core detects it from the debug
+     log's newest line, and `useRollbackAnnouncement` (shared by all three pages) fires it once.
+  3. *Move arrow persists* until the next thing happens: a new move replaces it; a roll, roll-back,
+     reverted turn, or rematch clears it (the effect now also keys on a positions signature, so a
+     debug-log-only update like a sound toggle doesn't clear it, and skips the Board Editor). No
+     more timed fade-out — it only fades in.
+  4. *Resign announcement* — "<player> resigned and hence lost the game", spoken + banner in every
+     mode. Implemented as an effect on `resignedPlayerName` declared after the win-announcement
+     effect (online: the server emits `resign:notice` after `game-updated`), so when the resignation
+     also ends the game, the resignation — not the survivor's win — is what's spoken.
+  5. *Results list* drops the "(P1)" seat id — just name and result.
+  6. *Label* "Hold to speak a command" → "Voice Command".
+  7. *Layout*: the Voice Command button and the settings panel now share one row
+     (`.ptt-controls-row`), saving the button's own row of vertical space; the page fits a 360×740
+     phone with no scroll.
+  8. *"Roll back" by voice*: new `rollback` intent ("roll back", "rollback", "undo", "take back", …),
+     checked *before* the bare-"roll" phrase — "roll back" contains "roll" and was being treated as a
+     roll of the dice. Gated by the same rules as the button (offered in this game; only the player
+     who made the last move online), with a specific message when it isn't (`voiceCmd.rollbackUnavailable`
+     in Vs Computer, `voiceCmd.nothingToRollBack` otherwise).
+  9. *Report Bug* hides its Close button while the report is being sent and shows it only once the
+     server has accepted it (the failure path keeps its own Close + copy fallback).
+  10. *"Resign game" by voice*: added "quit game"/"I quit"/"surrender" and a loose pattern for the
+     spaced/near-homophone forms recognizers produce ("re sign", "resin", "risen game"); the
+     confirm-before-resigning step is unchanged.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

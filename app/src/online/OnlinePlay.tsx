@@ -17,6 +17,7 @@ import ResignModal from '../components/ResignModal';
 import StatsModal from '../components/StatsModal';
 import PushToTalkButton from '../components/PushToTalkButton';
 import { useVoiceCommands } from '../voice/useVoiceCommands';
+import { useRollbackAnnouncement } from '../game/useRollbackAnnouncement';
 import {
   announceRoll,
   announceTurnStart,
@@ -26,6 +27,8 @@ import {
   announceGattiFormed,
   announceHint,
   announceStuckPool,
+  announceRolledBack,
+  announceResigned,
   setAnnouncerEnabled,
 } from '../audio/announcer';
 import { useT } from '../i18n/strings';
@@ -326,6 +329,24 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game.rankings.length]);
 
+  // Every seat's device runs this off the same server-broadcast state, so a roll-back anyone makes
+  // is announced everywhere (see useRollbackAnnouncement's own comment).
+  useRollbackAnnouncement(game, (name) => {
+    announceRolledBack(name);
+    setBanner(t('banner.rolledBack', name));
+  });
+
+  // Keyed on resignedPlayerName (set by the resign:notice broadcast, which the server always emits
+  // *after* its game-updated) rather than announced inside that socket handler: the handler lives
+  // in a mount-time effect with a stale `t`, and this way the resignation is spoken after any
+  // win announcement the same update triggered, instead of being cut off by it.
+  useEffect(() => {
+    if (!resignedPlayerName) return;
+    announceResigned(resignedPlayerName);
+    setBanner(t('banner.resigned', resignedPlayerName));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resignedPlayerName]);
+
   function handleRoll() {
     socketRef.current?.emit('game:roll', { gameId });
   }
@@ -360,6 +381,10 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
     viewerSeat: mySeat,
     isMyTurn: game.players[game.currentTurnIndex].id === mySeat,
     resignAllowed,
+    // Same rule as the roll-back button below: only the player who made the last move may undo it.
+    showRollback: true,
+    canRollback: moverOfLastMove(game)?.id === mySeat,
+    onRollback: handleRollback,
     onRoll: handleRoll,
     onSelectValue: handleSelectValue,
     onSelectPiece: handleSelectPiece,
@@ -535,6 +560,8 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
           resignAllowed={resignAllowed}
           onResign={handleResign}
         />
+        {/* Voice button and settings share one row (at explicit request) to save vertical space. */}
+        <div className="ptt-controls-row">
         {voice.supported && voiceOn && <PushToTalkButton voice={voice} />}
         <AppControlsPanel
           soundOn={soundOn}
@@ -578,6 +605,7 @@ export default function OnlinePlay({ gameId, initialState, mySeat, resignAllowed
             </div>
           )}
         </AppControlsPanel>
+        </div>
         {VOICE_CHAT_ENABLED && voiceError && <p className="online-error">{voiceError}</p>}
         {/* A hover-only tooltip (the per-player mic icon's title) isn't discoverable on a phone —
             this is the same "voice connection failed" fact as plain, always-visible text instead,

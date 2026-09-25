@@ -659,7 +659,9 @@
   pointer-events: none;
   z-index: 8;
   overflow: visible;
-  animation: moveArrowFade 1.6s ease-out forwards;
+  /* Fades in only — the arrow now stays until Board.tsx clears or replaces it (next roll or move),
+     rather than fading itself out on a timer. */
+  animation: moveArrowIn 0.25s ease-out forwards;
 }
 
 .move-arrow-line {
@@ -672,18 +674,12 @@
   fill: var(--gold);
 }
 
-@keyframes moveArrowFade {
-  0% {
+@keyframes moveArrowIn {
+  from {
     opacity: 0;
   }
-  15% {
+  to {
     opacity: 1;
-  }
-  70% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
   }
 }
 
@@ -1452,6 +1448,29 @@
   margin-top: 10px;
 }
 
+/* Voice Command button and the settings panel (language/sound/report bug/voice toggle) sit side by
+   side instead of stacked, at explicit request — saves the vertical space the button used to take
+   on its own row. The panel takes whatever width the button leaves (its own buttons wrap, see
+   .app-controls-main-row), and both drop their own top margin since this row supplies it. */
+.ptt-controls-row {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.ptt-controls-row .ptt-wrap {
+  margin-top: 0;
+  flex-shrink: 0;
+  justify-content: center;
+}
+
+.ptt-controls-row .app-controls-section {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+}
+
 .ptt-button {
   width: 96px;
   height: 96px;
@@ -1982,6 +2001,11 @@ th {
 
   .ptt-wrap {
     margin-top: 6px;
+  }
+
+  .ptt-controls-row {
+    margin-top: 6px;
+    gap: 6px;
   }
 
   /* App Controls' own section (language/sound/report bug) always being visible now, instead of

@@ -7,6 +7,7 @@
 
 export type VoiceIntent =
   | { kind: 'roll' }
+  | { kind: 'rollback' }
   | { kind: 'select-value'; value: number }
   | { kind: 'select-piece'; pieceNumber: number }
   | { kind: 'form-gatti' }
@@ -44,7 +45,16 @@ const ROLL_PHRASES = ['kavade haku', 'matte haku', 'matte aadu', 'roll dice', 'r
 const GATTI_PHRASES = ['gatti madu', 'gatti maadu', 'form gatti', 'make gatti'];
 // "resign" alone is included since it's short and doesn't collide as a substring with any other
 // command's phrases above.
-const RESIGN_PHRASES = ['saku aata', 'saku ata', 'resign', 'give up'];
+const RESIGN_PHRASES = ['saku aata', 'saku ata', 'resign', 'give up', 'quit game', 'i quit', 'surrender'];
+// "Resign game" is often transcribed with a stray space or a near-homophone ("re sign", "resine",
+// "risen game") — a real reported case where the phrase was never recognized. \bre\s?s[iy]g?n
+// covers the spaced/mis-vowelled spellings ("re sign", "resin", "re sine") without matching
+// unrelated words that merely contain "resign".
+const RESIGN_LOOSE = /\bre\s?s[iy]g?n|\brisen game|\breason game/;
+// Checked *before* ROLL_PHRASES: every one of these contains "roll", which would otherwise be
+// swallowed by the bare-"roll" match below and roll the dice instead of undoing the last move.
+// "role back"/"roll bag" are common misheard forms of "roll back".
+const ROLLBACK_PHRASES = ['roll back', 'rollback', 'role back', 'roll bag', 'undo', 'take back', 'go back'];
 
 // Parametric commands — a regex capturing the spoken number, rather than enumerating every
 // "gara 1 nedesu".."gara 8 nedesu" literally.
@@ -69,9 +79,10 @@ const PIECE_PATTERNS = [
 export function matchIntent(rawTranscript: string): VoiceIntent {
   const t = normalize(rawTranscript);
 
+  if (ROLLBACK_PHRASES.some((p) => t.includes(p))) return { kind: 'rollback' };
   if (ROLL_PHRASES.some((p) => t.includes(p))) return { kind: 'roll' };
   if (GATTI_PHRASES.some((p) => t.includes(p))) return { kind: 'form-gatti' };
-  if (RESIGN_PHRASES.some((p) => t.includes(p))) return { kind: 'resign' };
+  if (RESIGN_PHRASES.some((p) => t.includes(p)) || RESIGN_LOOSE.test(t)) return { kind: 'resign' };
 
   for (const re of VALUE_PATTERNS) {
     const m = t.match(re);

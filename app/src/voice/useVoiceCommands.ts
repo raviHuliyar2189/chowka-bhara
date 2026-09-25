@@ -19,6 +19,12 @@ export interface UseVoiceCommandsArgs {
   viewerSeat: PlayerId;
   isMyTurn: boolean;
   resignAllowed: boolean;
+  // Whether this game offers roll-back at all (a per-game setting; always false in Vs Computer),
+  // and whether there's actually a move of this player's own to undo right now — mirrors
+  // DiceTray's own showRollback/canRollback split so voice and the button agree on availability.
+  showRollback: boolean;
+  canRollback: boolean;
+  onRollback: () => void;
   onRoll: () => void;
   onSelectValue: (index: number) => void;
   onSelectPiece: (pieceId: number) => void;
@@ -43,8 +49,21 @@ const FEEDBACK_CLEAR_MS = 2200;
 // handleFormGatti/handleResign with identical signatures (only the bodies differ: local reducer
 // calls vs. socket emits), so this hook only ever needs those references, never their internals.
 export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState {
-  const { enabled, game, viewerSeat, isMyTurn, resignAllowed, onRoll, onSelectValue, onSelectPiece, onFormGatti, onResign } =
-    args;
+  const {
+    enabled,
+    game,
+    viewerSeat,
+    isMyTurn,
+    resignAllowed,
+    showRollback,
+    canRollback,
+    onRollback,
+    onRoll,
+    onSelectValue,
+    onSelectPiece,
+    onFormGatti,
+    onResign,
+  } = args;
   const t = useT();
   const supported = useMemo(() => isVoiceCommandsSupported(), []);
 
@@ -131,6 +150,22 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
     }
 
     switch (intent.kind) {
+      case 'rollback': {
+        if (!showRollback) {
+          setStatusBoth('unrecognized');
+          showFeedback('voiceCmd.rollbackUnavailable');
+          return;
+        }
+        if (!canRollback) {
+          setStatusBoth('unrecognized');
+          showFeedback('voiceCmd.nothingToRollBack');
+          return;
+        }
+        onRollback();
+        setStatusBoth('idle');
+        setFeedback(null);
+        return;
+      }
       case 'roll': {
         if (game.phase !== 'awaiting-roll' || !isMyTurn) {
           setStatusBoth('unrecognized');

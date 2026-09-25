@@ -452,14 +452,27 @@ export function moverOfLastMove(state: GameState): Player | null {
 // the player can pick a different piece or value — the game-rules equivalent of an "oops" key.
 // Only available while `state.lastMoveSnapshot` is set, i.e. since the last move and before any
 // further roll, turn change, or forfeit (see the field's own comment for exactly when it clears).
+const ROLLBACK_LOG_SUFFIX = "'s last move was rolled back — pending action restored.";
+
 export function rollbackLastMove(state: GameState): GameState {
   if (!state.lastMoveSnapshot) return state;
   const mover = moverOfLastMove(state)!;
   return {
     ...state.lastMoveSnapshot,
-    debugLog: [...state.debugLog, `${mover.name}'s last move was rolled back — pending action restored.`],
+    debugLog: [...state.debugLog, `${mover.name}${ROLLBACK_LOG_SUFFIX}`],
     lastMoveSnapshot: null,
   };
+}
+
+// Who just rolled back between two consecutive states, or null if this update wasn't a rollback.
+// Derived from the debug log's newest line (rollbackLastMove restores an older snapshot, so none of
+// the usual counters — actionSeq, eventSeq, etc. — move forward for it, and the already-deployed
+// online server can't be asked to add one) — the UI uses this to announce "<player> rolled back
+// the last move" exactly once per rollback, identically in hotseat, vs-computer, and online.
+export function rolledBackBy(prev: GameState, next: GameState): string | null {
+  if (next.debugLog.length <= prev.debugLog.length) return null;
+  const last = next.debugLog[next.debugLog.length - 1];
+  return last.endsWith(ROLLBACK_LOG_SUFFIX) ? last.slice(0, -ROLLBACK_LOG_SUFFIX.length) : null;
 }
 
 // Abort flow: mark the given players as having forfeited, then continue the game.

@@ -112,13 +112,9 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
     en: (n: number) => `${n} Player${n === 1 ? '' : 's'}`,
     kn: (n: number) => `${n} ಆಟಗಾರ${n === 1 ? '' : 'ರು'}`,
   },
-  'setup.seatName': { en: (seat: string) => `${seat} Name:`, kn: (seat: string) => `${seat} ಹೆಸರು:` },
+  'setup.seatName': { en: (n: number) => `Player ${n} Name:`, kn: (n: number) => `ಆಟಗಾರ ${n} ಹೆಸರು:` },
   'setup.namePlaceholder': { en: (n: number) => `Player ${n}`, kn: (n: number) => `ಆಟಗಾರ ${n}` },
   'setup.showRoster': { en: 'Show saved names', kn: 'ಉಳಿಸಿದ ಹೆಸರುಗಳನ್ನು ತೋರಿಸಿ' },
-  'side.bottom': { en: 'Bottom', kn: 'ಕೆಳಗೆ' },
-  'side.right': { en: 'Right', kn: 'ಬಲ' },
-  'side.top': { en: 'Top', kn: 'ಮೇಲೆ' },
-  'side.left': { en: 'Left', kn: 'ಎಡ' },
   'setup.announcements': { en: 'Announcements', kn: 'ಘೋಷಣೆಗಳು' },
   'setup.muteTitle': { en: 'Mute announcements', kn: 'ಘೋಷಣೆಗಳನ್ನು ಮ್ಯೂಟ್ ಮಾಡಿ' },
   'setup.unmuteTitle': { en: 'Unmute announcements', kn: 'ಘೋಷಣೆಗಳನ್ನು ಅನ್‌ಮ್ಯೂಟ್ ಮಾಡಿ' },
@@ -196,7 +192,7 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'voiceCmd.off': { en: 'Voice Cmds: Off', kn: 'ಧ್ವನಿ ಆಜ್ಞೆ: ಆಫ್' },
   'voiceCmd.toggleOnTitle': { en: 'Turn voice commands off', kn: 'ಧ್ವನಿ ಆಜ್ಞೆಗಳನ್ನು ಆಫ್ ಮಾಡಿ' },
   'voiceCmd.toggleOffTitle': { en: 'Turn voice commands on', kn: 'ಧ್ವನಿ ಆಜ್ಞೆಗಳನ್ನು ಆನ್ ಮಾಡಿ' },
-  'voiceCmd.pressToTalk': { en: 'Hold to speak a command', kn: 'ಆಜ್ಞೆ ಹೇಳಲು ಒತ್ತಿ ಹಿಡಿಯಿರಿ' },
+  'voiceCmd.pressToTalk': { en: 'Voice Command', kn: 'ಧ್ವನಿ ಆಜ್ಞೆ' },
   'voiceCmd.listening': { en: 'Listening…', kn: 'ಕೇಳುತ್ತಿದೆ…' },
   // Includes what was actually heard (when there is one) so a mismatch between speech and the
   // app's phrase list is visible on screen, not just "it didn't work" — a real reported bug
@@ -213,6 +209,8 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
     en: (n: number) => `Piece ${n} has no legal move`,
     kn: (n: number) => `ಕಾಯಿ ${n} ಗೆ ಸರಿಯಾದ ನಡೆ ಇಲ್ಲ`,
   },
+  'voiceCmd.rollbackUnavailable': { en: 'Roll back is not available in this game', kn: 'ಈ ಆಟದಲ್ಲಿ ಹಿಂತೆಗೆತ ಲಭ್ಯವಿಲ್ಲ' },
+  'voiceCmd.nothingToRollBack': { en: 'No move of yours to roll back', kn: 'ಹಿಂತೆಗೆಯಲು ನಿಮ್ಮ ಯಾವುದೇ ನಡೆ ಇಲ್ಲ' },
   'voiceCmd.noGattiAvailable': { en: 'No gatti can be formed right now', kn: 'ಈಗ ಗಟ್ಟಿ ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ' },
   'voiceCmd.resignNotAllowed': { en: 'Resign is not enabled for this game', kn: 'ಈ ಆಟದಲ್ಲಿ ಸಾಕು ಆಟ ಅನುಮತಿ ಇಲ್ಲ' },
   'voiceCmd.confirmResignPrompt': {
@@ -487,6 +485,14 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
   'banner.noLegalMove': {
     en: (name: string) => `${name} — No move possible`,
     kn: (name: string) => `${name} — ನಡೆ ಸಾಧ್ಯವಿಲ್ಲ`,
+  },
+  'banner.rolledBack': {
+    en: (name: string) => `${name} rolled back the last move`,
+    kn: (name: string) => `${name} ಕೊನೆಯ ನಡೆಯನ್ನು ಹಿಂತೆಗೆದುಕೊಂಡರು`,
+  },
+  'banner.resigned': {
+    en: (name: string) => `${name} resigned and hence lost the game`,
+    kn: (name: string) => `${name} ರಾಜೀನಾಮೆ ನೀಡಿದರು, ಆದ್ದರಿಂದ ಆಟದಲ್ಲಿ ಸೋತರು`,
   },
   // rollResult and rollBonus share this exact same form — label alone already distinguishes a
   // bonus roll (dice.ts's label is 'Bhara'/'Chauka' there, a plain number otherwise), so there's

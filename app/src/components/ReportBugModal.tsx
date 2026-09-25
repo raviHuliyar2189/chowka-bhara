@@ -107,11 +107,16 @@ export default function ReportBugModal({ mode, gameId, debugLog, onClose }: Prop
             <p className="bug-submit-status bug-submit-ok">
               {submitStatus === 'sending' ? t('bug.submitting') : t('bug.submitted')}
             </p>
-            <div className="report-bug-actions">
-              <button className="action-btn btn-abort" onClick={onClose}>
-                {t('bug.close')}
-              </button>
-            </div>
+            {/* Close only appears once the report has actually reached the server — dismissing
+                mid-send would leave the player unsure whether it went through, and an unmounted
+                modal can't show the failure fallback below if the send then fails. */}
+            {submitStatus === 'sent' && (
+              <div className="report-bug-actions">
+                <button className="action-btn btn-abort" onClick={onClose}>
+                  {t('bug.close')}
+                </button>
+              </div>
+            )}
           </>
         )}
 

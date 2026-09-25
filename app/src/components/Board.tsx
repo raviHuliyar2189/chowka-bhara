@@ -188,51 +188,51 @@ export default function Board({
   const rotationSteps = rotationStepsFor(viewerSeat);
   const placements = computePlacements(game);
 
-  // Move arrow: a transient line from a piece's cell before this action to its cell after, shown
-  // for whichever move (or gatti move — both pieces move together, so the first found suffices)
-  // just happened. Detected by diffing every piece's own position against what it was last render
-  // — this runs identically for every mode (hotseat's local reducer, online's server broadcast),
-  // since Board.tsx only ever sees the resulting GameState either way, never how it got there.
-  // Only an *increase* counts as a move to draw — a capture resets the captured piece to 0 in the
-  // very same update (a decrease, correctly ignored), and a rollback/stuck-pool revert only ever
-  // decreases positions too, so neither ever draws a stray arrow.
+  // Move arrow: a line from a piece's cell before its latest move to its cell after, shown for
+  // whichever move (or gatti move — both pieces move together, so the first found suffices) just
+  // happened. It stays until the next thing happens — a new move replaces it, and anything else that
+  // changes the board or the turn (a roll, a roll-back, a reverted turn, a rematch) clears it — so a
+  // player who looks away for a moment can still see what the last move was.
+  // Detected by diffing every piece's own position against what it was last time this ran — this is
+  // identical for every mode (hotseat's local reducer, online's server broadcast), since Board.tsx
+  // only ever sees the resulting GameState, never how it got there. Only an *increase* counts as a
+  // move to draw: a capture resets the captured piece to 0 in the very same update (a decrease,
+  // correctly ignored), and a rollback/stuck-pool revert only ever decreases positions.
   const [arrow, setArrow] = useState<{ from: Coord; to: Coord; key: number } | null>(null);
   const prevPositionsRef = useRef<Map<string, number> | null>(null);
+  // Changes exactly when any piece changes position (forward, captured, or rolled back) — not on
+  // unrelated updates like a sound toggle appending to the debug log, which shouldn't clear the arrow.
+  const positionsKey = game.players.map((p) => p.pieces.map((piece) => piece.pos).join(',')).join('|');
   useEffect(() => {
+    if (editable) return; // the Board Editor drags pieces anywhere — not moves worth drawing
     const next = new Map<string, number>();
     for (const p of game.players) {
       for (const piece of p.pieces) next.set(`${p.id}-${piece.id}`, piece.pos);
     }
     const prev = prevPositionsRef.current;
-    if (prev) {
-      for (const p of game.players) {
-        const moved = p.pieces.find((piece) => {
-          const before = prev.get(`${p.id}-${piece.id}`);
-          return before !== undefined && piece.pos > before;
-        });
-        if (moved) {
-          const before = prev.get(`${p.id}-${moved.id}`)!;
-          const from = rotateCoord(PATHS[p.id][before], rotationSteps);
-          const to = rotateCoord(PATHS[p.id][moved.pos], rotationSteps);
-          setArrow({ from, to, key: Date.now() });
-          break;
-        }
+    prevPositionsRef.current = next;
+    if (!prev) return; // first run (mount) — nothing has moved yet
+    for (const p of game.players) {
+      const moved = p.pieces.find((piece) => {
+        const before = prev.get(`${p.id}-${piece.id}`);
+        return before !== undefined && piece.pos > before;
+      });
+      if (moved) {
+        const before = prev.get(`${p.id}-${moved.id}`)!;
+        const from = rotateCoord(PATHS[p.id][before], rotationSteps);
+        const to = rotateCoord(PATHS[p.id][moved.pos], rotationSteps);
+        setArrow({ from, to, key: Date.now() });
+        return;
       }
     }
-    prevPositionsRef.current = next;
-    // Deliberately keyed on actionSeq (bumps on every roll or move — see turnEngine.ts) rather
-    // than the whole `game` object, which changes identity on every render regardless of whether
-    // anything actually moved.
+    // No forward move this time (a roll bumps actionSeq without moving anything; a roll-back,
+    // reverted turn, or rematch moves pieces backward) — the old arrow no longer describes the
+    // board, so clear it.
+    setArrow(null);
+    // Keyed on actionSeq (bumps on every roll or move — see turnEngine.ts) and the positions
+    // themselves, not the whole `game` object, whose identity changes on every update.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game.actionSeq]);
-
-  // Same transient-timeout convention as HotseatPage.tsx's own hint/capture-toast state — cleared
-  // by key so a second move arriving before the first one fades doesn't get cancelled early.
-  useEffect(() => {
-    if (!arrow) return;
-    const timer = setTimeout(() => setArrow(null), 1600);
-    return () => clearTimeout(timer);
-  }, [arrow?.key]);
+  }, [game.actionSeq, positionsKey]);
 
   // Shared by every non-editable render unit below (a lone piece, either half of a tollu, or a
   // gatti capsule as a whole) — the same selectability/legality/active-pulse logic that used to

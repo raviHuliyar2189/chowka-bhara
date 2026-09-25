@@ -26,6 +26,8 @@ import {
   announceGattiFormed,
   announceHint,
   announceStuckPool,
+  announceRolledBack,
+  announceResigned,
   setAnnouncerEnabled,
   waitForAnnouncer,
 } from '../audio/announcer';
@@ -40,6 +42,7 @@ import StatsModal from '../components/StatsModal';
 import ResultsModal from '../components/ResultsModal';
 import PushToTalkButton from '../components/PushToTalkButton';
 import { useVoiceCommands } from '../voice/useVoiceCommands';
+import { useRollbackAnnouncement } from '../game/useRollbackAnnouncement';
 
 // Always exactly 2 seats, opposite bases, matching the existing 2-player convention. AI_SEAT/
 // AI_NAME are shared with hotseat/Develop Test's own "1 player" option and the online server's
@@ -172,6 +175,21 @@ export default function VsComputerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.rankings.length]);
 
+  // Vs Computer has no roll-back button (showRollback={false}), but the shared detector is cheap
+  // and keeps every mode's announcement behavior identical if that ever changes.
+  useRollbackAnnouncement(game, (name) => {
+    announceRolledBack(name);
+    setBanner(t('banner.rolledBack', name));
+  });
+
+  // Declared after the rankings effect above on purpose — see HotseatPage.tsx's own copy of this.
+  useEffect(() => {
+    if (!resignedPlayerName) return;
+    announceResigned(resignedPlayerName);
+    setBanner(t('banner.resigned', resignedPlayerName));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resignedPlayerName]);
+
   function toggleSound() {
     const next = !soundOn;
     setSoundOn(next);
@@ -245,6 +263,11 @@ export default function VsComputerPage() {
     viewerSeat: HUMAN_SEAT,
     isMyTurn: isHumanTurn,
     resignAllowed,
+    // Vs Computer has no roll-back (DiceTray gets showRollback={false} below) — voice says so
+    // instead of silently ignoring the command.
+    showRollback: false,
+    canRollback: false,
+    onRollback: () => {},
     onRoll: handleRoll,
     onSelectValue: handleSelectValue,
     onSelectPiece: handleSelectPiece,
@@ -370,15 +393,18 @@ export default function VsComputerPage() {
             resignAllowed={resignAllowed}
             onResign={handleResign}
           />
-          {voice.supported && voiceOn && <PushToTalkButton voice={voice} />}
-          <AppControlsPanel
-            soundOn={soundOn}
-            onToggleSound={toggleSound}
-            onReportBug={() => setShowReportBug(true)}
-            voiceCommandsAvailable={voice.supported}
-            voiceOn={voiceOn}
-            onToggleVoice={() => setVoiceOn((v) => !v)}
-          />
+          {/* Voice button and settings share one row (at explicit request) to save vertical space. */}
+          <div className="ptt-controls-row">
+            {voice.supported && voiceOn && <PushToTalkButton voice={voice} />}
+            <AppControlsPanel
+              soundOn={soundOn}
+              onToggleSound={toggleSound}
+              onReportBug={() => setShowReportBug(true)}
+              voiceCommandsAvailable={voice.supported}
+              voiceOn={voiceOn}
+              onToggleVoice={() => setVoiceOn((v) => !v)}
+            />
+          </div>
         </div>
       </div>
 

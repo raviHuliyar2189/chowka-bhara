@@ -254,6 +254,14 @@ export function announceStuckPool(playerName: string): void {
   speakLocalized('banner.noLegalMove', [playerName]);
 }
 
+export function announceRolledBack(playerName: string): void {
+  speakLocalized('banner.rolledBack', [playerName]);
+}
+
+export function announceResigned(playerName: string): void {
+  speakLocalized('banner.resigned', [playerName]);
+}
+
 // Capturing always grants a bonus roll (§5.6) — say so, not just the capture itself, so this
 // announcement is a complete instruction like the others. banner.captured itself now carries
 // "Roll again!" (not a separate spoken-only string), so the on-screen banner and the spoken

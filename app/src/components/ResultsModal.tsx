@@ -22,7 +22,7 @@ export default function ResultsModal({ placements, sessionResults, stats, onRema
         <ol>
           {placements.map((p) => (
             <li key={p.playerId}>
-              <strong>{p.name}</strong> ({p.playerId}) — {p.isLoss ? t('results.loss') : t('results.place', p.place)}
+              <strong>{p.name}</strong> —{p.isLoss ? t('results.loss') : t('results.place', p.place)}
             </li>
           ))}
         </ol>

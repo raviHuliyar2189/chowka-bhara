@@ -27,6 +27,8 @@ import {
   announceGattiFormed,
   announceHint,
   announceStuckPool,
+  announceRolledBack,
+  announceResigned,
   setAnnouncerEnabled,
   waitForAnnouncer,
 } from '../audio/announcer';
@@ -42,6 +44,7 @@ import StatsModal from '../components/StatsModal';
 import ResultsModal from '../components/ResultsModal';
 import PushToTalkButton from '../components/PushToTalkButton';
 import { useVoiceCommands } from '../voice/useVoiceCommands';
+import { useRollbackAnnouncement } from '../game/useRollbackAnnouncement';
 
 const COLORS: Record<PlayerId, string> = {
   P1: '#b03a2e',
@@ -217,6 +220,21 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.rankings.length]);
+
+  useRollbackAnnouncement(game, (name) => {
+    announceRolledBack(name);
+    setBanner(t('banner.rolledBack', name));
+  });
+
+  // Declared after the rankings effect above on purpose: when this resignation also ends the game
+  // (only one player left), that effect announces the survivor's win in the same commit — this one
+  // running second means the resignation is what actually gets spoken, not cut off by the win.
+  useEffect(() => {
+    if (!resignedPlayerName) return;
+    announceResigned(resignedPlayerName);
+    setBanner(t('banner.resigned', resignedPlayerName));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resignedPlayerName]);
 
   function appendLog(line: string) {
     setGame((prev) => (prev ? { ...prev, debugLog: [...prev.debugLog, line] } : prev));
@@ -399,6 +417,10 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
     viewerSeat: game ? game.players[game.currentTurnIndex].id : 'P1',
     isMyTurn: true,
     resignAllowed,
+    // Same conditions DiceTray's own roll-back button uses below.
+    showRollback: rollbackEnabled && !!game && game.phase !== 'game-over',
+    canRollback: !!game?.lastMoveSnapshot,
+    onRollback: handleRollback,
     onRoll: handleRoll,
     onSelectValue: handleSelectValue,
     onSelectPiece: handleSelectPiece,
@@ -536,15 +558,18 @@ export default function HotseatPage({ allowCustomSetup = false }: Props) {
               resignAllowed={resignAllowed}
               onResign={handleResign}
             />
-            {voice.supported && voiceOn && <PushToTalkButton voice={voice} />}
-            <AppControlsPanel
-              soundOn={soundOn}
-              onToggleSound={toggleSound}
-              onReportBug={() => setShowReportBug(true)}
-              voiceCommandsAvailable={voice.supported}
-              voiceOn={voiceOn}
-              onToggleVoice={() => setVoiceOn((v) => !v)}
-            />
+            {/* Voice button and settings share one row (at explicit request) to save vertical space. */}
+            <div className="ptt-controls-row">
+              {voice.supported && voiceOn && <PushToTalkButton voice={voice} />}
+              <AppControlsPanel
+                soundOn={soundOn}
+                onToggleSound={toggleSound}
+                onReportBug={() => setShowReportBug(true)}
+                voiceCommandsAvailable={voice.supported}
+                voiceOn={voiceOn}
+                onToggleVoice={() => setVoiceOn((v) => !v)}
+              />
+            </div>
           </div>
         </div>
       )}
