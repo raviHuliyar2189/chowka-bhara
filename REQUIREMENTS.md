@@ -1742,6 +1742,12 @@ Resolved during requirements gathering:
   a scripted hotseat game: multi-value pool → pool glows, 0 pieces glow; after picking a value → no
   pool glow, pieces glow.
 
+- **Voice feedback stays until the next press** (explicit request; replaces the earlier ~2.2s
+  auto-clear). A "Didn't catch that / Heard: …", "No speech detected", error, or "not your turn"
+  message, and the button state that goes with it, now remain until the Voice Command button is
+  pressed again (`useVoiceCommands.ts`; `press()` clears it). The one timed exception is the resign
+  confirmation window, which still cancels itself after 4s.
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has

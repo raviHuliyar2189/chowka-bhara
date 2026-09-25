@@ -42,7 +42,6 @@ export interface VoiceCommandsState {
 }
 
 const CONFIRM_RESIGN_TIMEOUT_MS = 4000;
-const FEEDBACK_CLEAR_MS = 2200;
 
 // One shared hook rather than one copy per gameplay page — HotseatPage.tsx, VsComputerPage.tsx,
 // and OnlinePlay.tsx already define handleRoll/handleSelectValue/handleSelectPiece/
@@ -72,7 +71,6 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const statusRef = useRef<VoiceStatus>('idle');
 
   function setStatusBoth(next: VoiceStatus) {
@@ -84,8 +82,8 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
     const text = t(key, ...msgArgs);
     setFeedback(text);
     announceHint(key);
-    if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
-    feedbackTimeoutRef.current = setTimeout(() => setFeedback(null), FEEDBACK_CLEAR_MS);
+    // Deliberately no auto-clear timer: the message (and the button state it explains) stays until the
+    // next press() clears it, so the player can read what was heard / why it failed at their own pace.
   }
 
   function clearConfirmTimeout() {
@@ -112,7 +110,6 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
     return () => {
       recognitionRef.current?.abort();
       clearConfirmTimeout();
-      if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
