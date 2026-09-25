@@ -13,6 +13,7 @@ interface SpeechRecognitionAlternative {
 }
 
 interface SpeechRecognitionResult {
+  readonly isFinal: boolean;
   readonly length: number;
   item(index: number): SpeechRecognitionAlternative;
   [index: number]: SpeechRecognitionAlternative;

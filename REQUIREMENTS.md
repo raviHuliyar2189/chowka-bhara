@@ -1766,6 +1766,12 @@ Resolved during requirements gathering:
   `onend` now reports it: `Heard: (nothing) → session ended with no result (mic opened: yes/no, speech
   detected: yes/no)`, which tells a mic that never opened from speech that was never detected.
 
+- **Use the interim guess when Chrome never finalizes** (device report: "mic opened: yes, speech
+  detected: yes" but no result for a lone number). `interimResults` is now on; the latest interim
+  transcripts are kept, shown live as `Hearing: …`, and if the session ends with no final result they
+  are matched as if final. The empty-session message is shortened (`no result (mic: yes, speech: yes)`)
+  and the debug line is 3 lines tall so it is no longer clipped.
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has

@@ -342,7 +342,10 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
     // based choice, not rebuilding the matcher.
     recognition.lang = 'en-US';
     recognition.continuous = false;
-    recognition.interimResults = false;
+    // Interim results on: a one-word command like "3" is often heard (speech detected) but never
+    // finalized by Chrome — the session just ends with no final result. The interim guess is kept and
+    // used at onend in that case (see below), instead of losing the word entirely.
+    recognition.interimResults = true;
     // More than one candidate transcript — a real reported case had the recognizer's own top
     // guess come back empty for a multi-word phrase ("piece 3") while a short one-word phrase
     // ("roll") kept transcribing fine; checking a few alternatives costs nothing and gives the
@@ -358,8 +361,8 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
     recognition.onspeechstart = () => {
       seen.speech = true;
     };
-    recognition.onresult = (event) => {
-      seen.result = true;
+    let lastInterim: string[] = [];
+    const readTranscripts = (event: SpeechRecognitionEvent) => {
       const result = event.results[0];
       const transcripts: string[] = [];
       if (result) {
@@ -368,6 +371,16 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
           if (t) transcripts.push(t);
         }
       }
+      return { transcripts, isFinal: result?.isFinal !== false };
+    };
+    recognition.onresult = (event) => {
+      const { transcripts, isFinal } = readTranscripts(event);
+      if (!isFinal) {
+        if (transcripts.length) lastInterim = transcripts;
+        setHeard(`Hearing: ${transcripts.map((t) => `"${t}"`).join(' | ')}`);
+        return;
+      }
+      seen.result = true;
       setStatusBoth('processing');
       handleTranscript(transcripts, game);
     };
@@ -395,9 +408,16 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
     recognition.onend = () => {
       recognitionRef.current = null;
       if (!seen.result && !seen.error) {
-        setHeard(
-          `Heard: (nothing) → session ended with no result (mic opened: ${seen.audio ? 'yes' : 'no'}, speech detected: ${seen.speech ? 'yes' : 'no'})`,
-        );
+        if (lastInterim.length) {
+          // Never finalized, but there was an interim guess — act on it as if it had been final.
+          seen.result = true;
+          setStatusBoth('processing');
+          handleTranscript(lastInterim, game);
+        } else {
+          setHeard(
+            `Heard: (nothing) → no result (mic: ${seen.audio ? 'yes' : 'no'}, speech: ${seen.speech ? 'yes' : 'no'})`,
+          );
+        }
       }
       // Only fall back to idle here if nothing else already moved status on (onresult sets
       // 'processing' then resolves to a final status synchronously; onerror resolves its own).
