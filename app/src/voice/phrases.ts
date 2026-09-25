@@ -39,9 +39,18 @@ const NUMBER_WORDS: Record<string, string> = {
   nalaku: '4',
   naku: '4',
   naalku: '4',
+  // The two special throws are named after their values (see dice.ts): Chauka is 4, Bhara is 8 —
+  // players naturally call the number by the throw's name, so both count as the number too.
+  chouka: '4',
+  chauka: '4',
+  chowka: '4',
+  chaukha: '4',
   eight: '8',
   entu: '8',
   yentu: '8',
+  bhara: '8',
+  bhaara: '8',
+  bara: '8',
 };
 
 // Only ever applied when the *whole* utterance is that one word — "for" or "to" inside a longer

@@ -1717,7 +1717,9 @@ Resolved during requirements gathering:
   it switches value). Note the game auto-selects the value when the pool holds only one, so a bare
   number then means a piece immediately. Also recognized as numbers, in `normalize()`: English
   one/two/three/four/eight and Kannada ondu (1), eradu (2), mooru (3), nalku/naku (4), entu (8),
-  with common alternate spellings. Verified in the browser on a single-value pool and a
+  with common alternate spellings; also Chauka/Chouka/Chowka (4) and Bhara/Bara (8), the throws'
+  own names, at explicit request ("chowka bhara" together is two numbers, so it's ignored).
+  Verified in the browser on a single-value pool and a
   multi-value pool ([8, 3]: "3" picked the value, "1" moved piece 1, "8" picked the last value).
 
 Still open / assumed defaults (flag if any of these are wrong):
