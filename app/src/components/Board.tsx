@@ -256,7 +256,12 @@ export default function Board({
       game.phase === 'awaiting-selection' ? (selectedVal !== null ? [selectedVal] : game.pool) : [];
     const hasValidMove =
       relevantVals.length === 0 || relevantVals.some((v) => canMovePiece(game.players, player, piece, v));
-    const isActive = isCurrentPlayer && !isFinished && hasValidMove;
+    // With several values pending and none picked yet, the next step is choosing a value (Pending
+    // Moves is what glows — see DiceTray.tsx), not a piece, so no piece glows until one is picked —
+    // at explicit request, so the highlight always points at the step actually being asked for.
+    // (A lone pending value is auto-selected, so its pieces glow straight away.)
+    const choosingValue = game.phase === 'awaiting-selection' && selectedVal === null && game.pool.length > 1;
+    const isActive = isCurrentPlayer && !isFinished && hasValidMove && !choosingValue;
     return { isSelectable, isLegal, isIllegal, isActive };
   }
 

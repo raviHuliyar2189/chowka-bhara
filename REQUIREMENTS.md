@@ -1734,6 +1734,14 @@ Resolved during requirements gathering:
   and `touch-action: none`. Verified with an emulated Pixel 7 and a real 1s touch hold: exactly one
   recognition starts, no context-menu event fires, and both "roll dice" and a bare number work.
 
+- **Highlight order: Pending Moves first, then pieces** (explicit request). After a roll that leaves
+  more than one value pending, only the Pending Moves area pulses (`DiceTray.tsx`); no piece glows
+  yet. Once a value is selected the Pending Moves pulse stops and the movable pieces glow
+  (`Board.tsx` `pieceState`), so the highlight always points at the step actually being asked for.
+  A single pending value is auto-selected, so its pieces glow immediately (unchanged). Verified with
+  a scripted hotseat game: multi-value pool → pool glows, 0 pieces glow; after picking a value → no
+  pool glow, pieces glow.
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has

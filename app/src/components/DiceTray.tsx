@@ -187,7 +187,11 @@ export default function DiceTray({
         </div>
 
         {(() => {
-          const needsChoice = game.phase === 'awaiting-selection' && game.pool.length > 1;
+          // Step 1 of "pick a value, then a piece": highlights Pending Moves only while a value
+          // still has to be chosen. Once one is selected the highlight moves to the pieces (see
+          // Board.tsx's pieceState), so the glow always shows what to do next.
+          const needsChoice =
+            game.phase === 'awaiting-selection' && game.pool.length > 1 && game.selectedPoolIndex === null;
           return (
             <div className={needsChoice ? 'pool-section needs-choice' : 'pool-section'}>
               <strong>{t('dice.movesRemaining')}</strong>
