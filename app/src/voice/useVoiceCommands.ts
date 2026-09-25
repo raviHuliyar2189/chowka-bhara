@@ -36,12 +36,31 @@ export interface VoiceCommandsState {
   supported: boolean;
   status: VoiceStatus;
   feedback: string | null;
+  // Raw debug readout of the last press: every alternative the recognizer returned and the command
+  // it was matched to. Unlike `feedback` it is shown for every press, success or not, and stays
+  // until the next press.
+  heard: string | null;
   press: () => void;
   release: () => void;
   confirmResign: () => void;
 }
 
 const CONFIRM_RESIGN_TIMEOUT_MS = 4000;
+
+function describeIntent(intent: VoiceIntent): string {
+  switch (intent.kind) {
+    case 'select-value':
+      return `select value ${intent.value}`;
+    case 'select-piece':
+      return `select piece ${intent.pieceNumber}`;
+    case 'number':
+      return `number ${intent.value}`;
+    case 'unrecognized':
+      return 'not recognized';
+    default:
+      return intent.kind;
+  }
+}
 
 // One shared hook rather than one copy per gameplay page — HotseatPage.tsx, VsComputerPage.tsx,
 // and OnlinePlay.tsx already define handleRoll/handleSelectValue/handleSelectPiece/
@@ -68,6 +87,7 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
 
   const [status, setStatus] = useState<VoiceStatus>('idle');
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [heard, setHeard] = useState<string | null>(null);
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -138,6 +158,10 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
     // For diagnostic feedback when nothing matched — show whatever the recognizer's top,
     // non-empty guess was, even though it didn't match anything.
     const rawTranscript = matchedTranscript || transcripts.find((t) => t.trim()) || '';
+
+    setHeard(
+      `Heard: ${transcripts.length ? transcripts.map((t) => `"${t}"`).join(' | ') : '(nothing)'} → ${describeIntent(intent)}`,
+    );
 
     // A pending resign confirmation is resolved by hearing "resign" a second time; hearing
     // anything else cancels the pending confirmation and falls through to handle the new intent
@@ -338,6 +362,7 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
     };
     recognition.onerror = (event) => {
       recognitionRef.current = null;
+      if (event.error !== 'aborted') setHeard(`Heard: (nothing) → error: ${event.error}`);
       // Distinct from a transcript that didn't match anything (handleTranscript's own
       // 'unrecognized' case, which does have text to show) — these are the recognizer failing
       // *before* ever producing a transcript. 'aborted' is release() calling stop() early on
@@ -365,6 +390,7 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
     recognitionRef.current = recognition;
     setStatusBoth('listening');
     setFeedback(null);
+    setHeard(null);
     recognition.start();
   }
 
@@ -372,5 +398,5 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
     recognitionRef.current?.stop();
   }
 
-  return { supported, status, feedback, press, release, confirmResign };
+  return { supported, status, feedback, heard, press, release, confirmResign };
 }

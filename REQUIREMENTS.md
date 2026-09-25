@@ -1748,6 +1748,12 @@ Resolved during requirements gathering:
   pressed again (`useVoiceCommands.ts`; `press()` clears it). The one timed exception is the resign
   confirmation window, which still cancels itself after 4s.
 
+- **Voice debug readout on every press** (explicit request, for debugging). A line under the Voice
+  Command button (`.ptt-heard`, fixed height so nothing shifts) shows, for every press and until the
+  next one, all alternatives the recognizer returned and what they were matched to, e.g.
+  `Heard: "roll dice" | "role dice" → roll`, `Heard: "banana" → not recognized`, or
+  `Heard: (nothing) → error: no-speech`. Shown on success as well as failure.
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has

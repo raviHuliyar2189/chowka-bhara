@@ -10,7 +10,7 @@ interface Props {
 // only when the page has already confirmed voice.supported is true (see each page's own usage).
 export default function PushToTalkButton({ voice }: Props) {
   const t = useT();
-  const { status, feedback, press, release, confirmResign } = voice;
+  const { status, feedback, heard, press, release, confirmResign } = voice;
 
   const label =
     status === 'listening'
@@ -63,6 +63,9 @@ export default function PushToTalkButton({ voice }: Props) {
           </button>
         )}
       </div>
+      {/* Debug readout (requested): what the recognizer heard and what it was matched to, for every
+          press, kept until the next press. Always mounted at a fixed height so it can't shift layout. */}
+      <p className="ptt-heard">{heard}</p>
     </div>
   );
 }
