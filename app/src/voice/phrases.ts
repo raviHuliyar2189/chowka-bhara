@@ -70,11 +70,12 @@ const VALUE_PATTERNS = [
 // controls). "the" is optional since "move the piece 3" is just as natural to say as "move piece
 // 3". Checked in most-specific-first order for clarity, though substring .match() below doesn't
 // actually require anchoring.
-const PIECE_PATTERNS = [
-  /(\d+)\s*kayi/,
-  /move\s+(?:the\s+)?(?:piece|peace)\s+(\d+)/,
-  /(?:piece|peace)\s+(\d+)/,
-];
+// "pawn" and "kaayi" (Kannada for a game piece, also transcribed as "kayi"/"kaai"/"kaye") are
+// accepted in addition to "piece" — added at explicit request because "piece <n>" alone wasn't
+// being recognized consistently. Each works either before the number ("pawn 3", "kaayi 3") or
+// after it ("3 kaayi"); a digit must be adjacent, so a stray "kai"/"pawn" elsewhere can't match.
+const PIECE_WORD = '(?:piece|peace|pawn|paun|kaayi|kayi|kaai|kaye|kai)';
+const PIECE_PATTERNS = [new RegExp(`${PIECE_WORD}\\s*(\\d+)`), new RegExp(`(\\d+)\\s*${PIECE_WORD}`)];
 
 export function matchIntent(rawTranscript: string): VoiceIntent {
   const t = normalize(rawTranscript);

@@ -1698,6 +1698,13 @@ Resolved during requirements gathering:
   10. *"Resign game" by voice*: added "quit game"/"I quit"/"surrender" and a loose pattern for the
      spaced/near-homophone forms recognizers produce ("re sign", "resin", "risen game"); the
      confirm-before-resigning step is unchanged.
+- **"Pawn" and "kaayi" accepted alongside "piece" for voice piece selection** (§11, at explicit
+  request — "piece <n>" wasn't being recognized consistently): `phrases.ts`'s piece matcher now
+  takes any of piece/peace/pawn/paun/kaayi/kayi/kaai/kaye/kai directly before *or* after the digit
+  ("pawn 3", "kaayi 3", "3 kaayi", "move pawn 4"; spelled-out numbers still normalize to digits). A
+  digit must be adjacent, so a stray "kai"/"pawn" elsewhere in a sentence can't match on its own.
+  Checked against the existing commands (select value, roll, roll back, gatti, resign) — all
+  unchanged.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
