@@ -1453,6 +1453,13 @@
   align-items: center;
   gap: 6px;
   margin-top: 10px;
+  /* This button is held down while speaking — on a phone a long press otherwise selects text and
+     opens the browser's Copy / Select all / Web search menu, cancelling the touch (and the
+     recognition with it). None of this area is meant to be selectable. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Voice Command button and the settings panel (language/sound/report bug/voice toggle) sit side by
@@ -1503,6 +1510,8 @@
 }
 
 .ptt-button {
+  /* Pointer events own the whole gesture: no scroll/zoom/long-press-menu takeover while held. */
+  touch-action: none;
   width: 96px;
   height: 96px;
   border-radius: 50%;

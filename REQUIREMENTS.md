@@ -1721,6 +1721,18 @@ Resolved during requirements gathering:
   own names, at explicit request ("chowka bhara" together is two numbers, so it's ignored).
   Verified in the browser on a single-value pool and a
   multi-value pool ([8, 3]: "3" picked the value, "1" moved piece 1, "8" picked the last value).
+- **Phone: holding the mic opened Copy / Select all / Web search, and cut recognitions short** (§11,
+  reported bug, likely the real cause of many "not recognized" cases): the button is held down while
+  speaking, and a long press on a phone selects text and opens the browser's context menu, which
+  cancels the touch and aborts the recognition mid-phrase — short one-word commands squeaked
+  through, longer ones didn't. A second, related fault: separate `onTouch*` + `onMouse*` handlers
+  both fired (the `preventDefault` in `onTouchStart` is ignored because React's root touch listeners
+  are passive), so lifting the finger produced an emulated mousedown that started a *second*, empty
+  recognition right after the real one. `PushToTalkButton.tsx` now uses pointer events only
+  (`onPointerDown` with pointer capture, `onPointerUp`/`onPointerCancel`), `onContextMenu` is
+  prevented, and `.ptt-wrap`/`.ptt-button` set `user-select: none`, `-webkit-touch-callout: none`,
+  and `touch-action: none`. Verified with an emulated Pixel 7 and a real 1s touch hold: exactly one
+  recognition starts, no context-menu event fires, and both "roll dice" and a bare number work.
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),

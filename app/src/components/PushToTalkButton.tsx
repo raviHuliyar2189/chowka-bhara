@@ -24,15 +24,25 @@ export default function PushToTalkButton({ voice }: Props) {
       <button
         type="button"
         className={`ptt-button ptt-${status}`}
-        onMouseDown={press}
-        onMouseUp={release}
-        onMouseLeave={release}
-        onTouchStart={(e) => {
-          e.preventDefault();
+        // Pointer events (one stream for mouse, touch and pen) instead of separate mouse + touch
+        // handlers. On a phone the old pair fired *both*: touchstart's preventDefault is ignored
+        // (React's root touch listeners are passive), so lifting the finger produced an emulated
+        // mousedown that started a second, empty recognition right after the real one. Capturing the
+        // pointer also keeps the press alive if the finger drifts off the button while speaking.
+        // onContextMenu + the user-select/touch-callout CSS stop a long press (which is exactly how
+        // this button is used) from opening the browser's Copy / Select all / Web search menu, which
+        // cancelled the touch and aborted the recognition mid-phrase.
+        onPointerDown={(e) => {
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+          } catch {
+            // Not fatal — capture only keeps the press alive if the finger drifts off the button.
+          }
           press();
         }}
-        onTouchEnd={release}
-        onTouchCancel={release}
+        onPointerUp={release}
+        onPointerCancel={release}
+        onContextMenu={(e) => e.preventDefault()}
         aria-pressed={status === 'listening'}
         aria-label={t('voiceCmd.pressToTalk')}
         title={t('voiceCmd.pressToTalk')}
