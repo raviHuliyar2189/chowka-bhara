@@ -46,6 +46,7 @@ export interface VoiceCommandsState {
 }
 
 const CONFIRM_RESIGN_TIMEOUT_MS = 4000;
+const RELEASE_GRACE_MS = 700;
 
 function describeIntent(intent: VoiceIntent): string {
   switch (intent.kind) {
@@ -346,7 +347,7 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
     // guess come back empty for a multi-word phrase ("piece 3") while a short one-word phrase
     // ("roll") kept transcribing fine; checking a few alternatives costs nothing and gives the
     // matcher a chance at whichever candidate actually has content.
-    recognition.maxAlternatives = 4;
+    recognition.maxAlternatives = 8;
 
     recognition.onresult = (event) => {
       const result = event.results[0];
@@ -394,8 +395,16 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
     recognition.start();
   }
 
+  // A one-word command ("3") is over in a fraction of a second, and stopping the recognizer the
+  // instant the finger lifts often cut it off before it had captured or transcribed anything —
+  // result: nothing heard. So stopping is deferred slightly, letting trailing audio and a still-
+  // starting session finish; the recognizer also ends by itself once it detects the speech has ended.
   function release() {
-    recognitionRef.current?.stop();
+    const rec = recognitionRef.current;
+    if (!rec) return;
+    setTimeout(() => {
+      if (recognitionRef.current === rec) rec.stop();
+    }, RELEASE_GRACE_MS);
   }
 
   return { supported, status, feedback, heard, press, release, confirmResign };

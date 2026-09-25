@@ -1754,6 +1754,13 @@ Resolved during requirements gathering:
   `Heard: "roll dice" | "role dice" → roll`, `Heard: "banana" → not recognized`, or
   `Heard: (nothing) → error: no-speech`. Shown on success as well as failure.
 
+- **One-word piece numbers** (bug report: a lone "3" was not heard/recognized). Two fixes: (1) `release()`
+  now defers `stop()` by 700ms (`RELEASE_GRACE_MS`) — a one-word command is over so quickly that
+  stopping the instant the finger lifted often cut the recognizer off before it transcribed anything;
+  (2) more lone-word variants count as numbers (ordinals first–fourth, `eat`, `wan`, `ford`, `fur`, and
+  more Kannada spellings), and `maxAlternatives` is raised from 4 to 8. If it still fails, the debug
+  line shows exactly what was heard.
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has

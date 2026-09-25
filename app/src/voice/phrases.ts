@@ -65,6 +65,28 @@ const NUMBER_HOMOPHONES: Record<string, number> = {
   for: 4,
   fore: 4,
   ate: 8,
+  eat: 8,
+  wan: 1,
+  first: 1,
+  second: 2,
+  third: 3,
+  thee: 3,
+  tri: 3,
+  thre: 3,
+  fourth: 4,
+  ford: 4,
+  fur: 4,
+  // Kannada spellings a recognizer might produce for a lone word.
+  nalka: 4,
+  naaku: 4,
+  eradoo: 2,
+  eradhu: 2,
+  mur: 3,
+  mooroo: 3,
+  ondoo: 1,
+  ent: 8,
+  yenthu: 8,
+  enthu: 8,
 };
 
 function normalize(s: string): string {
