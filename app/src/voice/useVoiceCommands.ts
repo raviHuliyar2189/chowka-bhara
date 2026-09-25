@@ -349,7 +349,17 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
     // matcher a chance at whichever candidate actually has content.
     recognition.maxAlternatives = 8;
 
+    // Which lifecycle events fired — only used to explain a session that ends with no result and no
+    // error (see onend), which otherwise leaves the debug line blank.
+    const seen = { result: false, error: false, audio: false, speech: false };
+    recognition.onaudiostart = () => {
+      seen.audio = true;
+    };
+    recognition.onspeechstart = () => {
+      seen.speech = true;
+    };
     recognition.onresult = (event) => {
+      seen.result = true;
       const result = event.results[0];
       const transcripts: string[] = [];
       if (result) {
@@ -362,6 +372,7 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
       handleTranscript(transcripts, game);
     };
     recognition.onerror = (event) => {
+      seen.error = true;
       recognitionRef.current = null;
       if (event.error !== 'aborted') setHeard(`Heard: (nothing) → error: ${event.error}`);
       // Distinct from a transcript that didn't match anything (handleTranscript's own
@@ -383,6 +394,11 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
     };
     recognition.onend = () => {
       recognitionRef.current = null;
+      if (!seen.result && !seen.error) {
+        setHeard(
+          `Heard: (nothing) → session ended with no result (mic opened: ${seen.audio ? 'yes' : 'no'}, speech detected: ${seen.speech ? 'yes' : 'no'})`,
+        );
+      }
       // Only fall back to idle here if nothing else already moved status on (onresult sets
       // 'processing' then resolves to a final status synchronously; onerror resolves its own).
       if (statusRef.current === 'listening') setStatusBoth('idle');

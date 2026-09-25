@@ -1761,6 +1761,11 @@ Resolved during requirements gathering:
   more Kannada spellings), and `maxAlternatives` is raised from 4 to 8. If it still fails, the debug
   line shows exactly what was heard.
 
+- **Debug line for empty sessions too** (bug report: a failed lone number left the line blank). A session
+  that ends with neither a result nor an error (the recognizer just closing) previously set nothing.
+  `onend` now reports it: `Heard: (nothing) → session ended with no result (mic opened: yes/no, speech
+  detected: yes/no)`, which tells a mic that never opened from speech that was never detected.
+
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
   not synced across devices — this is now specifically a hotseat limitation, since online mode has
