@@ -10,6 +10,9 @@ export type VoiceIntent =
   | { kind: 'rollback' }
   | { kind: 'select-value'; value: number }
   | { kind: 'select-piece'; pieceNumber: number }
+  // Just a number, with no keyword (or with a keyword the recognizer mangled) — useVoiceCommands.ts
+  // decides from the game state whether it means a dice value or a piece.
+  | { kind: 'number'; value: number }
   | { kind: 'form-gatti' }
   | { kind: 'resign' }
   | { kind: 'unrecognized' };
@@ -18,12 +21,41 @@ export type VoiceIntent =
 // digit (more likely for a short, isolated number than for one embedded in a longer phrase) — a
 // real reported case where digit-only regexes silently missed an otherwise-correct utterance.
 // Converted to digits before matching so every pattern below only ever has to look for \d+.
+// Kannada number words (romanized) are included too, at explicit request: ondu (1), eradu (2),
+// mooru (3), nalku/naku (4), entu (8), plus common alternate spellings a recognizer might produce.
 const NUMBER_WORDS: Record<string, string> = {
   one: '1',
+  ondu: '1',
+  ondhu: '1',
   two: '2',
+  eradu: '2',
+  yeradu: '2',
   three: '3',
+  mooru: '3',
+  muru: '3',
+  moru: '3',
   four: '4',
+  nalku: '4',
+  nalaku: '4',
+  naku: '4',
+  naalku: '4',
   eight: '8',
+  entu: '8',
+  yentu: '8',
+};
+
+// Only ever applied when the *whole* utterance is that one word — "for" or "to" inside a longer
+// sentence is just a word, but a lone "for" spoken to a number-only command is almost certainly "4".
+const NUMBER_HOMOPHONES: Record<string, number> = {
+  won: 1,
+  to: 2,
+  too: 2,
+  tu: 2,
+  tree: 3,
+  free: 3,
+  for: 4,
+  fore: 4,
+  ate: 8,
 };
 
 function normalize(s: string): string {
@@ -99,6 +131,22 @@ export function matchIntent(rawTranscript: string): VoiceIntent {
       const pieceNumber = Number(m[1]);
       if (pieceNumber >= 1 && pieceNumber <= 4) return { kind: 'select-piece', pieceNumber };
     }
+  }
+
+  // A bare number — the keyword ("piece", "select", "pawn"…) is deliberately optional, at explicit
+  // request: pronunciation made the keywords unreliable, so what matters is just the number, with
+  // the game state deciding what it means (see useVoiceCommands.ts). Two shapes count:
+  //  - exactly one number token in the whole utterance, whatever else was said around it (covers a
+  //    keyword that was misheard into some other word: "peas 3", "pace 2");
+  //  - a lone word that is a common homophone of a number ("to", "for", "tree", "ate").
+  // Only 1-4 and 8 can ever be a dice value or piece number, and more than one number in an
+  // utterance is ambiguous, so neither of those matches.
+  const bare = t.replace(/^(?:number|no|the)\s+/, '');
+  const homophone = NUMBER_HOMOPHONES[bare];
+  if (homophone) return { kind: 'number', value: homophone };
+  const digits = t.match(/\d+/g) ?? [];
+  if (digits.length === 1 && [1, 2, 3, 4, 8].includes(Number(digits[0]))) {
+    return { kind: 'number', value: Number(digits[0]) };
   }
 
   return { kind: 'unrecognized' };

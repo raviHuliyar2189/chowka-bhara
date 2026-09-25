@@ -126,13 +126,17 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
   function handleTranscript(transcripts: string[], game: GameState) {
     let intent: VoiceIntent = { kind: 'unrecognized' };
     let matchedTranscript = '';
-    for (const t of transcripts) {
-      const candidate = matchIntent(t);
-      if (candidate.kind !== 'unrecognized') {
+    // Two passes: a real command in *any* alternative beats a bare number in an earlier one (a
+    // number is the loosest match there is — it shouldn't shadow "roll back" ranked second).
+    for (const wantNumber of [false, true]) {
+      for (const t of transcripts) {
+        const candidate = matchIntent(t);
+        if (candidate.kind === 'unrecognized' || (candidate.kind === 'number') !== wantNumber) continue;
         intent = candidate;
         matchedTranscript = t;
         break;
       }
+      if (intent.kind !== 'unrecognized') break;
     }
     // For diagnostic feedback when nothing matched — show whatever the recognizer's top,
     // non-empty guess was, even though it didn't match anything.
@@ -146,6 +150,40 @@ export function useVoiceCommands(args: UseVoiceCommandsArgs): VoiceCommandsState
       if (intent.kind === 'resign') {
         doResign();
         return;
+      }
+    }
+
+    // A bare number ("3") — keywords like "piece"/"select" are optional at explicit request, since
+    // pronunciation made them unreliable — means whatever the game is waiting for right now:
+    //  - no dice value picked yet  -> a dice value ("select value 3");
+    //  - a value already picked    -> a piece ("piece 3"), unless that piece can't use the picked
+    //    value and the number is another value still in the pool, in which case the player is
+    //    switching to that value instead.
+    if (intent.kind === 'number') {
+      const n = intent.value;
+      if (!isMyTurn) {
+        setStatusBoth('unrecognized');
+        showFeedback('voiceCmd.notYourTurn');
+        return;
+      }
+      if (game.phase === 'awaiting-roll') {
+        setStatusBoth('unrecognized');
+        showFeedback('voiceCmd.rollFirst');
+        return;
+      }
+      if (game.phase === 'awaiting-selection') {
+        if (game.selectedPoolIndex === null) {
+          intent = { kind: 'select-value', value: n };
+        } else {
+          const player = game.players.find((p) => p.id === viewerSeat);
+          const piece = player?.pieces.find((p) => p.id === n);
+          const selectedVal = game.pool[game.selectedPoolIndex];
+          const pieceCanMove = !!player && !!piece && canMovePiece(game.players, player, piece, selectedVal);
+          intent =
+            !pieceCanMove && game.pool.includes(n)
+              ? { kind: 'select-value', value: n }
+              : { kind: 'select-piece', pieceNumber: n };
+        }
       }
     }
 

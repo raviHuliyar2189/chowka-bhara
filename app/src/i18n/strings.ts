@@ -209,6 +209,7 @@ const STRINGS: Record<string, { en: Entry; kn: Entry }> = {
     en: (n: number) => `Piece ${n} has no legal move`,
     kn: (n: number) => `ಕಾಯಿ ${n} ಗೆ ಸರಿಯಾದ ನಡೆ ಇಲ್ಲ`,
   },
+  'voiceCmd.rollFirst': { en: 'Roll the dice first', kn: 'ಮೊದಲು ಕವಡೆ ಹಾಕಿ' },
   'voiceCmd.rollbackUnavailable': { en: 'Roll back is not available in this game', kn: 'ಈ ಆಟದಲ್ಲಿ ಹಿಂತೆಗೆತ ಲಭ್ಯವಿಲ್ಲ' },
   'voiceCmd.nothingToRollBack': { en: 'No move of yours to roll back', kn: 'ಹಿಂತೆಗೆಯಲು ನಿಮ್ಮ ಯಾವುದೇ ನಡೆ ಇಲ್ಲ' },
   'voiceCmd.noGattiAvailable': { en: 'No gatti can be formed right now', kn: 'ಈಗ ಗಟ್ಟಿ ಮಾಡಲು ಸಾಧ್ಯವಿಲ್ಲ' },

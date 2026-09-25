@@ -1705,6 +1705,20 @@ Resolved during requirements gathering:
   digit must be adjacent, so a stray "kai"/"pawn" elsewhere in a sentence can't match on its own.
   Checked against the existing commands (select value, roll, roll back, gatti, resign) — all
   unchanged.
+- **A bare number is a voice command; the keyword is optional and inferred from context** (§11, at
+  explicit request — pronunciation made "piece"/"select" unreliable): `matchIntent` returns a new
+  `number` intent when an utterance contains exactly one number token (1-4 or 8), whatever else was
+  said around it (so a mangled keyword like "peas 3" still works), or is a lone number homophone
+  ("to", "for", "tree", "ate"…). Explicit commands still take priority, and across the recognizer's
+  alternatives a real command beats a bare number. `useVoiceCommands.ts` resolves the number from the
+  game state: not this device's turn → "not your turn"; waiting for a roll → "Roll the dice first";
+  awaiting selection with no dice value picked → a dice value; with a value already picked → a piece
+  (unless that piece can't use it and the number is another value still in the pool, in which case
+  it switches value). Note the game auto-selects the value when the pool holds only one, so a bare
+  number then means a piece immediately. Also recognized as numbers, in `normalize()`: English
+  one/two/three/four/eight and Kannada ondu (1), eradu (2), mooru (3), nalku/naku (4), entu (8),
+  with common alternate spellings. Verified in the browser on a single-value pool and a
+  multi-value pool ([8, 3]: "3" picked the value, "1" moved piece 1, "8" picked the last value).
 
 Still open / assumed defaults (flag if any of these are wrong):
 - **Hotseat stats are single-browser only**: roster/stats are stored per-browser (`localStorage`),
